@@ -6,6 +6,7 @@ import ms from 'ms';
 import compression, { filter as _filter } from 'compression';
 import UAParser from 'ua-parser-js';
 import { Cumulonimbus } from './types';
+import { generateToken, validateToken } from './utils/Token';
 
 configureEnv();
 
@@ -41,3 +42,8 @@ app.use(
   json(),
   urlencoded({ extended: true })
 );
+
+(async function () {
+  let token = await generateToken('1571701248302', 'Chrome on Linux', false);
+  console.log(await validateToken(token), token);
+})();

@@ -8,7 +8,6 @@ declare namespace NodeJS {
     SERVERUSERNAME: string;
     SERVERPASSWORD: string;
     SERVERDB: string;
-    JWTSIGSECRET: string;
     instance: string;
   }
 }
