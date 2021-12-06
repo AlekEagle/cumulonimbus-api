@@ -1,4 +1,117 @@
 import UAParser from 'ua-parser-js';
+import { Cumulonimbus } from '../types';
+
+export namespace ResponseConstructors {
+  export namespace Errors {
+    export class Permissions implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INSUFFICIENT_PERMISSIONS_ERROR';
+      public readonly message: string = 'Missing Permissions';
+      constructor() {}
+    }
+
+    export class InvalidUser implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_USER_ERROR';
+      public readonly message: string = 'Invalid User';
+      constructor() {}
+    }
+
+    export class UserExists implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'USER_EXISTS_ERROR';
+      public readonly message: string = 'User Already Exists';
+      constructor() {}
+    }
+
+    export class InvalidPassword implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_PASSWORD_ERROR';
+      public readonly message: string = 'Invalid Password';
+      constructor() {}
+    }
+
+    export class InvalidSession implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_SESSION_ERROR';
+      public readonly message: string = 'Invalid Session';
+      constructor() {}
+    }
+
+    export class InvalidDomain implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_DOMAIN_ERROR';
+      public readonly message: string = 'Invalid Domain';
+      constructor() {}
+    }
+
+    export class InvalidSubdomain implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_SUBDOMAIN_ERROR';
+      public readonly message: string =
+        'Subdomain cannot be longer than 63 characters';
+      private __parsedSubdomain: string;
+      public get parsedSubdomain() {
+        return this.__parsedSubdomain;
+      }
+      constructor(parsedSubdomain: string) {
+        this.__parsedSubdomain = parsedSubdomain;
+      }
+    }
+
+    export class SubdomainNotSupported
+      implements Cumulonimbus.Structures.Error
+    {
+      public readonly code: string = 'SUBDOMAIN_NOT_SUPPORTED_ERROR';
+      public readonly message: string =
+        'Domain Does Not Support Using A Subdomain';
+      constructor() {}
+    }
+
+    export class MissingFields implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'MISSING_FIELDS_ERROR';
+      public readonly message: string = 'Missing Fields';
+      fields: string[];
+      constructor(fields: string[]) {
+        this.fields = fields;
+      }
+    }
+
+    export class FileMissing implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'FILE_NOT_FOUND_ERROR';
+      public readonly message: string = 'File Not Found';
+      constructor() {}
+    }
+
+    export class SessionMissing implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'SESSION_NOT_FOUND_ERROR';
+      public readonly message: string = 'Session Not Found';
+      constructor() {}
+    }
+
+    export class Internal implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INTERNAL_SERVER_ERROR';
+      public readonly message: string = 'Internal Server Error';
+      constructor() {}
+    }
+
+    export class Generic implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'GENERIC_ERROR';
+      private __message: string;
+      public get message(): string {
+        return this.__message;
+      }
+      constructor(message: string) {
+        this.__message = message;
+      }
+    }
+  }
+
+  export namespace Success {
+    export class Generic implements Cumulonimbus.Structures.Success {
+      public readonly success: boolean = true;
+      public message?: string = undefined;
+      constructor(message?: string) {
+        if (message !== undefined) {
+          this.message = message;
+        }
+      }
+    }
+  }
+}
 
 export function browserName(ua: UAParser.IResult) {
   if (
@@ -88,4 +201,15 @@ export function getInvalidFields(
     }
   });
   return invalidFields.map((a: [string, any]) => a[0]);
+}
+
+export function validateSubdomain(sd: string) {
+  return sd
+    .trim()
+    .split('')
+    .filter(a => a.match(/[a-z0-9- ]/i))
+    .join('')
+    .split(/\s/g)
+    .filter(a => a !== '')
+    .join('-');
 }

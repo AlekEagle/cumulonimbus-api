@@ -9,6 +9,7 @@ import { Cumulonimbus } from './types';
 import { TokenStructure, validateToken } from './utils/Token';
 import User from './utils/DB/User';
 import Endpoints from './api';
+import { ResponseConstructors } from './utils/RequestUtils';
 
 configureEnv();
 
@@ -52,15 +53,19 @@ app.use(
   ) => {
     if (req.headers.authorization) {
       let token = await validateToken(req.headers.authorization);
-      if (token instanceof Error) req.user = null;
-      else {
+      if (token instanceof Error) {
+        req.user = null;
+        req.session = null;
+      } else {
         let user = await User.findOne({
           where: {
             id: token.payload.sub
           }
         });
-        if (!user) req.user = null;
-        else {
+        if (!user) {
+          req.user = null;
+          req.session = null;
+        } else {
           if (
             user.sessions.some(
               s => s.iat === (token as TokenStructure).payload.iat
@@ -68,7 +73,11 @@ app.use(
           ) {
             await pruneExpiredSessions(user);
             req.user = user;
-          } else req.user = null;
+            req.session = token;
+          } else {
+            req.user = null;
+            req.session = null;
+          }
         }
       }
     }
@@ -103,13 +112,60 @@ Endpoints.forEach(endpointModule => {
       path
     );
     if (endpoint.preHandlers === null || endpoint.preHandlers === undefined)
-      app[endpoint.method](path, endpoint.handler);
+      app[endpoint.method](
+        path,
+        async (req: Cumulonimbus.Request, res: Cumulonimbus.Response, next) => {
+          try {
+            await endpoint.handler(req, res, next);
+          } catch (error) {
+            console.error(error);
+            res.status(500).json(new ResponseConstructors.Errors.Internal());
+          }
+        }
+      );
     else {
       if (Array.isArray(endpoint.preHandlers))
-        app[endpoint.method](path, ...endpoint.preHandlers, endpoint.handler);
-      else app[endpoint.method](path, endpoint.preHandlers, endpoint.handler);
+        app[endpoint.method](
+          path,
+          ...endpoint.preHandlers,
+          async (
+            req: Cumulonimbus.Request,
+            res: Cumulonimbus.Response,
+            next
+          ) => {
+            try {
+              await endpoint.handler(req, res, next);
+            } catch (error) {
+              console.error(error);
+              res.status(500).json(new ResponseConstructors.Errors.Internal());
+            }
+          }
+        );
+      else
+        app[endpoint.method](
+          path,
+          endpoint.preHandlers,
+          async (
+            req: Cumulonimbus.Request,
+            res: Cumulonimbus.Response,
+            next
+          ) => {
+            try {
+              await endpoint.handler(req, res, next);
+            } catch (error) {
+              console.error(error);
+              res.status(500).json(new ResponseConstructors.Errors.Internal());
+            }
+          }
+        );
     }
   });
+});
+
+app.all('/api/*', (req, res) => {
+  res
+    .status(404)
+    .json(new ResponseConstructors.Errors.Generic('Endpoint Not Found'));
 });
 
 app.listen(port, () => {

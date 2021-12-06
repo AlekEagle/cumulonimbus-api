@@ -32,13 +32,16 @@ export async function generateToken(
   user: string,
   name: string,
   expires: boolean = true
-): Promise<string> {
+): Promise<{ token: string; data: TokenStructure }> {
   await importCerts();
-  return await new SignJWT({ name, sub: user })
-    .setProtectedHeader({ alg: 'ES256', typ: 'JWT' })
-    .setIssuedAt()
-    .setExpirationTime(expires ? '30d' : '10y')
-    .sign(privKey);
+  let tokenStr = await new SignJWT({ name, sub: user })
+      .setProtectedHeader({ alg: 'ES256', typ: 'JWT' })
+      .setIssuedAt()
+      .setExpirationTime(expires ? '30d' : '10y')
+      .sign(privKey),
+    tokenData = extractToken(tokenStr);
+
+  return { token: tokenStr, data: tokenData };
 }
 
 export async function validateToken(

@@ -4,6 +4,8 @@ import { Model, DataTypes } from 'sequelize';
 export default class Domain extends Model {
   domain: string;
   allowsSubdomains: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 (async function () {

@@ -1,0 +1,225 @@
+import { Cumulonimbus } from '../../types';
+import { Op } from 'sequelize/dist';
+import Multer from 'multer';
+import { generateToken } from '../../utils/Token';
+import Bcrypt from 'bcrypt';
+import User from '../../utils/DB/User';
+import {
+  browserName,
+  getInvalidFields,
+  FieldTypeOptions,
+  ResponseConstructors
+} from '../../utils/RequestUtils';
+
+const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
+  {
+    method: 'post',
+    path: '/session',
+    preHandlers: Multer().none(),
+    async handler(
+      req: Cumulonimbus.Request<{
+        user: string;
+        pass: string;
+        rememberMe: boolean;
+      }>,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.SuccessfulAuth>
+    ) {
+      try {
+        let invalidFields = getInvalidFields(req.body, {
+          user: 'string',
+          pass: 'string',
+          rememberMe: new FieldTypeOptions('boolean', true)
+        });
+        if (invalidFields.length > 0) {
+          res
+            .status(400)
+            .json(new ResponseConstructors.Errors.MissingFields(invalidFields));
+        } else {
+          try {
+            let u = await User.findOne({
+              where: {
+                [Op.or]: {
+                  email: req.body.user,
+                  username: req.body.user.toLowerCase()
+                }
+              }
+            });
+            if (!u)
+              res
+                .status(404)
+                .json(new ResponseConstructors.Errors.InvalidUser());
+            else {
+              try {
+                let match = await Bcrypt.compare(req.body.pass, u.password);
+                if (!match)
+                  res
+                    .status(401)
+                    .json(new ResponseConstructors.Errors.InvalidPassword());
+                else {
+                  try {
+                    let token = await generateToken(
+                      u.id,
+                      browserName(req.ua),
+                      !req.body.rememberMe
+                    );
+                    let nS = [
+                      ...u.sessions,
+                      {
+                        iat: token.data.payload.iat,
+                        exp: token.data.payload.exp,
+                        name: token.data.payload.name
+                      }
+                    ];
+                    await u.update({ sessions: nS });
+                    res.status(201).json({
+                      token: token.token,
+                      exp: token.data.payload.exp
+                    } as Cumulonimbus.Structures.SuccessfulAuth);
+                  } catch (error) {
+                    throw error;
+                  }
+                }
+              } catch (error) {
+                throw error;
+              }
+            }
+          } catch (error) {
+            throw error;
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    }
+  },
+  {
+    method: 'get',
+    path: '/sessions',
+    async handler(
+      req,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.SessionList>
+    ) {
+      if (!req.user)
+        res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
+      else {
+        let u = req.user.toJSON();
+        res.status(200).json({
+          count: u.sessions.length,
+          sessions: u.sessions
+        } as Cumulonimbus.Structures.SessionList);
+      }
+    }
+  },
+  {
+    method: 'delete',
+    path: '/session/:id([0-9]+?)',
+    async handler(
+      req: Cumulonimbus.Request<{}, { id: string }>,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.Success>
+    ) {
+      if (!req.user)
+        res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
+      else {
+        if (
+          req.user.sessions.findIndex(a => a.iat === Number(req.params.id)) ===
+          -1
+        )
+          res
+            .status(404)
+            .json(new ResponseConstructors.Errors.SessionMissing());
+        else {
+          try {
+            let uSessions = req.user.sessions.filter(
+              s => s.iat !== Number(req.params.id)
+            );
+            await req.user.update({ sessions: uSessions });
+            res.status(200).json();
+          } catch (error) {
+            throw error;
+          }
+        }
+      }
+    }
+  },
+  {
+    method: 'delete',
+    path: '/sessions',
+    preHandlers: Multer().none(),
+    async handler(
+      req: Cumulonimbus.Request<string[]>,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
+    ) {
+      try {
+        if (!req.user)
+          res
+            .status(401)
+            .json(new ResponseConstructors.Errors.InvalidSession());
+        else {
+          if (!req.body || req.body.length < 1 || req.body.length > 100)
+            res
+              .status(400)
+              .json(new ResponseConstructors.Errors.MissingFields(['body']));
+          else {
+            try {
+              let count = req.user.sessions.filter(s =>
+                  req.body.includes(s.iat.toString())
+                ).length,
+                sessions = req.user.sessions.filter(
+                  s => !req.body.includes(s.iat.toString())
+                );
+              await req.user.update({ sessions });
+              res.status(200).json({
+                count,
+                type: 'session'
+              });
+            } catch (error) {
+              throw error;
+            }
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    }
+  },
+  {
+    method: 'delete',
+    path: '/sessions/all',
+    async handler(
+      req: Cumulonimbus.Request<null, null, { allButSelf: boolean }>,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
+    ) {
+      try {
+        if (!req.user)
+          res
+            .status(401)
+            .json(new ResponseConstructors.Errors.InvalidSession());
+        else {
+          try {
+            let count = req.query.allButSelf
+                ? req.user.sessions.filter(
+                    s => s.iat !== req.session.payload.iat
+                  ).length
+                : req.user.sessions.length,
+              sessions = req.query.allButSelf
+                ? req.user.sessions.filter(
+                    s => s.iat === req.session.payload.iat
+                  )
+                : [];
+            await req.user.update({ sessions });
+            res.status(200).json({
+              count,
+              type: 'session'
+            });
+          } catch (error) {
+            throw error;
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    }
+  }
+];
+
+export default UserSessionEndpoints;

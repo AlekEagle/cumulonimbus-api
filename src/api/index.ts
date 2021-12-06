@@ -1,10 +1,12 @@
 import { Cumulonimbus } from '../types';
-import SessionEndpoints from './SessionEndpoints';
-import UserEndpoints from './UserEndpoints';
+import UserSessionEndpoints from './user/UserSessionEndpoints';
+import UserAccountEndpoints from './user/UserAccountEndpoints';
+import UserFileEndpoints from './user/UserFileEndpoints';
 
 const Endpoints: Cumulonimbus.APIEndpointModule[] = [
-  UserEndpoints,
-  SessionEndpoints
+  UserAccountEndpoints,
+  UserSessionEndpoints,
+  UserFileEndpoints
 ];
 
 export default Endpoints;
