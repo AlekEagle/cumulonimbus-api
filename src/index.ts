@@ -6,7 +6,9 @@ import ms from 'ms';
 import compression, { filter as _filter } from 'compression';
 import UAParser from 'ua-parser-js';
 import { Cumulonimbus } from './types';
-import { generateToken, validateToken } from './utils/Token';
+import { TokenStructure, validateToken } from './utils/Token';
+import User from './utils/DB/User';
+import Endpoints from './api';
 
 configureEnv();
 
@@ -26,6 +28,21 @@ function shouldCompress(req: Express.Request, res: Express.Response): boolean {
   return _filter(req, res);
 }
 
+async function pruneExpiredSessions(user: User): Promise<void> {
+  const staleSessionTime = Math.floor(Date.now() / 1000);
+  if (user.sessions.some(s => s.exp < staleSessionTime)) {
+    await user.update({
+      sessions: user.sessions.filter(s => s.exp > staleSessionTime)
+    });
+  }
+  return;
+}
+
+setInterval(async () => {
+  let users = await User.findAll();
+  users.forEach(pruneExpiredSessions);
+}, ms('1h'));
+
 app.use(
   compression({ filter: shouldCompress }),
   async (
@@ -34,16 +51,67 @@ app.use(
     next: NextFunction
   ) => {
     if (req.headers.authorization) {
-      console.log('no');
+      let token = await validateToken(req.headers.authorization);
+      if (token instanceof Error) req.user = null;
+      else {
+        let user = await User.findOne({
+          where: {
+            id: token.payload.sub
+          }
+        });
+        if (!user) req.user = null;
+        else {
+          if (
+            user.sessions.some(
+              s => s.iat === (token as TokenStructure).payload.iat
+            )
+          ) {
+            await pruneExpiredSessions(user);
+            req.user = user;
+          } else req.user = null;
+        }
+      }
     }
     req.ua = new UAParser(req.headers['user-agent']).getResult();
     next();
   },
   json(),
-  urlencoded({ extended: true })
+  urlencoded({ extended: true }),
+  ExpressRateLimit({
+    windowMs: ms('5mins'),
+    max: 100,
+    keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
+      return req.user
+        ? req.user.id
+        : (Array.isArray(req.headers['x-forwarded-for'])
+            ? req.headers['x-forwarded-for'][0]
+            : req.headers['x-forwarded-for']) || req.ip;
+    }
+  })
 );
 
-(async function () {
-  let token = await generateToken('1571701248302', 'Chrome on Linux', false);
-  console.log(await validateToken(token), token);
-})();
+app.all('/api/', (req: Cumulonimbus.Request, res: Express.Response) => {
+  res.json(req.user.toJSON());
+});
+
+Endpoints.forEach(endpointModule => {
+  endpointModule.forEach(async endpoint => {
+    let path = `/api${endpoint.path}`;
+    console.log(
+      'Initializing endpoint: %s',
+      endpoint.method.toUpperCase(),
+      path
+    );
+    if (endpoint.preHandlers === null || endpoint.preHandlers === undefined)
+      app[endpoint.method](path, endpoint.handler);
+    else {
+      if (Array.isArray(endpoint.preHandlers))
+        app[endpoint.method](path, ...endpoint.preHandlers, endpoint.handler);
+      else app[endpoint.method](path, endpoint.preHandlers, endpoint.handler);
+    }
+  });
+});
+
+app.listen(port, () => {
+  console.log('Listening on port %s', port);
+});

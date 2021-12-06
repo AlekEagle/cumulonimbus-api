@@ -14,9 +14,8 @@ export default class User extends Model {
   createdAt: string;
   updatedAt: string;
   sessions: {
-    sub: string;
     iat: number;
-    eat: number;
+    exp: number;
     name: string;
   }[];
 }

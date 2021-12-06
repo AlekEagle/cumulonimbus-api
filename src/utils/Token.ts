@@ -10,7 +10,7 @@ export declare interface TokenStructure {
     sub: string;
     name: string;
     iat: number;
-    string: number;
+    exp: number;
   };
 }
 
@@ -41,8 +41,22 @@ export async function generateToken(
     .sign(privKey);
 }
 
-export async function validateToken(token: string): Promise<TokenStructure> {
+export async function validateToken(
+  token: string
+): Promise<TokenStructure | Error> {
   await importCerts();
-  const { protectedHeader, payload } = await jwtVerify(token, pubKey);
-  return { payload: payload as any, header: protectedHeader as any };
+  try {
+    const { protectedHeader, payload } = await jwtVerify(token, pubKey);
+    return { payload: payload as any, header: protectedHeader as any };
+  } catch (error) {
+    return error;
+  }
+}
+
+export function extractToken(token: string): TokenStructure {
+  let t = token
+    .split('.')
+    .filter((a, i) => i !== 2)
+    .map(p => JSON.parse(Buffer.from(p, 'base64').toString('utf8')));
+  return { header: t[0], payload: t[1] };
 }
