@@ -94,6 +94,25 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'get',
+    path: '/session',
+    async handler(
+      req,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
+    ) {
+      if (!req.user)
+        res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
+      else {
+        let curSession: Cumulonimbus.Structures.Session = {
+          iat: req.session.payload.iat,
+          exp: req.session.payload.exp,
+          name: req.session.payload.name
+        };
+        res.status(200).json(curSession);
+      }
+    }
+  },
+  {
+    method: 'get',
     path: '/sessions',
     async handler(
       req,
