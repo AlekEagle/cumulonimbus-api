@@ -43,12 +43,10 @@ export namespace ResponseConstructors {
       public readonly code: string = 'INVALID_SUBDOMAIN_ERROR';
       public readonly message: string =
         'Subdomain cannot be longer than 63 characters';
-      private __parsedSubdomain: string;
-      public get parsedSubdomain() {
-        return this.__parsedSubdomain;
-      }
+      public parsedSubdomain: string;
+
       constructor(parsedSubdomain: string) {
-        this.__parsedSubdomain = parsedSubdomain;
+        this.parsedSubdomain = parsedSubdomain;
       }
     }
 
@@ -82,6 +80,12 @@ export namespace ResponseConstructors {
       constructor() {}
     }
 
+    export class Banned implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'BANNED_ERROR';
+      public readonly message: string = 'Account Banned';
+      constructor() {}
+    }
+
     export class Internal implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'INTERNAL_SERVER_ERROR';
       public readonly message: string = 'Internal Server Error';
@@ -90,12 +94,9 @@ export namespace ResponseConstructors {
 
     export class Generic implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'GENERIC_ERROR';
-      private __message: string;
-      public get message(): string {
-        return this.__message;
-      }
+      public message: string;
       constructor(message: string) {
-        this.__message = message;
+        this.message = message;
       }
     }
   }

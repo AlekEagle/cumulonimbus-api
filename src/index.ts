@@ -66,17 +66,21 @@ app.use(
           req.user = null;
           req.session = null;
         } else {
-          if (
-            user.sessions.some(
-              s => s.iat === (token as TokenStructure).payload.iat
-            )
-          ) {
-            await pruneExpiredSessions(user);
-            req.user = user;
-            req.session = token;
-          } else {
-            req.user = null;
-            req.session = null;
+          if (user.bannedAt)
+            res.status(403).json(new ResponseConstructors.Errors.Banned());
+          else {
+            if (
+              user.sessions.some(
+                s => s.iat === (token as TokenStructure).payload.iat
+              )
+            ) {
+              await pruneExpiredSessions(user);
+              req.user = user;
+              req.session = token;
+            } else {
+              req.user = null;
+              req.session = null;
+            }
           }
         }
       }
@@ -100,7 +104,7 @@ app.use(
 );
 
 app.all('/api/', (req: Cumulonimbus.Request, res: Express.Response) => {
-  res.json(req.user.toJSON());
+  res.json({ hello: 'world', version: '3.0.0' });
 });
 
 Endpoints.forEach(endpointModule => {
