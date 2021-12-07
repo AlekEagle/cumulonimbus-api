@@ -109,7 +109,7 @@ export namespace ResponseConstructors {
 
   export namespace Success {
     export class Generic implements Cumulonimbus.Structures.Success {
-      public readonly success: boolean = true;
+      public readonly code: string = 'GENERIC_SUCCESS';
       public message?: string = undefined;
       constructor(message?: string) {
         if (message !== undefined) {

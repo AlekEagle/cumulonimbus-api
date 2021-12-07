@@ -105,7 +105,8 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         let curSession: Cumulonimbus.Structures.Session = {
           iat: req.session.payload.iat,
           exp: req.session.payload.exp,
-          name: req.session.payload.name
+          name: req.session.payload.name,
+          sub: req.user.id
         };
         res.status(200).json(curSession);
       }
@@ -116,16 +117,21 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     path: '/sessions',
     async handler(
       req,
-      res: Cumulonimbus.Response<Cumulonimbus.Structures.SessionList>
+      res: Cumulonimbus.Response<
+        Cumulonimbus.Structures.List<Cumulonimbus.Structures.Session>
+      >
     ) {
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        let u = req.user.toJSON();
+        let u = req.user.toJSON(),
+          sessions = u.sessions.map((s: Cumulonimbus.Structures.Session) => {
+            return { ...s, sub: req.user.id };
+          });
         res.status(200).json({
           count: u.sessions.length,
-          sessions: u.sessions
-        } as Cumulonimbus.Structures.SessionList);
+          items: sessions
+        } as Cumulonimbus.Structures.List<Cumulonimbus.Structures.Session>);
       }
     }
   },
@@ -152,7 +158,11 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
               s => s.iat !== Number(req.params.id)
             );
             await req.user.update({ sessions: uSessions });
-            res.status(200).json();
+            res
+              .status(200)
+              .json(
+                new ResponseConstructors.Success.Generic('Session Deleted')
+              );
           } catch (error) {
             throw error;
           }
@@ -165,7 +175,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     path: '/sessions',
     preHandlers: Multer().none(),
     async handler(
-      req: Cumulonimbus.Request<string[]>,
+      req: Cumulonimbus.Request<{ sessions: string[] }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
     ) {
       try {
@@ -174,17 +184,23 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .status(401)
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
-          if (!req.body || req.body.length < 1 || req.body.length > 100)
+          let invalidFields = getInvalidFields(req.body, {
+            sessions: new FieldTypeOptions('array', false, 'string')
+          });
+
+          if (invalidFields.length > 0)
             res
               .status(400)
-              .json(new ResponseConstructors.Errors.MissingFields(['body']));
+              .json(
+                new ResponseConstructors.Errors.MissingFields(invalidFields)
+              );
           else {
             try {
               let count = req.user.sessions.filter(s =>
-                  req.body.includes(s.iat.toString())
+                  req.body.sessions.includes(s.iat.toString())
                 ).length,
                 sessions = req.user.sessions.filter(
-                  s => !req.body.includes(s.iat.toString())
+                  s => !req.body.sessions.includes(s.iat.toString())
                 );
               await req.user.update({ sessions });
               res.status(200).json({
@@ -205,7 +221,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     method: 'delete',
     path: '/sessions/all',
     async handler(
-      req: Cumulonimbus.Request<null, null, { allButSelf: boolean }>,
+      req: Cumulonimbus.Request<null, null, { allButSelf: 'true' | 'false' }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
     ) {
       try {
@@ -215,16 +231,18 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
-            let count = req.query.allButSelf
-                ? req.user.sessions.filter(
-                    s => s.iat !== req.session.payload.iat
-                  ).length
-                : req.user.sessions.length,
-              sessions = req.query.allButSelf
-                ? req.user.sessions.filter(
-                    s => s.iat === req.session.payload.iat
-                  )
-                : [];
+            let count =
+                req.query.allButSelf === 'true'
+                  ? req.user.sessions.filter(
+                      s => s.iat !== req.session.payload.iat
+                    ).length
+                  : req.user.sessions.length,
+              sessions =
+                req.query.allButSelf === 'true'
+                  ? req.user.sessions.filter(
+                      s => s.iat === req.session.payload.iat
+                    )
+                  : [];
             await req.user.update({ sessions });
             res.status(200).json({
               count,

@@ -54,16 +54,17 @@ declare namespace Cumulonimbus {
     export interface Session {
       iat: number;
       exp: number;
+      sub: string;
       name: string;
     }
 
-    export interface SessionList {
+    export interface List<T> {
       count: number;
-      sessions: Session[];
+      items: T[];
     }
 
     export interface Success {
-      success: boolean;
+      code: string;
       message?: string;
     }
 
@@ -77,11 +78,6 @@ declare namespace Cumulonimbus {
       allowsSubdomains: boolean;
       createdAt: string;
       updatedAt: string;
-    }
-
-    export interface DomainList {
-      count: number;
-      domains: Domain[];
     }
 
     export interface Error {
@@ -100,11 +96,6 @@ declare namespace Cumulonimbus {
       updatedAt: string;
       userId: string;
       size: number;
-    }
-
-    export interface FileList {
-      count: number;
-      files: File[];
     }
   }
 

@@ -8,7 +8,9 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
     path: '/domains',
     async handler(
       req: Cumulonimbus.Request<null, null, { limit: number; offset: number }>,
-      res: Cumulonimbus.Response<Cumulonimbus.Structures.DomainList>
+      res: Cumulonimbus.Response<
+        Cumulonimbus.Structures.List<Cumulonimbus.Structures.Domain>
+      >
     ) {
       try {
         if (!req.user)
@@ -20,7 +22,7 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
             let domains = await Domain.findAndCountAll({}),
               rows = domains.rows.map(d => d.toJSON());
 
-            res.status(200).json({ count: domains.count, domains: rows });
+            res.status(200).json({ count: domains.count, items: rows });
           } catch (error) {
             throw error;
           }
