@@ -167,9 +167,7 @@ Endpoints.forEach(endpointModule => {
 });
 
 app.all('/api/*', (req, res) => {
-  res
-    .status(404)
-    .json(new ResponseConstructors.Errors.Generic('Endpoint Not Found'));
+  res.status(404).json(new ResponseConstructors.Errors.InvalidEndpoint());
 });
 
 app.listen(port, () => {

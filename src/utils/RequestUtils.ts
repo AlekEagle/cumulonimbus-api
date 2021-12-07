@@ -92,6 +92,12 @@ export namespace ResponseConstructors {
       constructor() {}
     }
 
+    export class InvalidEndpoint implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'ENDPOINT_NOT_FOUND_ERROR';
+      public readonly message: string = 'Endpoint Not Found';
+      constructor() {}
+    }
+
     export class Generic implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'GENERIC_ERROR';
       public message: string;
