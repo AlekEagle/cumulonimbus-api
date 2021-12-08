@@ -49,38 +49,42 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(404)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
-              try {
-                let match = await Bcrypt.compare(req.body.pass, u.password);
-                if (!match)
-                  res
-                    .status(401)
-                    .json(new ResponseConstructors.Errors.InvalidPassword());
-                else {
-                  try {
-                    let token = await generateToken(
-                      u.id,
-                      browserName(req.ua),
-                      !req.body.rememberMe
-                    );
-                    let nS = [
-                      ...u.sessions,
-                      {
-                        iat: token.data.payload.iat,
-                        exp: token.data.payload.exp,
-                        name: token.data.payload.name
-                      }
-                    ];
-                    await u.update({ sessions: nS });
-                    res.status(201).json({
-                      token: token.token,
-                      exp: token.data.payload.exp
-                    } as Cumulonimbus.Structures.SuccessfulAuth);
-                  } catch (error) {
-                    throw error;
+              if (u.bannedAt !== null)
+                res.status(403).json(new ResponseConstructors.Errors.Banned());
+              else {
+                try {
+                  let match = await Bcrypt.compare(req.body.pass, u.password);
+                  if (!match)
+                    res
+                      .status(401)
+                      .json(new ResponseConstructors.Errors.InvalidPassword());
+                  else {
+                    try {
+                      let token = await generateToken(
+                        u.id,
+                        browserName(req.ua),
+                        !req.body.rememberMe
+                      );
+                      let nS = [
+                        ...u.sessions,
+                        {
+                          iat: token.data.payload.iat,
+                          exp: token.data.payload.exp,
+                          name: token.data.payload.name
+                        }
+                      ];
+                      await u.update({ sessions: nS });
+                      res.status(201).json({
+                        token: token.token,
+                        exp: token.data.payload.exp
+                      } as Cumulonimbus.Structures.SuccessfulAuth);
+                    } catch (error) {
+                      throw error;
+                    }
                   }
+                } catch (error) {
+                  throw error;
                 }
-              } catch (error) {
-                throw error;
               }
             }
           } catch (error) {

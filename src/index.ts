@@ -52,37 +52,43 @@ app.use(
     next: NextFunction
   ) => {
     if (req.headers.authorization) {
-      let token = await validateToken(req.headers.authorization);
-      if (token instanceof Error) {
-        req.user = null;
-        req.session = null;
-      } else {
-        let user = await User.findOne({
-          where: {
-            id: token.payload.sub
-          }
-        });
-        if (!user) {
+      try {
+        let token = await validateToken(req.headers.authorization);
+        if (token instanceof Error) {
           req.user = null;
           req.session = null;
         } else {
-          if (user.bannedAt)
-            res.status(403).json(new ResponseConstructors.Errors.Banned());
-          else {
-            if (
-              user.sessions.some(
-                s => s.iat === (token as TokenStructure).payload.iat
-              )
-            ) {
-              await pruneExpiredSessions(user);
-              req.user = user;
-              req.session = token;
-            } else {
-              req.user = null;
-              req.session = null;
+          let user = await User.findOne({
+            where: {
+              id: token.payload.sub
+            }
+          });
+          if (!user) {
+            req.user = null;
+            req.session = null;
+          } else {
+            if (user.bannedAt)
+              res.status(403).json(new ResponseConstructors.Errors.Banned());
+            else {
+              if (
+                user.sessions.some(
+                  s => s.iat === (token as TokenStructure).payload.iat
+                )
+              ) {
+                await pruneExpiredSessions(user);
+                req.user = user;
+                req.session = token;
+              } else {
+                req.user = null;
+                req.session = null;
+              }
             }
           }
         }
+      } catch (error) {
+        console.error(error);
+        res.status(500).json(new ResponseConstructors.Errors.Internal());
+        return;
       }
     }
     req.ua = new UAParser(req.headers['user-agent']).getResult();

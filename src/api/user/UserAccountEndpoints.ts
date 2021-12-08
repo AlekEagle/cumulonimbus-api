@@ -151,23 +151,24 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               res
                 .status(403)
                 .json(new ResponseConstructors.Errors.InvalidUser());
-            let files = await Upload.findAll({
+            let uls = await Upload.findAll({
               where: {
                 userID: req.user.id
               }
             });
-            files.forEach(async u => {
+            for (let ul of uls) {
               try {
-                await unlink(`./uploads/${u.filename}`);
-                await u.destroy();
+                await unlink(`./uploads/${ul.filename}`);
+                await ul.destroy();
               } catch (error) {
                 throw error;
               }
-            });
-            let u = req.user.toJSON();
-            delete u.password;
-            delete u.sessions;
-            res.status(200).json(u as Cumulonimbus.Structures.User);
+            }
+            let strippedUser = req.user.toJSON();
+            delete strippedUser.password;
+            delete strippedUser.sessions;
+            req.user.destroy();
+            res.status(200).json(strippedUser as Cumulonimbus.Structures.User);
           }
         }
       } catch (error) {

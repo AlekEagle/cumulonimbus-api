@@ -153,14 +153,14 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
 
             if (uls.count < 1) res.status(200).json({ count: 0, type: 'file' });
             else {
-              uls.rows.forEach(async ul => {
+              for (let ul of uls.rows) {
                 try {
                   await unlink(`./uploads/${ul.filename}`);
                   await ul.destroy();
                 } catch (error) {
                   throw error;
                 }
-              });
+              }
               res.status(200).json({ count: uls.count, type: 'file' });
             }
           }
@@ -184,18 +184,22 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
-            let files = await Upload.findAndCountAll({
+            let uls = await Upload.findAndCountAll({
               where: {
                 userId: req.user.id
               }
             });
 
-            files.rows.forEach(async f => {
-              await unlink(`./uploads/${f.filename}`);
-              await f.destroy();
-            });
+            for (let ul of uls.rows) {
+              try {
+                await unlink(`./uploads/${ul.filename}`);
+                await ul.destroy();
+              } catch (error) {
+                throw error;
+              }
+            }
 
-            res.status(200).json({ count: files.count, type: 'file' });
+            res.status(200).json({ count: uls.count, type: 'file' });
           } catch (error) {
             throw error;
           }
