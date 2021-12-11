@@ -1,7 +1,7 @@
 import { sequelize, init as initDB } from '.';
 import { Model, DataTypes } from 'sequelize';
 
-export default class Upload extends Model {
+export default class File extends Model {
   filename: string;
   userID: string;
   size: number;
@@ -9,7 +9,7 @@ export default class Upload extends Model {
 
 (async function () {
   await initDB();
-  Upload.init(
+  File.init(
     {
       filename: {
         type: DataTypes.STRING,
@@ -24,7 +24,7 @@ export default class Upload extends Model {
     }
   );
   try {
-    await Upload.sync();
+    await File.sync();
     console.log('Upload table synced with DB.');
   } catch (error) {
     console.error('Unable to sync Upload table. Error: ', error);

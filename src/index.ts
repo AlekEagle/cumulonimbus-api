@@ -10,6 +10,7 @@ import { TokenStructure, validateToken } from './utils/Token';
 import User from './utils/DB/User';
 import Endpoints from './api';
 import { ResponseConstructors } from './utils/RequestUtils';
+import QueryStringParser from './utils/QueryStringParser';
 
 configureEnv();
 
@@ -46,6 +47,10 @@ setInterval(async () => {
 
 app.use(
   compression({ filter: shouldCompress }),
+  QueryStringParser({
+    keyWithNoValueIsBool: true,
+    ignoreKeyWithNoValue: false
+  }),
   async (
     req: Cumulonimbus.Request,
     res: Express.Response,

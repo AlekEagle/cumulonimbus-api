@@ -14,7 +14,7 @@ import {
 const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'post',
-    path: '/session',
+    path: '/user/session',
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{
@@ -98,7 +98,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'get',
-    path: '/session',
+    path: '/user/session',
     async handler(
       req,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
@@ -118,9 +118,9 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'get',
-    path: '/sessions',
+    path: '/user/sessions',
     async handler(
-      req,
+      req: Cumulonimbus.Request<null, null, { limit: number; offset: number }>,
       res: Cumulonimbus.Response<
         Cumulonimbus.Structures.List<Cumulonimbus.Structures.Session>
       >
@@ -128,10 +128,13 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
+        if (req.query.limit > 50) req.query.limit = 50;
         let u = req.user.toJSON(),
-          sessions = u.sessions.map((s: Cumulonimbus.Structures.Session) => {
-            return { ...s, sub: req.user.id };
-          });
+          sessions = u.sessions
+            .map((s: Cumulonimbus.Structures.Session) => {
+              return { ...s, sub: req.user.id };
+            })
+            .slice(req.query.offset, req.query.limit + req.query.offset);
         res.status(200).json({
           count: u.sessions.length,
           items: sessions
@@ -141,7 +144,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/session/:id([0-9]+?)',
+    path: '/user/session/:id([0-9]+)',
     async handler(
       req: Cumulonimbus.Request<{}, { id: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Success>
@@ -176,7 +179,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/sessions',
+    path: '/user/sessions',
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{ sessions: string[] }>,
@@ -225,7 +228,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     method: 'delete',
     path: '/sessions/all',
     async handler(
-      req: Cumulonimbus.Request<null, null, { allButSelf: 'true' | 'false' }>,
+      req: Cumulonimbus.Request<null, null, { allButSelf: boolean }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
     ) {
       try {
@@ -235,18 +238,16 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
-            let count =
-                req.query.allButSelf === 'true'
-                  ? req.user.sessions.filter(
-                      s => s.iat !== req.session.payload.iat
-                    ).length
-                  : req.user.sessions.length,
-              sessions =
-                req.query.allButSelf === 'true'
-                  ? req.user.sessions.filter(
-                      s => s.iat === req.session.payload.iat
-                    )
-                  : [];
+            let count = req.query.allButSelf
+                ? req.user.sessions.filter(
+                    s => s.iat !== req.session.payload.iat
+                  ).length
+                : req.user.sessions.length,
+              sessions = req.query.allButSelf
+                ? req.user.sessions.filter(
+                    s => s.iat === req.session.payload.iat
+                  )
+                : [];
             await req.user.update({ sessions });
             res.status(200).json({
               count,

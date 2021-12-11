@@ -73,6 +73,17 @@ declare namespace Cumulonimbus {
       type: 'user' | 'session' | 'file' | 'domain' | 'instruction';
     }
 
+    export interface Instruction {
+      name: string;
+      steps: string[];
+      filename: string;
+      fileContent: string;
+      description: string;
+      displayName: string;
+      createdAt: string;
+      updatedAt: string;
+    }
+
     export interface Domain {
       domain: string;
       allowsSubdomains: boolean;

@@ -205,9 +205,26 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
                 }
               }
             });
+
+            for (let domain of domains) {
+              let users = await User.findAll({
+                where: {
+                  domain: domain.domain
+                }
+              });
+
+              for (let user of users) {
+                await user.update({ domain: 'alekeagle.me', subdomain: null });
+              }
+              await domain.destroy();
+            }
+
+            res.status(200).json({ count, type: 'domain' });
           }
         }
       }
     }
   }
 ];
+
+export default AdminDomainEndpoints;

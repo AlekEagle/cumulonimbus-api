@@ -4,7 +4,7 @@ import Bcrypt from 'bcrypt';
 import User from '../../utils/DB/User';
 import { ResponseConstructors } from '../../utils/RequestUtils';
 import { randomInt } from 'node:crypto';
-import Upload from '../../utils/DB/Upload';
+import File from '../../utils/DB/File';
 import { unlink } from 'node:fs/promises';
 import { Op } from 'sequelize/dist';
 
@@ -17,8 +17,8 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
         null,
         null,
         {
-          limit?: string;
-          offset?: string;
+          limit: number;
+          offset: number;
         }
       >,
       res: Cumulonimbus.Response<
@@ -32,13 +32,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            let offset = req.query.offset ? Number(req.query.offset) : 0;
-            let limit = req.query.limit ? Number(req.query.limit) : 50;
-            limit = limit > 50 ? 50 : limit;
+            if (req.query.limit > 50) req.query.limit = 50;
 
             let { count, rows } = await User.findAndCountAll({
-                limit,
-                offset,
+                limit: req.query.limit,
+                offset: req.query.offset,
                 order: [['createdAt', 'DESC']]
               }),
               strippedUsers = rows.map(u => {
@@ -230,7 +228,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(404)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
-              let uls = await Upload.findAll({
+              let uls = await File.findAll({
                 where: {
                   userId: u.id
                 }
@@ -288,7 +286,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                 }
               });
               for (let user of users) {
-                let userFiles = await Upload.findAll({
+                let userFiles = await File.findAll({
                   where: {
                     userId: user.id
                   }

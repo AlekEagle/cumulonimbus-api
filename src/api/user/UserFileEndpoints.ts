@@ -6,39 +6,39 @@ import {
 import { Cumulonimbus } from '../../types';
 import { Op } from 'sequelize/dist';
 import { unlink } from 'fs/promises';
-import Upload from '../../utils/DB/Upload';
+import File from '../../utils/DB/File';
 import Multer from 'multer';
 
 const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'get',
-    path: '/files',
+    path: '/user/files',
     async handler(
-      req: Cumulonimbus.Request<null, null, { limit: string; offset: string }>,
+      req: Cumulonimbus.Request<null, null, { limit: number; offset: number }>,
       res: Cumulonimbus.Response<
         Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
       >
     ) {
       try {
-        let query = { limit: '50', offset: '0', ...req.query };
+        if (req.query.limit > 50) req.query.limit = 50;
 
         if (!req.user)
           res
             .status(401)
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
-          if (Number(query.limit) > 100) query.limit = '100';
-
-          let uls = await Upload.findAndCountAll({
+          let uls = await File.findAndCountAll({
+            limit: req.query.limit,
+            offset: req.query.offset,
             order: [['createdAt', 'DESC']],
             where: {
               userId: req.user.id
             }
           });
 
-          let files = uls.rows
-            .slice(Number(query.offset), Number(query.limit))
-            .map(u => u.toJSON()) as Cumulonimbus.Structures.File[];
+          let files = uls.rows.map(u =>
+            u.toJSON()
+          ) as Cumulonimbus.Structures.File[];
 
           res.status(200).json({
             count: uls.count,
@@ -52,7 +52,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'get',
-    path: '/file/:id',
+    path: '/user/file/:id',
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
@@ -63,7 +63,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             .status(401)
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
-          let ul = await Upload.findOne({
+          let ul = await File.findOne({
             where: {
               filename: req.params.id,
               userId: req.user.id
@@ -71,7 +71,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           });
 
           if (!ul)
-            res.status(404).json(new ResponseConstructors.Errors.FileMissing());
+            res.status(404).json(new ResponseConstructors.Errors.InvalidFile());
           else
             res.status(200).json(ul.toJSON() as Cumulonimbus.Structures.File);
         }
@@ -82,7 +82,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/file/:id',
+    path: '/user/file/:id',
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Success>
@@ -93,7 +93,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             .status(401)
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
-          let ul = await Upload.findOne({
+          let ul = await File.findOne({
             where: {
               filename: req.params.id,
               userId: req.user.id
@@ -101,7 +101,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           });
 
           if (!ul)
-            res.status(404).json(new ResponseConstructors.Errors.FileMissing());
+            res.status(404).json(new ResponseConstructors.Errors.InvalidFile());
           else {
             try {
               await unlink(`./uploads/${ul.filename}`);
@@ -121,7 +121,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/files',
+    path: '/user/files',
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{ files: string[] }>,
@@ -133,17 +133,16 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             .status(401)
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
-          let invalidFields = getInvalidFields(req.body, {
-            files: new FieldTypeOptions('array', false, 'string')
-          });
-          if (invalidFields.length > 0)
+          if (
+            !req.body.files ||
+            req.body.files.length < 0 ||
+            req.body.files.length > 100
+          )
             res
               .status(400)
-              .json(
-                new ResponseConstructors.Errors.MissingFields(invalidFields)
-              );
+              .json(new ResponseConstructors.Errors.MissingFields(['files']));
           else {
-            let uls = await Upload.findAndCountAll({
+            let uls = await File.findAndCountAll({
               where: {
                 filename: {
                   [Op.in]: req.body.files
@@ -172,7 +171,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/files/all',
+    path: '/user/files/all',
     async handler(
       req,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -184,7 +183,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
-            let uls = await Upload.findAndCountAll({
+            let uls = await File.findAndCountAll({
               where: {
                 userId: req.user.id
               }

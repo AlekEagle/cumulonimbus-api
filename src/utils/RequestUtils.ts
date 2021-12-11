@@ -15,12 +15,6 @@ export namespace ResponseConstructors {
       constructor() {}
     }
 
-    export class UserExists implements Cumulonimbus.Structures.Error {
-      public readonly code: string = 'USER_EXISTS_ERROR';
-      public readonly message: string = 'User Already Exists';
-      constructor() {}
-    }
-
     export class InvalidPassword implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'INVALID_PASSWORD_ERROR';
       public readonly message: string = 'Invalid Password';
@@ -50,6 +44,18 @@ export namespace ResponseConstructors {
       }
     }
 
+    export class InvalidFile implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_FILE';
+      public readonly message: string = 'Invalid File';
+      constructor() {}
+    }
+
+    export class InvalidInstruction implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INVALID_INSTRUCTION';
+      public readonly message: string = 'Invalid Instruction';
+      constructor() {}
+    }
+
     export class SubdomainNotSupported
       implements Cumulonimbus.Structures.Error
     {
@@ -65,6 +71,12 @@ export namespace ResponseConstructors {
       constructor() {}
     }
 
+    export class UserExists implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'USER_EXISTS_ERROR';
+      public readonly message: string = 'User Already Exists';
+      constructor() {}
+    }
+
     export class MissingFields implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'MISSING_FIELDS_ERROR';
       public readonly message: string = 'Missing Fields';
@@ -72,12 +84,6 @@ export namespace ResponseConstructors {
       constructor(fields: string[]) {
         this.fields = fields;
       }
-    }
-
-    export class FileMissing implements Cumulonimbus.Structures.Error {
-      public readonly code: string = 'FILE_NOT_FOUND_ERROR';
-      public readonly message: string = 'File Not Found';
-      constructor() {}
     }
 
     export class SessionMissing implements Cumulonimbus.Structures.Error {

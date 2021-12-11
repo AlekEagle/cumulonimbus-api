@@ -13,7 +13,7 @@ import {
 import { generateToken } from '../../utils/Token';
 import { randomInt } from 'crypto';
 import { unlink } from 'fs/promises';
-import Upload from '../../utils/DB/Upload';
+import File from '../../utils/DB/File';
 import Domain from '../../utils/DB/Domain';
 
 const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
@@ -151,7 +151,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               res
                 .status(403)
                 .json(new ResponseConstructors.Errors.InvalidUser());
-            let uls = await Upload.findAll({
+            let uls = await File.findAll({
               where: {
                 userID: req.user.id
               }

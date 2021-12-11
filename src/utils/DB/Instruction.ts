@@ -8,6 +8,8 @@ export default class Instruction extends Model {
   fileContent: string;
   description: string;
   displayName: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 (async function () {
