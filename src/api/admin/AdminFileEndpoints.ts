@@ -136,7 +136,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
     method: 'delete',
     path: '/file/:id',
     async handler(
-      req: Cumulonimbus.Request<null, { id: string }, null>,
+      req: Cumulonimbus.Request<null, { uid: string; id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
     ) {
       if (!req.user)
@@ -163,61 +163,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
             else {
               await unlink(`/var/www-uploads/${file.filename}`);
               await file.destroy();
-            }
 
-            res.status(200).json(file.toJSON());
+              res.status(200).json(file.toJSON());
+            }
           } catch (error) {
             throw error;
-          }
-        }
-      }
-    }
-  },
-  ,
-  {
-    method: 'delete',
-    path: '/files',
-    async handler(
-      req: Cumulonimbus.Request<{ files: string[] }, null, null>,
-      res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
-    ) {
-      if (!req.user)
-        res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
-      else {
-        if (
-          req.user.staff === undefined ||
-          req.user.staff === null ||
-          req.user.staff === ''
-        )
-          res.status(403).json(new ResponseConstructors.Errors.Permissions());
-        else {
-          if (
-            !req.body.files ||
-            req.body.files.length < 1 ||
-            req.body.files.length > 100
-          )
-            res
-              .status(400)
-              .json(new ResponseConstructors.Errors.MissingFields(['files']));
-          else {
-            try {
-              let { count, rows: files } = await File.findAndCountAll({
-                where: {
-                  filename: {
-                    [Op.in]: req.body.files
-                  }
-                }
-              });
-
-              for (let file of files) {
-                await unlink(`/var/www-uploads/${file.filename}`);
-                await file.destroy();
-              }
-
-              res.status(200).json({ count, type: 'file' });
-            } catch (error) {
-              throw error;
-            }
           }
         }
       }

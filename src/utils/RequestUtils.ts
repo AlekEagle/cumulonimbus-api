@@ -104,6 +104,13 @@ export namespace ResponseConstructors {
       constructor() {}
     }
 
+    export class RateLimited implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'RATELIMITED_ERROR';
+      public readonly message: string =
+        'You Have Been Ratelimited. Please Try Again Later.';
+      constructor() {}
+    }
+
     export class Internal implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'INTERNAL_SERVER_ERROR';
       public readonly message: string = 'Internal Server Error';

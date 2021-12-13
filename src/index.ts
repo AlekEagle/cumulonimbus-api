@@ -110,6 +110,13 @@ app.use(
         : (Array.isArray(req.headers['x-forwarded-for'])
             ? req.headers['x-forwarded-for'][0]
             : req.headers['x-forwarded-for']) || req.ip;
+    },
+    handler(
+      req: Express.Request,
+      res: Express.Response,
+      next: Express.NextFunction
+    ) {
+      res.status(429).send(new ResponseConstructors.Errors.RateLimited());
     }
   })
 );

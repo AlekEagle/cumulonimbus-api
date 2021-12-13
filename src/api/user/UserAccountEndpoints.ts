@@ -3,6 +3,9 @@ import { Op } from 'sequelize/dist';
 import Multer from 'multer';
 import Bcrypt from 'bcrypt';
 import User from '../../utils/DB/User';
+import ExpressRateLimits from 'express-rate-limit';
+import ms from 'ms';
+import Express from 'express';
 import {
   browserName,
   getInvalidFields,
@@ -179,7 +182,27 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'post',
     path: '/user',
-    preHandlers: Multer().none(),
+    preHandlers: [
+      Multer().none(),
+      ExpressRateLimits({
+        windowMs: ms('30mins'),
+        max: 1,
+        keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
+          return req.user
+            ? req.user.id
+            : (Array.isArray(req.headers['x-forwarded-for'])
+                ? req.headers['x-forwarded-for'][0]
+                : req.headers['x-forwarded-for']) || req.ip;
+        },
+        handler(
+          req: Express.Request,
+          res: Express.Response,
+          next: Express.NextFunction
+        ) {
+          res.status(429).send(new ResponseConstructors.Errors.RateLimited());
+        }
+      })
+    ],
     async handler(
       req: Cumulonimbus.Request<{
         username: string;

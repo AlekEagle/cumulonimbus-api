@@ -2,11 +2,17 @@ import { Cumulonimbus } from '../../types';
 import Multer from 'multer';
 import Bcrypt from 'bcrypt';
 import User from '../../utils/DB/User';
-import { ResponseConstructors } from '../../utils/RequestUtils';
+import {
+  FieldTypeOptions,
+  getInvalidFields,
+  ResponseConstructors,
+  validateSubdomain
+} from '../../utils/RequestUtils';
 import { randomInt } from 'node:crypto';
 import File from '../../utils/DB/File';
 import { unlink } from 'node:fs/promises';
 import { Op } from 'sequelize/dist';
+import Domain from '../../utils/DB/Domain';
 
 const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -172,6 +178,105 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             throw error;
           }
         }
+      }
+    }
+  },
+  {
+    method: 'patch',
+    path: '/user/:id([0-9]+)/domain',
+    preHandlers: Multer().none(),
+    async handler(
+      req: Cumulonimbus.Request<
+        { domain: string; subdomain?: string },
+        { id: string }
+      >,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.User>
+    ) {
+      try {
+        if (!req.user)
+          res
+            .status(401)
+            .json(new ResponseConstructors.Errors.InvalidSession());
+        else {
+          let invalidFields = getInvalidFields(req.body, {
+            domain: 'string',
+            subdomain: new FieldTypeOptions('string', true)
+          });
+          if (invalidFields.length > 0)
+            res
+              .status(400)
+              .json(
+                new ResponseConstructors.Errors.MissingFields(invalidFields)
+              );
+          else {
+            try {
+              let domain = await Domain.findOne({
+                  where: {
+                    domain: req.body.domain
+                  }
+                }),
+                user = await User.findOne({
+                  where: {
+                    id: req.params.id
+                  }
+                });
+              if (!domain)
+                res
+                  .status(404)
+                  .json(new ResponseConstructors.Errors.InvalidDomain());
+              else if (!user) {
+                res
+                  .status(404)
+                  .json(new ResponseConstructors.Errors.InvalidUser());
+              } else {
+                if (!req.body.subdomain) {
+                  await user.update({
+                    domain: domain.domain,
+                    subdomain: null
+                  });
+
+                  let u = user.toJSON();
+                  delete u.password;
+                  delete u.sessions;
+                  res.status(200).json(u as Cumulonimbus.Structures.User);
+                } else {
+                  if (!domain.allowsSubdomains)
+                    res
+                      .status(400)
+                      .json(
+                        new ResponseConstructors.Errors.SubdomainNotSupported()
+                      );
+                  else {
+                    let safeSubdomain = validateSubdomain(req.body.subdomain);
+                    if (safeSubdomain.length > 63)
+                      res
+                        .status(400)
+                        .json(
+                          new ResponseConstructors.Errors.InvalidSubdomain(
+                            safeSubdomain
+                          )
+                        );
+                    else {
+                      await user.update({
+                        domain: domain.domain,
+                        subdomain: safeSubdomain
+                      });
+
+                      let u = user.toJSON();
+                      delete u.password;
+                      delete u.sessions;
+                      res.status(200).json(u as Cumulonimbus.Structures.User);
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              throw error;
+            }
+          }
+        }
+      } catch (error) {
+        throw error;
       }
     }
   },
