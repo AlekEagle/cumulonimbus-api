@@ -32,7 +32,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             offset: req.query.offset,
             order: [['createdAt', 'DESC']],
             where: {
-              userId: req.user.id
+              userID: req.user.id
             }
           });
 
@@ -66,7 +66,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           let ul = await File.findOne({
             where: {
               filename: req.params.id,
-              userId: req.user.id
+              userID: req.user.id
             }
           });
 
@@ -85,7 +85,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
     path: '/user/file/:id',
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
-      res: Cumulonimbus.Response<Cumulonimbus.Structures.Success>
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
     ) {
       try {
         if (!req.user)
@@ -96,7 +96,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           let ul = await File.findOne({
             where: {
               filename: req.params.id,
-              userId: req.user.id
+              userID: req.user.id
             }
           });
 
@@ -104,11 +104,9 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             res.status(404).json(new ResponseConstructors.Errors.InvalidFile());
           else {
             try {
-              await unlink(`./uploads/${ul.filename}`);
+              await unlink(`/var/www-uploads/${ul.filename}`);
               await ul.destroy();
-              res
-                .status(200)
-                .json(new ResponseConstructors.Success.Generic('File Deleted'));
+              res.status(200).json(ul.toJSON());
             } catch (error) {
               throw error;
             }
@@ -154,7 +152,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             else {
               for (let ul of uls.rows) {
                 try {
-                  await unlink(`./uploads/${ul.filename}`);
+                  await unlink(`/var/www-uploads/${ul.filename}`);
                   await ul.destroy();
                 } catch (error) {
                   throw error;
@@ -185,13 +183,13 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let uls = await File.findAndCountAll({
               where: {
-                userId: req.user.id
+                userID: req.user.id
               }
             });
 
             for (let ul of uls.rows) {
               try {
-                await unlink(`./uploads/${ul.filename}`);
+                await unlink(`/var/www-uploads/${ul.filename}`);
                 await ul.destroy();
               } catch (error) {
                 throw error;

@@ -158,7 +158,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             });
             for (let ul of uls) {
               try {
-                await unlink(`./uploads/${ul.filename}`);
+                await unlink(`/var/www-uploads/${ul.filename}`);
                 await ul.destroy();
               } catch (error) {
                 throw error;

@@ -24,7 +24,11 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           let invalidFields = getInvalidFields(req.body, {
@@ -50,12 +54,7 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
                   allowsSubdomains: req.body.allowsSubdomains
                 });
 
-                res.status(201).json({
-                  domain: domain.domain,
-                  allowsSubdomains: domain.allowsSubdomains,
-                  createdAt: domain.createdAt.toISOString(),
-                  updatedAt: domain.updatedAt.toISOString()
-                });
+                res.status(201).json(domain.toJSON());
               }
             } catch (error) {
               throw error;
@@ -80,7 +79,11 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           let invalidFields = getInvalidFields(req.body, {
@@ -109,12 +112,7 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
                   allowsSubdomains: req.body.allowsSubdomains
                 });
 
-                res.status(200).json({
-                  domain: updatedDomain.domain,
-                  allowsSubdomains: updatedDomain.allowsSubdomains,
-                  createdAt: updatedDomain.createdAt.toISOString(),
-                  updatedAt: updatedDomain.updatedAt.toISOString()
-                });
+                res.status(200).json(updatedDomain.toJSON());
               }
             } catch (error) {
               throw error;
@@ -134,7 +132,11 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -161,12 +163,7 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
 
               await domain.destroy();
 
-              res.status(200).json({
-                domain: domain.domain,
-                allowsSubdomains: domain.allowsSubdomains,
-                createdAt: domain.createdAt.toISOString(),
-                updatedAt: domain.updatedAt.toISOString()
-              });
+              res.status(200).json(domain.toJSON());
             }
           } catch (error) {
             throw error;
@@ -186,7 +183,11 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           if (

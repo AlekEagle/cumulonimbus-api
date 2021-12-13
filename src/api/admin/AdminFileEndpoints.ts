@@ -18,7 +18,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -53,7 +57,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -72,7 +80,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                 limit: req.query.limit,
                 offset: req.query.offset,
                 where: {
-                  userId: u.id
+                  userID: u.id
                 }
               });
               let items = files.map(file => file.toJSON());
@@ -96,7 +104,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -130,7 +142,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -145,7 +161,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(404)
                 .json(new ResponseConstructors.Errors.InvalidFile());
             else {
-              await unlink(`./uploads/${file.filename}`);
+              await unlink(`/var/www-uploads/${file.filename}`);
               await file.destroy();
             }
 
@@ -168,7 +184,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           if (
@@ -190,7 +210,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
               });
 
               for (let file of files) {
-                await unlink(`./uploads/${file.filename}`);
+                await unlink(`/var/www-uploads/${file.filename}`);
                 await file.destroy();
               }
 
@@ -215,7 +235,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -231,7 +255,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
             else {
               let { count, rows: files } = await File.findAndCountAll({
                 where: {
-                  userId: u.id,
+                  userID: u.id,
                   filename: {
                     [Op.in]: req.body.files
                   }

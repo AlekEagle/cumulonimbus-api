@@ -28,7 +28,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -64,7 +68,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -106,7 +114,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -173,7 +185,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -213,7 +229,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -230,13 +250,13 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             else {
               let uls = await File.findAll({
                 where: {
-                  userId: u.id
+                  userID: u.id
                 }
               });
 
               for (let ul of uls) {
                 try {
-                  await unlink(`./uploads/${ul.filename}`);
+                  await unlink(`/var/www-uploads/${ul.filename}`);
                   await ul.destroy();
                 } catch (error) {
                   throw error;
@@ -265,7 +285,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           if (
@@ -288,12 +312,12 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               for (let user of users) {
                 let userFiles = await File.findAll({
                   where: {
-                    userId: user.id
+                    userID: user.id
                   }
                 });
 
                 for (let file of userFiles) {
-                  await unlink(`./uploads/${file.filename}`);
+                  await unlink(`/var/www-uploads/${file.filename}`);
                   await file.destroy();
                 }
 

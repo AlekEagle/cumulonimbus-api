@@ -45,14 +45,20 @@ export namespace ResponseConstructors {
     }
 
     export class InvalidFile implements Cumulonimbus.Structures.Error {
-      public readonly code: string = 'INVALID_FILE';
+      public readonly code: string = 'INVALID_FILE_ERROR';
       public readonly message: string = 'Invalid File';
       constructor() {}
     }
 
     export class InvalidInstruction implements Cumulonimbus.Structures.Error {
-      public readonly code: string = 'INVALID_INSTRUCTION';
+      public readonly code: string = 'INVALID_INSTRUCTION_ERROR';
       public readonly message: string = 'Invalid Instruction';
+      constructor() {}
+    }
+
+    export class InvalidEndpoint implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'ENDPOINT_NOT_FOUND_ERROR';
+      public readonly message: string = 'Endpoint Not Found';
       constructor() {}
     }
 
@@ -101,12 +107,6 @@ export namespace ResponseConstructors {
     export class Internal implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'INTERNAL_SERVER_ERROR';
       public readonly message: string = 'Internal Server Error';
-      constructor() {}
-    }
-
-    export class InvalidEndpoint implements Cumulonimbus.Structures.Error {
-      public readonly code: string = 'ENDPOINT_NOT_FOUND_ERROR';
-      public readonly message: string = 'Endpoint Not Found';
       constructor() {}
     }
 

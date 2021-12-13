@@ -21,7 +21,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -64,7 +68,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -113,7 +121,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -160,6 +172,7 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'delete',
     path: '/user/:id([0-9]+)/sessions',
+    preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<
         { sessions: string[] },
@@ -171,7 +184,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -215,7 +232,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.user.staff === undefined || req.user.staff === null)
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -244,3 +265,5 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     }
   }
 ];
+
+export default AdminSessionEndpoints;

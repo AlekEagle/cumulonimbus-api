@@ -105,8 +105,14 @@ declare namespace Cumulonimbus {
       filename: string;
       createdAt: string;
       updatedAt: string;
-      userId: string;
+      userID: string;
       size: number;
+    }
+
+    export interface SuccessfulUpload {
+      url: string;
+      thumbnail: string;
+      manage: string;
     }
   }
 
