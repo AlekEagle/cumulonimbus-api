@@ -175,12 +175,10 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/user/:id([0-9]+)/files',
+    path: '/files',
     async handler(
       req: Cumulonimbus.Request<{ files: string[] }, { id: string }, null>,
-      res: Cumulonimbus.Response<
-        Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
-      >
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
     ) {
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
@@ -193,28 +191,20 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            let u = await User.findOne({
+            let { count, rows: files } = await File.findAndCountAll({
               where: {
-                id: req.params.id
+                filename: {
+                  [Op.in]: req.body.files
+                }
               }
             });
-            if (!u)
-              res
-                .status(404)
-                .json(new ResponseConstructors.Errors.InvalidUser());
-            else {
-              let { count, rows: files } = await File.findAndCountAll({
-                where: {
-                  userID: u.id,
-                  filename: {
-                    [Op.in]: req.body.files
-                  }
-                }
-              });
-              let items = files.map(file => file.toJSON());
 
-              res.status(200).json({ count, items });
+            for (let file of files) {
+              await unlink(`/var/www-uploads/${file.filename}`);
+              await file.destroy();
             }
+
+            res.status(200).json({ count, type: 'file' });
           } catch (error) {
             throw error;
           }

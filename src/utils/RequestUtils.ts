@@ -83,6 +83,12 @@ export namespace ResponseConstructors {
       constructor() {}
     }
 
+    export class InstructionExists implements Cumulonimbus.Structures.Error {
+      public readonly code: string = 'INSTRUCTION_EXISTS_ERROR';
+      public readonly message: string = 'Instruction Already Exists';
+      constructor() {}
+    }
+
     export class MissingFields implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'MISSING_FIELDS_ERROR';
       public readonly message: string = 'Missing Fields';

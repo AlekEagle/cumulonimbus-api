@@ -53,23 +53,40 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
                 new ResponseConstructors.Errors.MissingFields(invalidFields)
               );
           else {
-            let {
-              steps,
-              filename,
-              fileContent,
-              description,
-              displayName,
-              name
-            } = req.body;
-            let instruction = await Instruction.create({
-              steps,
-              fileContent,
-              filename,
-              description,
-              displayName,
-              name
-            });
-            res.status(201).json(instruction.toJSON());
+            try {
+              let {
+                steps,
+                filename,
+                fileContent,
+                description,
+                displayName,
+                name
+              } = req.body;
+
+              let i = await Instruction.findOne({
+                where: {
+                  name
+                }
+              });
+
+              if (i)
+                res
+                  .status(409)
+                  .json(new ResponseConstructors.Errors.InstructionExists());
+              else {
+                let instruction = await Instruction.create({
+                  steps,
+                  fileContent,
+                  filename,
+                  description,
+                  displayName,
+                  name
+                });
+                res.status(201).json(instruction.toJSON());
+              }
+            } catch (error) {
+              throw error;
+            }
           }
         }
       }

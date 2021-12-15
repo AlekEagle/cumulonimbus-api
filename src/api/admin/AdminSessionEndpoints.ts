@@ -2,7 +2,6 @@ import { Cumulonimbus } from '../../types';
 import Multer from 'multer';
 import User from '../../utils/DB/User';
 import { ResponseConstructors } from '../../utils/RequestUtils';
-import { Op } from 'sequelize/dist';
 
 const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
