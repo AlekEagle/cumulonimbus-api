@@ -98,12 +98,6 @@ export namespace ResponseConstructors {
       }
     }
 
-    export class SessionMissing implements Cumulonimbus.Structures.Error {
-      public readonly code: string = 'SESSION_NOT_FOUND_ERROR';
-      public readonly message: string = 'Session Not Found';
-      constructor() {}
-    }
-
     export class Banned implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'BANNED_ERROR';
       public readonly message: string = 'Account Banned';

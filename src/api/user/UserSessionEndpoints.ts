@@ -158,7 +158,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         )
           res
             .status(404)
-            .json(new ResponseConstructors.Errors.SessionMissing());
+            .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
             let uSessions = req.user.sessions.filter(
