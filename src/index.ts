@@ -11,6 +11,7 @@ import User from './utils/DB/User';
 import Endpoints from './api';
 import { ResponseConstructors } from './utils/RequestUtils';
 import QueryStringParser from './utils/QueryStringParser';
+import cors from 'cors';
 
 configureEnv();
 
@@ -46,6 +47,7 @@ setInterval(async () => {
 }, ms('1h'));
 
 app.use(
+  cors({ origin: true }),
   compression({ filter: shouldCompress }),
   QueryStringParser({
     keyWithNoValueIsBool: true,
