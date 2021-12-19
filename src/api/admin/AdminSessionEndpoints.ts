@@ -173,11 +173,7 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     path: '/user/:id([0-9]+)/sessions',
     preHandlers: Multer().none(),
     async handler(
-      req: Cumulonimbus.Request<
-        { sessions: string[] },
-        { id: string; sid: string },
-        null
-      >,
+      req: Cumulonimbus.Request<{ sessions: string[] }, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
     ) {
       if (!req.user)

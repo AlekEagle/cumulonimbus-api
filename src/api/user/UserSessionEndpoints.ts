@@ -4,6 +4,9 @@ import Multer from 'multer';
 import { generateToken } from '../../utils/Token';
 import Bcrypt from 'bcrypt';
 import User from '../../utils/DB/User';
+import Express from 'express';
+import ExpressRateLimits from 'express-rate-limit';
+import ms from 'ms';
 import {
   browserName,
   getInvalidFields,
@@ -15,7 +18,27 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'post',
     path: '/user/session',
-    preHandlers: Multer().none(),
+    preHandlers: [
+      Multer().none(),
+      ExpressRateLimits({
+        windowMs: ms('5mins'),
+        max: 1,
+        keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
+          return req.user
+            ? req.user.id
+            : (Array.isArray(req.headers['x-forwarded-for'])
+                ? req.headers['x-forwarded-for'][0]
+                : req.headers['x-forwarded-for']) || req.ip;
+        },
+        handler(
+          req: Express.Request,
+          res: Express.Response,
+          next: Express.NextFunction
+        ) {
+          res.status(429).send(new ResponseConstructors.Errors.RateLimited());
+        }
+      })
+    ],
     async handler(
       req: Cumulonimbus.Request<{
         user: string;
@@ -113,6 +136,27 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           sub: req.user.id
         };
         res.status(200).json(curSession);
+      }
+    }
+  },
+  {
+    method: 'get',
+    path: '/user/session/:id',
+    async handler(
+      req: Cumulonimbus.Request<null, { id: string }>,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
+    ) {
+      if (!req.user)
+        res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
+      else {
+        let session = req.user.sessions.find(
+          s => s.iat.toString() === req.params.id
+        );
+        if (session === undefined)
+          res
+            .status(404)
+            .json(new ResponseConstructors.Errors.InvalidSession());
+        else res.status(200).json({ ...session, sub: req.user.id });
       }
     }
   },
@@ -226,7 +270,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
-    path: '/sessions/all',
+    path: '/user/sessions/all',
     async handler(
       req: Cumulonimbus.Request<null, null, { allButSelf: boolean }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
