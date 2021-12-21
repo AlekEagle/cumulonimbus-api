@@ -21,7 +21,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     preHandlers: [
       Multer().none(),
       ExpressRateLimits({
-        windowMs: ms('5mins'),
+        windowMs: ms('1min'),
         max: 1,
         keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
           return req.user
@@ -36,7 +36,8 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           next: Express.NextFunction
         ) {
           res.status(429).send(new ResponseConstructors.Errors.RateLimited());
-        }
+        },
+        skipFailedRequests: true
       })
     ],
     async handler(

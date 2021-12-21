@@ -200,7 +200,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           next: Express.NextFunction
         ) {
           res.status(429).send(new ResponseConstructors.Errors.RateLimited());
-        }
+        },
+        skipFailedRequests: true
       })
     ],
     async handler(

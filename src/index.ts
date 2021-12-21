@@ -47,7 +47,15 @@ setInterval(async () => {
 }, ms('1h'));
 
 app.use(
-  cors({ origin: true }),
+  cors({
+    origin: true,
+    exposedHeaders: [
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'Retry-After',
+      'X-RateLimit-Reset'
+    ]
+  }),
   compression({ filter: shouldCompress }),
   QueryStringParser({
     keyWithNoValueIsBool: true,
@@ -119,7 +127,8 @@ app.use(
       next: Express.NextFunction
     ) {
       res.status(429).send(new ResponseConstructors.Errors.RateLimited());
-    }
+    },
+    skipFailedRequests: true
   })
 );
 
