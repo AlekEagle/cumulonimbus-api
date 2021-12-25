@@ -37,7 +37,7 @@ export async function generateToken(
   let tokenStr = await new SignJWT({ name, sub: user })
       .setProtectedHeader({ alg: 'ES256', typ: 'JWT' })
       .setIssuedAt()
-      .setExpirationTime(expires ? '30d' : '10y')
+      .setExpirationTime(expires ? '24h' : '10y')
       .sign(privKey),
     tokenData = extractToken(tokenStr);
 

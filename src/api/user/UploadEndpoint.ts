@@ -50,9 +50,12 @@ const UploadEndpoint: Cumulonimbus.APIEndpointModule = [
               );
             let fileExt;
             if (!fileStream.fileType) {
-              fileExt = req.file.originalname
-                .match(/\.[a-z0-9.]+$/)[0]
-                .slice(1);
+              if (req.file.originalname.match(/\.[a-z0-9.]+$/) === null)
+                fileExt = 'txt';
+              else
+                fileExt = req.file.originalname
+                  .match(/\.[a-z0-9.]+$/)[0]
+                  .slice(1);
             } else fileExt = fileStream.fileType.ext;
             const wStream = createWriteStream(
               `/var/www-uploads/${filename}.${fileExt}`
