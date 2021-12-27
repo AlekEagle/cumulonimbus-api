@@ -48,7 +48,6 @@ setInterval(async () => {
 
 app.use(
   cors({
-    origin: true,
     exposedHeaders: [
       'X-RateLimit-Limit',
       'X-RateLimit-Remaining',

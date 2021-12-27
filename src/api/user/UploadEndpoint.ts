@@ -8,6 +8,8 @@ import { createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { getEncoding } from 'istextorbinary';
 
+const FILE_EXT = /\.[a-z0-9.-]+$/i;
+
 function newString(length: number) {
   var text = '';
   var possible =
@@ -50,12 +52,9 @@ const UploadEndpoint: Cumulonimbus.APIEndpointModule = [
               );
             let fileExt;
             if (!fileStream.fileType) {
-              if (req.file.originalname.match(/\.[a-z0-9.]+$/) === null)
+              if (req.file.originalname.match(FILE_EXT) === null)
                 fileExt = 'txt';
-              else
-                fileExt = req.file.originalname
-                  .match(/\.[a-z0-9.]+$/)[0]
-                  .slice(1);
+              else fileExt = req.file.originalname.match(FILE_EXT)[0].slice(1);
             } else fileExt = fileStream.fileType.ext;
             const wStream = createWriteStream(
               `/var/www-uploads/${filename}.${fileExt}`
