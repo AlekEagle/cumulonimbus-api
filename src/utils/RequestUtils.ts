@@ -217,7 +217,14 @@ export function getInvalidFields(
           case 'any':
             return false;
           case 'array':
-            return Array.isArray(body[e[0]]);
+            if (e[1].arrayType)
+              return (
+                !Array.isArray(body[e[0]]) &&
+                (body[e[0]] as any[]).every(
+                  a => typeof a === (e[1] as FieldTypeOptions).arrayType
+                )
+              );
+            else return !Array.isArray(body[e[0]]);
           case 'number':
             return typeof body[e[0]] !== 'number';
           case 'boolean':
