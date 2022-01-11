@@ -154,7 +154,7 @@ export function browserName(ua: UAParser.IResult) {
   )
     return ua.ua;
   else
-    return `${ua.browser.name} v${ua.browser.version} on ${ua.os.name} ${ua.os.version} ${ua.cpu.architecture}`;
+    return `${ua.browser.name} v${ua.browser.version} on ${ua.os.name} ${ua.os.version}`;
 }
 
 export declare type ValidFieldTypes =
