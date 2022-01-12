@@ -84,9 +84,14 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                       .json(new ResponseConstructors.Errors.InvalidPassword());
                   else {
                     try {
+                      let tName =
+                        typeof req.headers['x-token-name'] === 'string' &&
+                        req.headers['x-token-name'] !== ''
+                          ? req.headers['x-token-name']
+                          : browserName(req.ua);
                       let token = await generateToken(
                         u.id,
-                        browserName(req.ua),
+                        tName,
                         !req.body.rememberMe
                       );
                       let nS = [

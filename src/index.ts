@@ -81,9 +81,10 @@ app.use(
             req.user = null;
             req.session = null;
           } else {
-            if (user.bannedAt)
+            if (user.bannedAt) {
               res.status(403).json(new ResponseConstructors.Errors.Banned());
-            else {
+              return;
+            } else {
               if (
                 user.sessions.some(
                   s => s.iat === (token as TokenStructure).payload.iat
