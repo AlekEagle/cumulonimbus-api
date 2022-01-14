@@ -113,7 +113,7 @@ app.use(
   urlencoded({ extended: true }),
   ExpressRateLimit({
     windowMs: ms('5mins'),
-    max: 100,
+    max: 200,
     keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
       return req.user
         ? req.user.id
