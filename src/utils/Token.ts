@@ -35,7 +35,7 @@ export async function generateToken(
 ): Promise<{ token: string; data: TokenStructure }> {
   await importCerts();
   let tokenStr = await new SignJWT({ name, sub: user })
-      .setProtectedHeader({ alg: 'ES256', typ: 'JWT' })
+      .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
       .setIssuedAt()
       .setExpirationTime(expires ? '24h' : '10y')
       .sign(privKey),
