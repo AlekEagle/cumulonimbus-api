@@ -150,9 +150,9 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               res
                 .status(401)
                 .json(new ResponseConstructors.Errors.InvalidPassword());
-            if (req.body.username !== req.user.username)
+            if (req.body.username.toLowerCase() !== req.user.username)
               res
-                .status(403)
+                .status(401)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             let uls = await File.findAll({
               where: {
