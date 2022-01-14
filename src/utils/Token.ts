@@ -23,7 +23,7 @@ export async function importCerts() {
 
   privKey = await importPKCS8(
     await readFile('./certs/jwt.pem', 'utf8'),
-    'ES256'
+    'RS256'
   );
   imported = true;
 }
