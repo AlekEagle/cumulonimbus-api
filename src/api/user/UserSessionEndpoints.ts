@@ -184,6 +184,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .map((s: Cumulonimbus.Structures.Session) => {
               return { ...s, sub: req.user.id };
             })
+            .reverse()
             .slice(req.query.offset, req.query.limit + req.query.offset);
         res.status(200).json({
           count: u.sessions.length,

@@ -45,6 +45,7 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                   .map((s: Cumulonimbus.Structures.Session) => {
                     return { ...s, sub: u.id };
                   })
+                  .reverse()
                   .slice(req.query.offset, req.query.limit + req.query.offset);
               res
                 .status(200)
