@@ -12,6 +12,9 @@ import Endpoints from './api';
 import { ResponseConstructors } from './utils/RequestUtils';
 import QueryStringParser from './utils/QueryStringParser';
 import cors from 'cors';
+import { readFileSync } from 'node:fs';
+
+const packageJSON = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 configureEnv();
 
@@ -133,7 +136,7 @@ app.use(
 );
 
 app.all('/api/', (req: Cumulonimbus.Request, res: Express.Response) => {
-  res.json({ hello: 'world', version: '3.0.0' });
+  res.json({ hello: 'world', version: packageJSON.version });
 });
 
 Endpoints.forEach(endpointModule => {
