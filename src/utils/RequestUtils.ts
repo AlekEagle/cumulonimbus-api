@@ -35,12 +35,10 @@ export namespace ResponseConstructors {
 
     export class InvalidSubdomain implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'INVALID_SUBDOMAIN_ERROR';
-      public readonly message: string =
-        'Subdomain cannot be longer than 63 characters';
-      public parsedSubdomain: string;
+      public readonly message: string = 'Invalid Subdomain: ';
 
       constructor(parsedSubdomain: string) {
-        this.parsedSubdomain = parsedSubdomain;
+        this.message += parsedSubdomain;
       }
     }
 
@@ -66,47 +64,45 @@ export namespace ResponseConstructors {
       implements Cumulonimbus.Structures.Error
     {
       public readonly code: string = 'SUBDOMAIN_NOT_SUPPORTED_ERROR';
-      public readonly message: string =
-        'Domain Does Not Support Using A Subdomain';
+      public readonly message: string = 'Subdomain Not Supported';
       constructor() {}
     }
 
     export class DomainExists implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'DOMAIN_EXISTS_ERROR';
-      public readonly message: string = 'Domain Already Exists';
+      public readonly message: string = 'Domain Exists';
       constructor() {}
     }
 
     export class UserExists implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'USER_EXISTS_ERROR';
-      public readonly message: string = 'User Already Exists';
+      public readonly message: string = 'User Exists';
       constructor() {}
     }
 
     export class InstructionExists implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'INSTRUCTION_EXISTS_ERROR';
-      public readonly message: string = 'Instruction Already Exists';
+      public readonly message: string = 'Instruction Exists';
       constructor() {}
     }
 
     export class MissingFields implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'MISSING_FIELDS_ERROR';
-      public readonly message: string = 'Missing Fields';
-      public fields: string[];
+      public readonly message: string = 'Missing Fields: ';
       constructor(fields: string[]) {
-        this.fields = fields;
+        this.message += fields.join(', ');
       }
     }
 
     export class Banned implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'BANNED_ERROR';
-      public readonly message: string = 'Account Banned';
+      public readonly message: string = 'Banned';
       constructor() {}
     }
 
     export class BodyTooLarge implements Cumulonimbus.Structures.Error {
       public readonly code: string = 'BODY_TOO_LARGE_ERROR';
-      public readonly message: string = 'Request Body Too Large';
+      public readonly message: string = 'Body Too Large';
       constructor() {}
     }
 
