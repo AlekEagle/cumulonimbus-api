@@ -29,7 +29,8 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
             if (req.query.limit > 50) req.query.limit = 50;
             let { count, rows: files } = await File.findAndCountAll({
               limit: req.query.limit,
-              offset: req.query.offset
+              offset: req.query.offset,
+              order: [['createdAt', 'DESC']]
             });
             let items = files.map(file => file.toJSON());
 
@@ -79,6 +80,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
               let { count, rows: files } = await File.findAndCountAll({
                 limit: req.query.limit,
                 offset: req.query.offset,
+                order: [['createdAt', 'DESC']],
                 where: {
                   userID: u.id
                 }
