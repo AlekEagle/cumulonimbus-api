@@ -143,6 +143,25 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   ])
                 );
             else {
+              let existingUserConstraints: any = {
+                where: {
+                  [Op.or]: []
+                }
+              };
+              if (req.body.username !== undefined)
+                existingUserConstraints.where[Op.or].username =
+                  req.body.username;
+              if (req.body.email !== undefined)
+                existingUserConstraints.where[Op.or].email = req.body.email;
+              let existingUser = await User.findOne(existingUserConstraints);
+              if (existingUser) {
+                if (existingUser.id !== req.params.id) {
+                  res
+                    .status(409)
+                    .json(new ResponseConstructors.Errors.UserExists());
+                  return;
+                }
+              }
               let u = await User.findOne({
                 where: {
                   id: req.params.id

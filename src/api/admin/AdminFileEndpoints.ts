@@ -177,6 +177,58 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'delete',
+    path: '/user/:id([0-9]+)/files/all',
+    async handler(
+      req: Cumulonimbus.Request<null, { id: string }, null>,
+      res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
+    ) {
+      if (!req.user)
+        res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
+      else {
+        if (
+          req.user.staff === undefined ||
+          req.user.staff === null ||
+          req.user.staff === ''
+        )
+          res.status(403).json(new ResponseConstructors.Errors.Permissions());
+        else {
+          try {
+            let u = await User.findOne({
+              where: {
+                id: req.params.id
+              }
+            });
+            if (!u)
+              res
+                .status(404)
+                .json(new ResponseConstructors.Errors.InvalidUser());
+            else {
+              try {
+                let files = await File.findAll({
+                  where: {
+                    userID: u.id
+                  }
+                });
+                if (files.length > 0) {
+                  for (let file of files) {
+                    await unlink(`/var/www-uploads/${file.filename}`);
+                    await file.destroy();
+                  }
+                }
+                res.status(200).json({ type: 'file', count: files.length });
+              } catch (error) {
+                throw error;
+              }
+            }
+          } catch (error) {
+            throw error;
+          }
+        }
+      }
+    }
+  },
+  {
+    method: 'delete',
     path: '/files',
     async handler(
       req: Cumulonimbus.Request<{ files: string[] }, { id: string }, null>,
