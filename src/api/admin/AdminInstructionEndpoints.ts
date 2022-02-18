@@ -40,7 +40,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
         else {
           let invalidFields = getInvalidFields(req.body, {
             steps: new FieldTypeOptions('array', false, 'string'),
-            filename: 'string',
+            filename: new FieldTypeOptions('string', true),
             fileContent: 'string',
             description: 'string',
             displayName: 'string',
@@ -100,7 +100,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
       req: Cumulonimbus.Request<
         {
           steps: string[];
-          filename: string;
+          filename: string | null;
           fileContent: string;
           description: string;
           displayName: string;
@@ -123,6 +123,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
           if (
             req.body.steps === undefined &&
             req.body.filename === undefined &&
+            req.body.filename !== null &&
             req.body.fileContent === undefined &&
             req.body.description === undefined &&
             req.body.displayName === undefined
