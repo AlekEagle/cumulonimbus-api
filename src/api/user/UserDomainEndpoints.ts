@@ -22,7 +22,8 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
             if (req.query.limit > 50) req.query.limit = 50;
             let domains = await Domain.findAndCountAll({
                 limit: req.query.limit,
-                offset: req.query.offset
+                offset: req.query.offset,
+                order: [['createdAt', 'DESC']]
               }),
               rows = domains.rows.map(d => d.toJSON());
 
