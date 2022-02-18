@@ -4,7 +4,7 @@ import { Model, DataTypes } from 'sequelize';
 export default class Instruction extends Model {
   name: string;
   steps: string[];
-  filename: string;
+  filename: string | null;
   fileContent: string;
   description: string;
   displayName: string;
