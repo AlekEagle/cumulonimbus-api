@@ -6,7 +6,7 @@ export default class User extends Model {
   username: string;
   displayName: string;
   email: string;
-  staff: string;
+  staff: boolean;
   password: string;
   domain: string;
   subdomain: string;
@@ -31,7 +31,11 @@ export default class User extends Model {
       username: DataTypes.STRING(60),
       displayName: DataTypes.STRING(60),
       email: DataTypes.STRING,
-      staff: DataTypes.STRING,
+      staff: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false
+      },
       password: DataTypes.STRING(2000),
       domain: DataTypes.STRING,
       subdomain: DataTypes.STRING,

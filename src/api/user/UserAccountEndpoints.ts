@@ -261,7 +261,6 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   domain: 'alekeagle.me',
                   subdomain: '',
                   password: newHash,
-                  staff: null,
                   id: userID,
                   sessions: [
                     {

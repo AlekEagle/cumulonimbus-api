@@ -31,11 +31,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (
-          req.user.staff === undefined ||
-          req.user.staff === null ||
-          req.user.staff === ''
-        )
+        if (req.user.staff)
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           let invalidFields = getInvalidFields(req.body, {
@@ -113,11 +109,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (
-          req.user.staff === undefined ||
-          req.user.staff === null ||
-          req.user.staff === ''
-        )
+        if (req.user.staff)
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           if (
@@ -185,11 +177,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (
-          req.user.staff === undefined ||
-          req.user.staff === null ||
-          req.user.staff === ''
-        )
+        if (req.user.staff)
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -225,11 +213,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (
-          req.user.staff === undefined ||
-          req.user.staff === null ||
-          req.user.staff === ''
-        )
+        if (req.user.staff)
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
@@ -277,11 +261,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (
-          req.user.staff === undefined ||
-          req.user.staff === null ||
-          req.user.staff === ''
-        )
+        if (req.user.staff)
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
