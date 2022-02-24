@@ -103,7 +103,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<
-        { username: string; password: string; email: string },
+        { username: string; password: string; email: string; staff: boolean },
         { id: string },
         null
       >,
@@ -119,7 +119,8 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             if (
               req.body.email === undefined &&
               req.body.password === undefined &&
-              req.body.username === undefined
+              req.body.username === undefined &&
+              req.body.staff === undefined
             )
               res
                 .status(400)
@@ -127,7 +128,8 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   new ResponseConstructors.Errors.MissingFields([
                     'username',
                     'password',
-                    'email'
+                    'email',
+                    'staff'
                   ])
                 );
             else {
@@ -161,7 +163,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   .status(404)
                   .json(new ResponseConstructors.Errors.InvalidUser());
               else {
-                let updatedFields: { [key: string]: string } = {};
+                let updatedFields: { [key: string]: string | boolean } = {};
                 if (req.body.password)
                   updatedFields['password'] = await Bcrypt.hash(
                     req.body.password,
@@ -173,6 +175,8 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   updatedFields['username'] = req.body.username.toLowerCase();
                   updatedFields['displayName'] = req.body.username;
                 }
+                if (req.body.staff !== undefined)
+                  updatedFields['staff'] = req.body.staff;
 
                 let updatedU = await u.update(updatedFields),
                   strippedUser = updatedU.toJSON();
