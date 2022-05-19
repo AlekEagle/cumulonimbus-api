@@ -39,6 +39,43 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
   },
   {
     method: 'get',
+    path: '/domains/slim',
+    async handler(
+      req: Cumulonimbus.Request<null, null, null>,
+      res: Cumulonimbus.Response<
+        Cumulonimbus.Structures.List<Cumulonimbus.Structures.DomainSlim>
+      >
+    ) {
+      try {
+        if (!req.user)
+          res
+            .status(401)
+            .json(new ResponseConstructors.Errors.InvalidSession());
+        else {
+          try {
+            let domains = await Domain.findAndCountAll({
+                order: [['createdAt', 'DESC']]
+              }),
+              rows = domains.rows.map(d => {
+                let a = d.toJSON();
+                return {
+                  domain: a.domain,
+                  allowsSubdomains: a.allowsSubdomains
+                };
+              });
+
+            res.status(200).json({ count: domains.count, items: rows });
+          } catch (error) {
+            throw error;
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    }
+  },
+  {
+    method: 'get',
     path: '/domain/:id',
     async handler(
       req: Cumulonimbus.Request<null, { id: string }>,

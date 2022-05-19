@@ -1,7 +1,7 @@
-import Express from "express";
-import UA from "ua-parser-js";
-import User from "../utils/DB/User";
-import { TokenStructure } from "../utils/Token";
+import Express from 'express';
+import UA from 'ua-parser-js';
+import User from '../utils/DB/User';
+import { TokenStructure } from '../utils/Token';
 
 declare namespace NodeJS {
   export interface ProcessEnv {
@@ -15,14 +15,14 @@ declare namespace NodeJS {
 
 declare namespace Cumulonimbus {
   export type Methods =
-    | "get"
-    | "post"
-    | "patch"
-    | "options"
-    | "put"
-    | "delete"
-    | "head"
-    | "all";
+    | 'get'
+    | 'post'
+    | 'patch'
+    | 'options'
+    | 'put'
+    | 'delete'
+    | 'head'
+    | 'all';
 
   export interface Request<
     BodyStruct = null,
@@ -70,7 +70,7 @@ declare namespace Cumulonimbus {
 
     export interface DeleteBulk {
       count: number;
-      type: "user" | "session" | "file" | "domain" | "instruction";
+      type: 'user' | 'session' | 'file' | 'domain' | 'instruction';
     }
 
     export interface Instruction {
@@ -89,6 +89,11 @@ declare namespace Cumulonimbus {
       allowsSubdomains: boolean;
       createdAt: string;
       updatedAt: string;
+    }
+
+    export interface DomainSlim {
+      domain: string;
+      allowsSubdomains: boolean;
     }
 
     export interface Error {
