@@ -1,28 +1,28 @@
-import { Cumulonimbus } from '../../types';
-import { Op } from 'sequelize/dist';
-import Multer from 'multer';
-import Bcrypt from 'bcrypt';
-import User from '../../utils/DB/User';
-import ExpressRateLimits from 'express-rate-limit';
-import ms from 'ms';
-import Express from 'express';
+import { Cumulonimbus } from "../../types";
+import { Op, Sequelize } from "sequelize/dist";
+import Multer from "multer";
+import Bcrypt from "bcrypt";
+import User from "../../utils/DB/User";
+import ExpressRateLimits from "express-rate-limit";
+import ms from "ms";
+import Express from "express";
 import {
   browserName,
   getInvalidFields,
   FieldTypeOptions,
   ResponseConstructors,
-  validateSubdomain
-} from '../../utils/RequestUtils';
-import { generateToken } from '../../utils/Token';
-import { randomInt } from 'crypto';
-import { unlink } from 'fs/promises';
-import File from '../../utils/DB/File';
-import Domain from '../../utils/DB/Domain';
+  validateSubdomain,
+} from "../../utils/RequestUtils";
+import { generateToken } from "../../utils/Token";
+import { randomInt } from "crypto";
+import { unlink } from "fs/promises";
+import File from "../../utils/DB/File";
+import Domain from "../../utils/DB/Domain";
 
 const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'get',
-    path: '/user',
+    method: "get",
+    path: "/user",
     async handler(
       req,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.User>
@@ -35,11 +35,11 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
         delete u.sessions;
         res.status(200).json(u as Cumulonimbus.Structures.User);
       }
-    }
+    },
   },
   {
-    method: 'patch',
-    path: '/user',
+    method: "patch",
+    path: "/user",
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{
@@ -54,10 +54,10 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
         let invalidFields = getInvalidFields(req.body, {
-          username: new FieldTypeOptions('string', true),
-          email: new FieldTypeOptions('string', true),
-          newPassword: new FieldTypeOptions('string', true),
-          password: 'string'
+          username: new FieldTypeOptions("string", true),
+          email: new FieldTypeOptions("string", true),
+          newPassword: new FieldTypeOptions("string", true),
+          password: "string",
         });
 
         if (invalidFields.length > 0)
@@ -73,9 +73,9 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             .status(400)
             .json(
               new ResponseConstructors.Errors.MissingFields([
-                'username',
-                'email',
-                'password'
+                "username",
+                "email",
+                "password",
               ])
             );
         else {
@@ -92,15 +92,14 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               try {
                 let newFields: { [key: string]: string } = {};
                 if (req.body.newPassword)
-                  newFields['password'] = await Bcrypt.hash(
+                  newFields["password"] = await Bcrypt.hash(
                     req.body.newPassword,
                     randomInt(0, 15)
                   );
                 if (req.body.username) {
-                  newFields['username'] = req.body.username;
-                  newFields['displayName'] = req.body.username.toLowerCase();
+                  newFields["username"] = req.body.username;
                 }
-                if (req.body.email) newFields['email'] = req.body.email;
+                if (req.body.email) newFields["email"] = req.body.email;
 
                 await req.user.update(newFields);
                 let u = req.user.toJSON();
@@ -116,11 +115,11 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user',
+    method: "delete",
+    path: "/user",
     async handler(
       req: Cumulonimbus.Request<{ username: string; password: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.User>
@@ -132,8 +131,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           let invalidFields = getInvalidFields(req.body, {
-            username: 'string',
-            password: 'string'
+            username: "string",
+            password: "string",
           });
           if (invalidFields.length > 0)
             res
@@ -150,14 +149,15 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               res
                 .status(401)
                 .json(new ResponseConstructors.Errors.InvalidPassword());
-            if (req.body.username.toLowerCase() !== req.user.username)
+            if (
+              req.body.username.toLowerCase() !==
+              req.user.username.toLowerCase()
+            )
               res
                 .status(401)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             let uls = await File.findAll({
-              where: {
-                userID: req.user.id
-              }
+              where: Sequelize.where(Sequelize.col("userID"), req.user.id),
             });
             for (let ul of uls) {
               try {
@@ -177,22 +177,22 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'post',
-    path: '/user',
+    method: "post",
+    path: "/user",
     preHandlers: [
       Multer().none(),
       ExpressRateLimits({
-        windowMs: ms('30mins'),
+        windowMs: ms("30mins"),
         max: 1,
         keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
           return req.user
             ? req.user.id
-            : (Array.isArray(req.headers['x-forwarded-for'])
-                ? req.headers['x-forwarded-for'][0]
-                : req.headers['x-forwarded-for']) || req.ip;
+            : (Array.isArray(req.headers["x-forwarded-for"])
+                ? req.headers["x-forwarded-for"][0]
+                : req.headers["x-forwarded-for"]) || req.ip;
         },
         handler(
           req: Express.Request,
@@ -201,8 +201,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
         ) {
           res.status(429).send(new ResponseConstructors.Errors.RateLimited());
         },
-        skipFailedRequests: true
-      })
+        skipFailedRequests: true,
+      }),
     ],
     async handler(
       req: Cumulonimbus.Request<{
@@ -216,11 +216,11 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
     ) {
       try {
         let invalidFields = getInvalidFields(req.body, {
-          username: 'string',
-          email: 'string',
-          password: 'string',
-          repeatPassword: 'string',
-          rememberMe: new FieldTypeOptions('boolean', true)
+          username: "string",
+          email: "string",
+          password: "string",
+          repeatPassword: "string",
+          rememberMe: new FieldTypeOptions("boolean", true),
         });
         if (invalidFields.length > 0)
           res
@@ -228,12 +228,16 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.MissingFields(invalidFields));
         else {
           let u = await User.findOne({
-            where: {
-              [Op.or]: {
-                email: req.body.email,
-                username: req.body.username.toLowerCase()
-              }
-            }
+            where: Sequelize.or(
+              Sequelize.where(
+                Sequelize.fn("lower", Sequelize.col("username")),
+                Sequelize.fn("lower", req.body.username)
+              ),
+              Sequelize.where(
+                Sequelize.fn("lower", Sequelize.col("email")),
+                Sequelize.fn("lower", req.body.email)
+              )
+            ),
           });
           if (u)
             res.status(409).json(new ResponseConstructors.Errors.UserExists());
@@ -255,24 +259,23 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                     !req.body.rememberMe
                   );
                 await User.create({
-                  username: req.body.username.toLowerCase(),
-                  displayName: req.body.username,
+                  username: req.body.username,
                   email: req.body.email,
-                  domain: 'alekeagle.me',
-                  subdomain: '',
+                  domain: "alekeagle.me",
+                  subdomain: "",
                   password: newHash,
                   id: userID,
                   sessions: [
                     {
                       iat: token.data.payload.iat,
                       exp: token.data.payload.exp,
-                      name: token.data.payload.name
-                    }
-                  ]
+                      name: token.data.payload.name,
+                    },
+                  ],
                 });
                 res.status(201).json({
                   token: token.token,
-                  exp: token.data.payload.exp
+                  exp: token.data.payload.exp,
                 } as Cumulonimbus.Structures.SuccessfulAuth);
               } catch (error) {
                 throw error;
@@ -283,11 +286,11 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'patch',
-    path: '/user/domain',
+    method: "patch",
+    path: "/user/domain",
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{ domain: string; subdomain?: string }>,
@@ -300,8 +303,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           let invalidFields = getInvalidFields(req.body, {
-            domain: 'string',
-            subdomain: new FieldTypeOptions('string', true)
+            domain: "string",
+            subdomain: new FieldTypeOptions("string", true),
           });
           if (invalidFields.length > 0)
             res
@@ -313,8 +316,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
             try {
               let domain = await Domain.findOne({
                 where: {
-                  domain: req.body.domain
-                }
+                  domain: req.body.domain,
+                },
               });
               if (!domain)
                 res
@@ -324,7 +327,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                 if (!req.body.subdomain) {
                   await req.user.update({
                     domain: domain.domain,
-                    subdomain: null
+                    subdomain: null,
                   });
 
                   let u = req.user.toJSON();
@@ -351,7 +354,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                     else {
                       await req.user.update({
                         domain: domain.domain,
-                        subdomain: safeSubdomain
+                        subdomain: safeSubdomain,
                       });
 
                       let u = req.user.toJSON();
@@ -370,8 +373,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
-  }
+    },
+  },
 ];
 
 export default UserAccountEndpoints;

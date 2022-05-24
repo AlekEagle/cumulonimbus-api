@@ -1,34 +1,34 @@
-import { Cumulonimbus } from '../../types';
-import { Op } from 'sequelize/dist';
-import Multer from 'multer';
-import { generateToken } from '../../utils/Token';
-import Bcrypt from 'bcrypt';
-import User from '../../utils/DB/User';
-import Express from 'express';
-import ExpressRateLimits from 'express-rate-limit';
-import ms from 'ms';
+import { Cumulonimbus } from "../../types";
+import { Op, Sequelize } from "sequelize/dist";
+import Multer from "multer";
+import { generateToken } from "../../utils/Token";
+import Bcrypt from "bcrypt";
+import User from "../../utils/DB/User";
+import Express from "express";
+import ExpressRateLimits from "express-rate-limit";
+import ms from "ms";
 import {
   browserName,
   getInvalidFields,
   FieldTypeOptions,
-  ResponseConstructors
-} from '../../utils/RequestUtils';
+  ResponseConstructors,
+} from "../../utils/RequestUtils";
 
 const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'post',
-    path: '/user/session',
+    method: "post",
+    path: "/user/session",
     preHandlers: [
       Multer().none(),
       ExpressRateLimits({
-        windowMs: ms('1min'),
+        windowMs: ms("1min"),
         max: 1,
         keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
           return req.user
             ? req.user.id
-            : (Array.isArray(req.headers['x-forwarded-for'])
-                ? req.headers['x-forwarded-for'][0]
-                : req.headers['x-forwarded-for']) || req.ip;
+            : (Array.isArray(req.headers["x-forwarded-for"])
+                ? req.headers["x-forwarded-for"][0]
+                : req.headers["x-forwarded-for"]) || req.ip;
         },
         handler(
           req: Express.Request,
@@ -37,8 +37,8 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         ) {
           res.status(429).send(new ResponseConstructors.Errors.RateLimited());
         },
-        skipFailedRequests: true
-      })
+        skipFailedRequests: true,
+      }),
     ],
     async handler(
       req: Cumulonimbus.Request<{
@@ -50,9 +50,9 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
     ) {
       try {
         let invalidFields = getInvalidFields(req.body, {
-          user: 'string',
-          pass: 'string',
-          rememberMe: new FieldTypeOptions('boolean', true)
+          user: "string",
+          pass: "string",
+          rememberMe: new FieldTypeOptions("boolean", true),
         });
         if (invalidFields.length > 0) {
           res
@@ -61,12 +61,16 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         } else {
           try {
             let u = await User.findOne({
-              where: {
-                [Op.or]: {
-                  email: req.body.user,
-                  username: req.body.user.toLowerCase()
-                }
-              }
+              where: Sequelize.or(
+                Sequelize.where(
+                  Sequelize.fn("lower", Sequelize.col("username")),
+                  Sequelize.fn("lower", req.body.user)
+                ),
+                Sequelize.where(
+                  Sequelize.fn("lower", Sequelize.col("email")),
+                  Sequelize.fn("lower", req.body.user)
+                )
+              ),
             });
             if (!u)
               res
@@ -85,9 +89,9 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                   else {
                     try {
                       let tName =
-                        typeof req.headers['x-token-name'] === 'string' &&
-                        req.headers['x-token-name'] !== ''
-                          ? req.headers['x-token-name']
+                        typeof req.headers["x-token-name"] === "string" &&
+                        req.headers["x-token-name"] !== ""
+                          ? req.headers["x-token-name"]
                           : browserName(req.ua);
                       let token = await generateToken(
                         u.id,
@@ -99,13 +103,13 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                         {
                           iat: token.data.payload.iat,
                           exp: token.data.payload.exp,
-                          name: token.data.payload.name
-                        }
+                          name: token.data.payload.name,
+                        },
                       ];
                       await u.update({ sessions: nS });
                       res.status(201).json({
                         token: token.token,
-                        exp: token.data.payload.exp
+                        exp: token.data.payload.exp,
                       } as Cumulonimbus.Structures.SuccessfulAuth);
                     } catch (error) {
                       throw error;
@@ -123,11 +127,11 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/user/session',
+    method: "get",
+    path: "/user/session",
     async handler(
       req,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
@@ -139,15 +143,15 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           iat: req.session.payload.iat,
           exp: req.session.payload.exp,
           name: req.session.payload.name,
-          sub: req.user.id
+          sub: req.user.id,
         };
         res.status(200).json(curSession);
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/user/session/:id',
+    method: "get",
+    path: "/user/session/:id",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
@@ -156,7 +160,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
         let session = req.user.sessions.find(
-          s => s.iat.toString() === req.params.id
+          (s) => s.iat.toString() === req.params.id
         );
         if (session === undefined)
           res
@@ -164,11 +168,11 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else res.status(200).json({ ...session, sub: req.user.id });
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/user/sessions',
+    method: "get",
+    path: "/user/sessions",
     async handler(
       req: Cumulonimbus.Request<null, null, { limit: number; offset: number }>,
       res: Cumulonimbus.Response<
@@ -188,14 +192,14 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .slice(req.query.offset, req.query.limit + req.query.offset);
         res.status(200).json({
           count: u.sessions.length,
-          items: sessions
+          items: sessions,
         } as Cumulonimbus.Structures.List<Cumulonimbus.Structures.Session>);
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/session/:id([0-9]+)',
+    method: "delete",
+    path: "/user/session/:id([0-9]+)",
     async handler(
       req: Cumulonimbus.Request<{}, { id: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Success>
@@ -204,8 +208,9 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
         if (
-          req.user.sessions.findIndex(a => a.iat === Number(req.params.id)) ===
-          -1
+          req.user.sessions.findIndex(
+            (a) => a.iat === Number(req.params.id)
+          ) === -1
         )
           res
             .status(404)
@@ -213,24 +218,24 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
         else {
           try {
             let uSessions = req.user.sessions.filter(
-              s => s.iat !== Number(req.params.id)
+              (s) => s.iat !== Number(req.params.id)
             );
             await req.user.update({ sessions: uSessions });
             res
               .status(200)
               .json(
-                new ResponseConstructors.Success.Generic('Session Deleted')
+                new ResponseConstructors.Success.Generic("Session Deleted")
               );
           } catch (error) {
             throw error;
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/sessions',
+    method: "delete",
+    path: "/user/sessions",
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{ sessions: string[] }>,
@@ -243,7 +248,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           let invalidFields = getInvalidFields(req.body, {
-            sessions: new FieldTypeOptions('array', false, 'string')
+            sessions: new FieldTypeOptions("array", false, "string"),
           });
 
           if (invalidFields.length > 0)
@@ -254,16 +259,16 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
               );
           else {
             try {
-              let count = req.user.sessions.filter(s =>
+              let count = req.user.sessions.filter((s) =>
                   req.body.sessions.includes(s.iat.toString())
                 ).length,
                 sessions = req.user.sessions.filter(
-                  s => !req.body.sessions.includes(s.iat.toString())
+                  (s) => !req.body.sessions.includes(s.iat.toString())
                 );
               await req.user.update({ sessions });
               res.status(200).json({
                 count,
-                type: 'session'
+                type: "session",
               });
             } catch (error) {
               throw error;
@@ -273,11 +278,11 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/sessions/all',
+    method: "delete",
+    path: "/user/sessions/all",
     async handler(
       req: Cumulonimbus.Request<null, null, { allButSelf: boolean }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -291,18 +296,18 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let count = req.query.allButSelf
                 ? req.user.sessions.filter(
-                    s => s.iat !== req.session.payload.iat
+                    (s) => s.iat !== req.session.payload.iat
                   ).length
                 : req.user.sessions.length,
               sessions = req.query.allButSelf
                 ? req.user.sessions.filter(
-                    s => s.iat === req.session.payload.iat
+                    (s) => s.iat === req.session.payload.iat
                   )
                 : [];
             await req.user.update({ sessions });
             res.status(200).json({
               count,
-              type: 'session'
+              type: "session",
             });
           } catch (error) {
             throw error;
@@ -311,8 +316,8 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
-  }
+    },
+  },
 ];
 
 export default UserSessionEndpoints;

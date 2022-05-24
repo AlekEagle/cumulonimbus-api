@@ -172,8 +172,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
 
                 if (req.body.email) updatedFields['email'] = req.body.email;
                 if (req.body.username) {
-                  updatedFields['username'] = req.body.username.toLowerCase();
-                  updatedFields['displayName'] = req.body.username;
+                  updatedFields['username'] = req.body.username;
                 }
                 if (req.body.staff !== undefined)
                   updatedFields['staff'] = req.body.staff;
