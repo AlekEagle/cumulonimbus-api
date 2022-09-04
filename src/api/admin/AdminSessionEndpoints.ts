@@ -24,7 +24,8 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            if (req.query.limit > 50) req.query.limit = 50;
+            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
             let u = await User.findOne({
               where: {
                 id: req.params.id
@@ -42,7 +43,7 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                     return { ...s, sub: u.id };
                   })
                   .reverse()
-                  .slice(req.query.offset, req.query.limit + req.query.offset);
+                  .slice(offset, limit + offset);
               res
                 .status(200)
                 .json({ count: ujson.sessions.length, items: sessions });
