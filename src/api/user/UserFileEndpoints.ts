@@ -20,7 +20,8 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
       >
     ) {
       try {
-        if (req.query.limit > 50) req.query.limit = 50;
+        const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+              offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
 
         if (!req.user)
           res
@@ -28,8 +29,8 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           let uls = await File.findAndCountAll({
-            limit: req.query.limit,
-            offset: req.query.offset,
+            limit,
+            offset,
             order: [['createdAt', 'DESC']],
             where: {
               userID: req.user.id
