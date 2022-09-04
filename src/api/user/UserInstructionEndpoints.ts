@@ -16,11 +16,12 @@ const UserInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
         try {
-          if (req.query.limit > 50) req.query.limit = 50;
+          const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+                offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
           let { count, rows: instructions } = await Instruction.findAndCountAll(
             {
-              limit: req.query.limit,
-              offset: req.query.offset
+              limit,
+              offset
             }
           );
 
