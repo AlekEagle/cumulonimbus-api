@@ -19,10 +19,11 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
-            if (req.query.limit > 50) req.query.limit = 50;
+            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
             let domains = await Domain.findAndCountAll({
-                limit: req.query.limit,
-                offset: req.query.offset,
+                limit,
+                offset,
                 order: [['createdAt', 'DESC']]
               }),
               rows = domains.rows.map(d => d.toJSON());

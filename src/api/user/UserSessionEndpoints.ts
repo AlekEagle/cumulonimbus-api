@@ -182,14 +182,15 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
       if (!req.user)
         res.status(401).json(new ResponseConstructors.Errors.InvalidSession());
       else {
-        if (req.query.limit > 50) req.query.limit = 50;
+        const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+              offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
         let u = req.user.toJSON(),
           sessions = u.sessions
             .map((s: Cumulonimbus.Structures.Session) => {
               return { ...s, sub: req.user.id };
             })
             .reverse()
-            .slice(req.query.offset, req.query.limit + req.query.offset);
+            .slice(offset, limit + offset);
         res.status(200).json({
           count: u.sessions.length,
           items: sessions,

@@ -22,10 +22,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            if (req.query.limit > 50) req.query.limit = 50;
+            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
             let { count, rows: files } = await File.findAndCountAll({
-              limit: req.query.limit,
-              offset: req.query.offset,
+              limit,
+              offset,
               order: [['createdAt', 'DESC']]
             });
             let items = files.map(file => file.toJSON());
@@ -68,10 +69,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(404)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
-              if (req.query.limit > 50) req.query.limit = 50;
+              const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
+                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
               let { count, rows: files } = await File.findAndCountAll({
-                limit: req.query.limit,
-                offset: req.query.offset,
+                limit,
+                offset,
                 order: [['createdAt', 'DESC']],
                 where: {
                   userID: u.id
