@@ -8,6 +8,7 @@ import { Op } from 'sequelize/dist';
 import { unlink } from 'fs/promises';
 import File from '../../utils/DB/File';
 import Multer from 'multer';
+import { existsSync } from 'node:fs';
 
 const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -20,8 +21,12 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
       >
     ) {
       try {
-        const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
-              offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+        const limit =
+            req.query.limit && req.query.limit <= 50 && req.query.limit > 0
+              ? req.query.limit
+              : 50,
+          offset =
+            req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
 
         if (!req.user)
           res
@@ -106,6 +111,14 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           else {
             try {
               await unlink(`/var/www-uploads/${ul.filename}`);
+              if (
+                existsSync(
+                  `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                )
+              )
+                await unlink(
+                  `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                );
               await ul.destroy();
               res.status(200).json(ul.toJSON());
             } catch (error) {
@@ -154,6 +167,14 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
               for (let ul of uls.rows) {
                 try {
                   await unlink(`/var/www-uploads/${ul.filename}`);
+                  if (
+                    existsSync(
+                      `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                    )
+                  )
+                    await unlink(
+                      `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                    );
                   await ul.destroy();
                 } catch (error) {
                   throw error;
@@ -191,6 +212,14 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
             for (let ul of uls.rows) {
               try {
                 await unlink(`/var/www-uploads/${ul.filename}`);
+                if (
+                  existsSync(
+                    `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                  )
+                )
+                  await unlink(
+                    `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                  );
                 await ul.destroy();
               } catch (error) {
                 throw error;

@@ -13,6 +13,7 @@ import File from '../../utils/DB/File';
 import { unlink } from 'node:fs/promises';
 import { Op } from 'sequelize/dist';
 import Domain from '../../utils/DB/Domain';
+import { existsSync } from 'node:fs';
 
 const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -38,8 +39,14 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
-                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+            const limit =
+                req.query.limit && req.query.limit <= 50 && req.query.limit > 0
+                  ? req.query.limit
+                  : 50,
+              offset =
+                req.query.offset && req.query.offset >= 0
+                  ? req.query.offset
+                  : 0;
 
             let { count, rows } = await User.findAndCountAll({
                 limit,
@@ -365,6 +372,14 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               for (let ul of uls) {
                 try {
                   await unlink(`/var/www-uploads/${ul.filename}`);
+                  if (
+                    existsSync(
+                      `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                    )
+                  )
+                    await unlink(
+                      `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                    );
                   await ul.destroy();
                 } catch (error) {
                   throw error;
@@ -422,6 +437,14 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
 
                 for (let file of userFiles) {
                   await unlink(`/var/www-uploads/${file.filename}`);
+                  if (
+                    existsSync(
+                      `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                    )
+                  )
+                    await unlink(
+                      `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                    );
                   await file.destroy();
                 }
 

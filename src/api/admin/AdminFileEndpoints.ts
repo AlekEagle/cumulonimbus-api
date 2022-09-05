@@ -4,6 +4,7 @@ import User from '../../utils/DB/User';
 import { ResponseConstructors } from '../../utils/RequestUtils';
 import File from '../../utils/DB/File';
 import { unlink } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
 const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -22,8 +23,14 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
-                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+            const limit =
+                req.query.limit && req.query.limit <= 50 && req.query.limit > 0
+                  ? req.query.limit
+                  : 50,
+              offset =
+                req.query.offset && req.query.offset >= 0
+                  ? req.query.offset
+                  : 0;
             let { count, rows: files } = await File.findAndCountAll({
               limit,
               offset,
@@ -69,8 +76,16 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(404)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
-              const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
-                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+              const limit =
+                  req.query.limit &&
+                  req.query.limit <= 50 &&
+                  req.query.limit > 0
+                    ? req.query.limit
+                    : 50,
+                offset =
+                  req.query.offset && req.query.offset >= 0
+                    ? req.query.offset
+                    : 0;
               let { count, rows: files } = await File.findAndCountAll({
                 limit,
                 offset,
@@ -150,6 +165,14 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                 .json(new ResponseConstructors.Errors.InvalidFile());
             else {
               await unlink(`/var/www-uploads/${file.filename}`);
+              if (
+                existsSync(
+                  `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                )
+              )
+                await unlink(
+                  `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                );
               await file.destroy();
 
               res.status(200).json(file.toJSON());
@@ -194,6 +217,14 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                 if (files.length > 0) {
                   for (let file of files) {
                     await unlink(`/var/www-uploads/${file.filename}`);
+                    if (
+                      existsSync(
+                        `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                      )
+                    )
+                      await unlink(
+                        `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                      );
                     await file.destroy();
                   }
                 }
@@ -233,6 +264,14 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
 
             for (let file of files) {
               await unlink(`/var/www-uploads/${file.filename}`);
+              if (
+                existsSync(
+                  `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                )
+              )
+                await unlink(
+                  `/tmp/cumulonimbus-preview-cache/${file.filename}.webp`
+                );
               await file.destroy();
             }
 

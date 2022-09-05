@@ -18,6 +18,7 @@ import { randomInt } from 'crypto';
 import { unlink } from 'fs/promises';
 import File from '../../utils/DB/File';
 import Domain from '../../utils/DB/Domain';
+import { existsSync } from 'node:fs';
 
 const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -163,6 +164,12 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               for (let ul of uls) {
                 try {
                   await unlink(`/var/www-uploads/${ul.filename}`);
+                  if (
+                    existsSync(`/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`)
+                  )
+                    await unlink(
+                      `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                    );
                   await ul.destroy();
                 } catch (error) {
                   throw error;
