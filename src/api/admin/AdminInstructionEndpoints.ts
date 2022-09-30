@@ -7,12 +7,13 @@ import {
   ResponseConstructors
 } from '../../utils/RequestUtils';
 import { Op } from 'sequelize/dist';
+import AutoTrim from '../../utils/AutoTrim';
 
 const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'post',
     path: '/instruction',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
         {
@@ -91,7 +92,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'patch',
     path: '/instruction/:id',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
         {

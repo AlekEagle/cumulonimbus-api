@@ -14,6 +14,8 @@ import { unlink } from 'node:fs/promises';
 import { Op } from 'sequelize/dist';
 import Domain from '../../utils/DB/Domain';
 import { existsSync } from 'node:fs';
+import { usernameRegex } from '../..';
+import AutoTrim from '../../utils/AutoTrim';
 
 const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -108,7 +110,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'patch',
     path: '/user/:id([0-9]+)',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim(['password'])],
     async handler(
       req: Cumulonimbus.Request<
         { username: string; password: string; email: string; staff: boolean },
@@ -146,11 +148,13 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   [Op.or]: []
                 }
               };
-              if (req.body.username !== undefined)
+              if (req.body.username !== undefined) {
                 existingUserConstraints.where[Op.or].username =
-                  req.body.username;
+                  req.body.username.trim();
+              }
               if (req.body.email !== undefined)
-                existingUserConstraints.where[Op.or].email = req.body.email;
+                existingUserConstraints.where[Op.or].email =
+                  req.body.email.trim();
               let existingUser = await User.findOne(existingUserConstraints);
               if (existingUser) {
                 if (existingUser.id !== req.params.id) {
@@ -180,7 +184,16 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
 
                 if (req.body.email) updatedFields['email'] = req.body.email;
                 if (req.body.username) {
-                  updatedFields['username'] = req.body.username;
+                  if (!req.body.username.trim().match(usernameRegex)) {
+                    res
+                      .status(400)
+                      .json(
+                        new ResponseConstructors.Errors.MissingFields([
+                          'username'
+                        ])
+                      );
+                    return;
+                  } else updatedFields['username'] = req.body.username.trim();
                 }
                 if (req.body.staff !== undefined)
                   updatedFields['staff'] = req.body.staff;
@@ -202,7 +215,7 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'patch',
     path: '/user/:id([0-9]+)/domain',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
         { domain: string; subdomain?: string },

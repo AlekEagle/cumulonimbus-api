@@ -7,12 +7,13 @@ import {
   ResponseConstructors
 } from '../../utils/RequestUtils';
 import Domain from '../../utils/DB/Domain';
+import AutoTrim from '../../utils/AutoTrim';
 
 const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'post',
     path: '/domain',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
         { domain: string; allowsSubdomains: boolean },
@@ -63,7 +64,7 @@ const AdminDomainEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'patch',
     path: '/domain/:id',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
         { allowsSubdomains: boolean },

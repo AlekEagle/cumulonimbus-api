@@ -1,5 +1,5 @@
 import { Cumulonimbus } from '../../types';
-import { Op, Sequelize } from 'sequelize/dist';
+import { Sequelize } from 'sequelize/dist';
 import Multer from 'multer';
 import Bcrypt from 'bcrypt';
 import User from '../../utils/DB/User';
@@ -19,6 +19,8 @@ import { unlink } from 'fs/promises';
 import File from '../../utils/DB/File';
 import Domain from '../../utils/DB/Domain';
 import { existsSync } from 'node:fs';
+import { usernameRegex } from '../..';
+import AutoTrim from '../../utils/AutoTrim';
 
 const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
@@ -41,7 +43,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'patch',
     path: '/user',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim(['password', 'newPassword'])],
     async handler(
       req: Cumulonimbus.Request<{
         username: string;
@@ -60,7 +62,9 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           newPassword: new FieldTypeOptions('string', true),
           password: 'string'
         });
-
+        if (!req.body.username.match(usernameRegex)) {
+          invalidFields.push('username');
+        }
         if (invalidFields.length > 0)
           res
             .status(400)
@@ -121,6 +125,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'delete',
     path: '/user',
+    preHandlers: [Multer().none(), AutoTrim(['password'])],
     async handler(
       req: Cumulonimbus.Request<{ username: string; password: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.User>
@@ -165,7 +170,9 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                 try {
                   await unlink(`/var/www-uploads/${ul.filename}`);
                   if (
-                    existsSync(`/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`)
+                    existsSync(
+                      `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
+                    )
                   )
                     await unlink(
                       `/tmp/cumulonimbus-preview-cache/${ul.filename}.webp`
@@ -213,7 +220,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(429).send(new ResponseConstructors.Errors.RateLimited());
         },
         skipFailedRequests: true
-      })
+      }),
+      AutoTrim(['password', 'repeatPassword'])
     ],
     async handler(
       req: Cumulonimbus.Request<{
@@ -233,6 +241,9 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           repeatPassword: 'string',
           rememberMe: new FieldTypeOptions('boolean', true)
         });
+        if (!req.body.username.match(usernameRegex)) {
+          invalidFields.push('username');
+        }
         if (invalidFields.length > 0)
           res
             .status(400)
@@ -302,7 +313,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {
     method: 'patch',
     path: '/user/domain',
-    preHandlers: Multer().none(),
+    preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<{ domain: string; subdomain?: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.User>
