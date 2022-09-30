@@ -1,23 +1,28 @@
-import Logger, { Level } from "./utils/Logger";
-import configureEnv from "./utils/Env";
-import Express, { json, urlencoded, NextFunction } from "express";
-import ExpressRateLimit from "express-rate-limit";
-import ms from "ms";
-import compression, { filter as _filter } from "compression";
-import UAParser from "ua-parser-js";
-import { Cumulonimbus } from "./types";
-import { TokenStructure, validateToken } from "./utils/Token";
-import User from "./utils/DB/User";
-import Endpoints from "./api";
-import { ResponseConstructors } from "./utils/RequestUtils";
-import QueryStringParser from "./utils/QueryStringParser";
-import cors from "cors";
-import { readFileSync } from "node:fs";
-import { Sequelize } from "sequelize/dist";
+import Logger, { Level } from './utils/Logger';
+import configureEnv from './utils/Env';
+import Express, { json, urlencoded, NextFunction } from 'express';
+import ExpressRateLimit from 'express-rate-limit';
+import ms from 'ms';
+import compression, { filter as _filter } from 'compression';
+import UAParser from 'ua-parser-js';
+import { Cumulonimbus } from './types';
+import { TokenStructure, validateToken } from './utils/Token';
+import User from './utils/DB/User';
+import Endpoints from './api';
+import { ResponseConstructors } from './utils/RequestUtils';
+import QueryStringParser from './utils/QueryStringParser';
+import cors from 'cors';
+import { readFileSync } from 'node:fs';
+import { Sequelize } from 'sequelize/dist';
 
-const packageJSON = JSON.parse(readFileSync("./package.json", "utf-8"));
+const packageJSON = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 configureEnv();
+
+// Usernames can only contain alphanumeric characters, underscores, dashes, periods and must not exceed 60 characters.
+export const usernameRegex = /^[a-zA-Z0-9_\-\.]{1,60}$/;
+export const emailRegex =
+  /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/;
 
 global.console = new Logger(
   process.env.DEBUG ? Level.DEBUG : Level.INFO
@@ -28,7 +33,7 @@ const port: number =
 const app = Express();
 
 function shouldCompress(req: Express.Request, res: Express.Response): boolean {
-  if (req.headers["x-no-compression"]) {
+  if (req.headers['x-no-compression']) {
     return false;
   }
 
@@ -37,9 +42,9 @@ function shouldCompress(req: Express.Request, res: Express.Response): boolean {
 
 async function pruneExpiredSessions(user: User): Promise<void> {
   const staleSessionTime = Math.floor(Date.now() / 1000);
-  if (user.sessions.some((s) => s.exp < staleSessionTime)) {
+  if (user.sessions.some(s => s.exp < staleSessionTime)) {
     await user.update({
-      sessions: user.sessions.filter((s) => s.exp > staleSessionTime),
+      sessions: user.sessions.filter(s => s.exp > staleSessionTime)
     });
   }
   return;
@@ -48,21 +53,21 @@ async function pruneExpiredSessions(user: User): Promise<void> {
 setInterval(async () => {
   let users = await User.findAll();
   users.forEach(pruneExpiredSessions);
-}, ms("1h"));
+}, ms('1h'));
 
 app.use(
   cors({
     exposedHeaders: [
-      "X-RateLimit-Limit",
-      "X-RateLimit-Remaining",
-      "Retry-After",
-      "X-RateLimit-Reset",
-    ],
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'Retry-After',
+      'X-RateLimit-Reset'
+    ]
   }),
   compression({ filter: shouldCompress }),
   QueryStringParser({
     keyWithNoValueIsBool: true,
-    ignoreKeyWithNoValue: false,
+    ignoreKeyWithNoValue: false
   }),
   async (
     req: Cumulonimbus.Request,
@@ -77,7 +82,7 @@ app.use(
           req.session = null;
         } else {
           let user = await User.findOne({
-            where: Sequelize.where(Sequelize.col("id"), token.payload.sub),
+            where: Sequelize.where(Sequelize.col('id'), token.payload.sub)
           });
           if (!user) {
             req.user = null;
@@ -89,7 +94,7 @@ app.use(
             } else {
               if (
                 user.sessions.some(
-                  (s) => s.iat === (token as TokenStructure).payload.iat
+                  s => s.iat === (token as TokenStructure).payload.iat
                 )
               ) {
                 await pruneExpiredSessions(user);
@@ -108,20 +113,20 @@ app.use(
         return;
       }
     }
-    req.ua = new UAParser(req.headers["user-agent"]).getResult();
+    req.ua = new UAParser(req.headers['user-agent']).getResult();
     next();
   },
   json(),
   urlencoded({ extended: true }),
   ExpressRateLimit({
-    windowMs: ms("5mins"),
+    windowMs: ms('5mins'),
     max: 200,
     keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
       return req.user
         ? req.user.id
-        : (Array.isArray(req.headers["x-forwarded-for"])
-            ? req.headers["x-forwarded-for"][0]
-            : req.headers["x-forwarded-for"]) || req.ip;
+        : (Array.isArray(req.headers['x-forwarded-for'])
+            ? req.headers['x-forwarded-for'][0]
+            : req.headers['x-forwarded-for']) || req.ip;
     },
     handler(
       req: Express.Request,
@@ -130,19 +135,19 @@ app.use(
     ) {
       res.status(429).send(new ResponseConstructors.Errors.RateLimited());
     },
-    skipFailedRequests: true,
+    skipFailedRequests: true
   })
 );
 
-app.all("/api/", (req: Cumulonimbus.Request, res: Express.Response) => {
-  res.json({ hello: "world", version: packageJSON.version });
+app.all('/api/', (req: Cumulonimbus.Request, res: Express.Response) => {
+  res.json({ hello: 'world', version: packageJSON.version });
 });
 
-Endpoints.forEach((endpointModule) => {
-  endpointModule.forEach(async (endpoint) => {
+Endpoints.forEach(endpointModule => {
+  endpointModule.forEach(async endpoint => {
     let path = `/api${endpoint.path}`;
     console.log(
-      "Initializing endpoint: %s",
+      'Initializing endpoint: %s',
       endpoint.method.toUpperCase(),
       path
     );
@@ -197,10 +202,10 @@ Endpoints.forEach((endpointModule) => {
   });
 });
 
-app.all("/api/*", (req, res) => {
+app.all('/api/*', (req, res) => {
   res.status(404).json(new ResponseConstructors.Errors.InvalidEndpoint());
 });
 
 app.listen(port, () => {
-  console.log("Listening on port %s", port);
+  console.log('Listening on port %s', port);
 });
