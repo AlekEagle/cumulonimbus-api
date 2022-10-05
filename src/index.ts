@@ -11,7 +11,6 @@ import User from './utils/DB/User';
 import Endpoints from './api';
 import { ResponseConstructors } from './utils/RequestUtils';
 import QueryStringParser from './utils/QueryStringParser';
-import cors from 'cors';
 import { readFileSync } from 'node:fs';
 import { Sequelize } from 'sequelize/dist';
 
@@ -54,14 +53,6 @@ setInterval(async () => {
 }, ms('1h'));
 
 app.use(
-  cors({
-    exposedHeaders: [
-      'X-RateLimit-Limit',
-      'X-RateLimit-Remaining',
-      'Retry-After',
-      'X-RateLimit-Reset'
-    ]
-  }),
   compression({ filter: shouldCompress }),
   QueryStringParser({
     keyWithNoValueIsBool: true,
