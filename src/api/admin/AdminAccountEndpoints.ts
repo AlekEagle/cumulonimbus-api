@@ -184,16 +184,19 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
 
                 if (req.body.email) updatedFields['email'] = req.body.email;
                 if (req.body.username) {
-                  if (!req.body.username.trim().match(usernameRegex)) {
+                  if (
+                    !req.body.username ||
+                    !req.body.username.trim().match(usernameRegex)
+                  ) {
                     res
                       .status(400)
                       .json(
                         new ResponseConstructors.Errors.MissingFields([
-                          'username'
+                          "username",
                         ])
                       );
                     return;
-                  } else updatedFields['username'] = req.body.username.trim();
+                  } else updatedFields["username"] = req.body.username.trim();
                 }
                 if (req.body.staff !== undefined)
                   updatedFields['staff'] = req.body.staff;
