@@ -150,11 +150,11 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
               };
               if (req.body.username !== undefined) {
                 existingUserConstraints.where[Op.or].username =
-                  req.body.username.trim();
+                  req.body.username;
               }
               if (req.body.email !== undefined)
                 existingUserConstraints.where[Op.or].email =
-                  req.body.email.trim();
+                  req.body.email;
               let existingUser = await User.findOne(existingUserConstraints);
               if (existingUser) {
                 if (existingUser.id !== req.params.id) {
@@ -183,21 +183,19 @@ const AdminAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   );
 
                 if (req.body.email) updatedFields['email'] = req.body.email;
-                if (req.body.username) {
-                  if (
-                    !req.body.username ||
-                    !req.body.username.trim().match(usernameRegex)
-                  ) {
-                    res
-                      .status(400)
-                      .json(
-                        new ResponseConstructors.Errors.MissingFields([
-                          "username",
-                        ])
-                      );
-                    return;
-                  } else updatedFields["username"] = req.body.username.trim();
-                }
+                if (
+                  req.body.username &&
+                  !req.body.username.match(usernameRegex)
+                ) {
+                  res
+                    .status(400)
+                    .json(
+                      new ResponseConstructors.Errors.MissingFields([
+                        "username",
+                      ])
+                    );
+                  return;
+                } else updatedFields["username"] = req.body.username.trim();
                 if (req.body.staff !== undefined)
                   updatedFields['staff'] = req.body.staff;
 
