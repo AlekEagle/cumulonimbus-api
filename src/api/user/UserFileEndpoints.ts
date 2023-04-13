@@ -4,7 +4,7 @@ import {
   ResponseConstructors
 } from '../../utils/RequestUtils';
 import { Cumulonimbus } from '../../types';
-import { Op } from 'sequelize/dist';
+import { Op } from 'sequelize';
 import { unlink } from 'fs/promises';
 import File from '../../utils/DB/File';
 import Multer from 'multer';

@@ -1,18 +1,18 @@
-import { Cumulonimbus } from '../../types';
-import Multer from 'multer';
-import Instruction from '../../utils/DB/Instruction';
+import { Cumulonimbus } from "../../types";
+import Multer from "multer";
+import Instruction from "../../utils/DB/Instruction";
 import {
   FieldTypeOptions,
   getInvalidFields,
-  ResponseConstructors
-} from '../../utils/RequestUtils';
-import { Op } from 'sequelize/dist';
-import AutoTrim from '../../utils/AutoTrim';
+  ResponseConstructors,
+} from "../../utils/RequestUtils";
+import { Op } from "sequelize";
+import AutoTrim from "../../utils/AutoTrim";
 
 const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'post',
-    path: '/instruction',
+    method: "post",
+    path: "/instruction",
     preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
@@ -36,12 +36,12 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           let invalidFields = getInvalidFields(req.body, {
-            steps: new FieldTypeOptions('array', false, 'string'),
-            filename: new FieldTypeOptions('string', true),
-            fileContent: 'string',
-            description: 'string',
-            displayName: 'string',
-            name: 'string'
+            steps: new FieldTypeOptions("array", false, "string"),
+            filename: new FieldTypeOptions("string", true),
+            fileContent: "string",
+            description: "string",
+            displayName: "string",
+            name: "string",
           });
           if (invalidFields.length > 0)
             res
@@ -57,13 +57,13 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
                 fileContent,
                 description,
                 displayName,
-                name
+                name,
               } = req.body;
 
               let i = await Instruction.findOne({
                 where: {
-                  name
-                }
+                  name,
+                },
               });
 
               if (i)
@@ -77,7 +77,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
                   filename,
                   description,
                   displayName,
-                  name
+                  name,
                 });
                 res.status(201).json(instruction.toJSON());
               }
@@ -87,11 +87,11 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'patch',
-    path: '/instruction/:id',
+    method: "patch",
+    path: "/instruction/:id",
     preHandlers: [Multer().none(), AutoTrim()],
     async handler(
       req: Cumulonimbus.Request<
@@ -125,19 +125,19 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
               .status(400)
               .json(
                 new ResponseConstructors.Errors.MissingFields([
-                  'steps',
-                  'filename',
-                  'fileContent',
-                  'description',
-                  'displayName'
+                  "steps",
+                  "filename",
+                  "fileContent",
+                  "description",
+                  "displayName",
                 ])
               );
           else {
             try {
               let instruction = await Instruction.findOne({
                 where: {
-                  name: req.params.id
-                }
+                  name: req.params.id,
+                },
               });
 
               if (!instruction)
@@ -147,14 +147,14 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
               else {
                 let newFields: { [key: string]: any } = {};
                 if (req.body.description)
-                  newFields['description'] = req.body.description;
+                  newFields["description"] = req.body.description;
                 if (req.body.displayName)
-                  newFields['displayName'] = req.body.displayName;
+                  newFields["displayName"] = req.body.displayName;
                 if (req.body.fileContent)
-                  newFields['fileContent'] = req.body.fileContent;
+                  newFields["fileContent"] = req.body.fileContent;
                 if (req.body.filename)
-                  newFields['filename'] = req.body.filename;
-                if (req.body.steps) newFields['steps'] = req.body.steps;
+                  newFields["filename"] = req.body.filename;
+                if (req.body.steps) newFields["steps"] = req.body.steps;
 
                 await instruction.update(newFields);
 
@@ -166,11 +166,11 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/instruction/:id',
+    method: "delete",
+    path: "/instruction/:id",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Instruction>
@@ -184,8 +184,8 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let instruction = await Instruction.findOne({
               where: {
-                name: req.params.id
-              }
+                name: req.params.id,
+              },
             });
 
             if (!instruction)
@@ -202,11 +202,11 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/instructions',
+    method: "delete",
+    path: "/instructions",
     async handler(
       req: Cumulonimbus.Request<{ instructions: string[] }, null, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -227,7 +227,7 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(400)
                 .json(
                   new ResponseConstructors.Errors.MissingFields([
-                    'instructions'
+                    "instructions",
                   ])
                 );
             else {
@@ -235,26 +235,26 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
                 await Instruction.findAndCountAll({
                   where: {
                     name: {
-                      [Op.or]: req.body.instructions
-                    }
-                  }
+                      [Op.or]: req.body.instructions,
+                    },
+                  },
                 });
 
               for (let instruction of instructions) {
                 await instruction.destroy();
               }
-              res.status(200).json({ count, type: 'instruction' });
+              res.status(200).json({ count, type: "instruction" });
             }
           } catch (error) {
             throw error;
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/instructions/all',
+    method: "delete",
+    path: "/instructions/all",
     async handler(
       req: Cumulonimbus.Request<null, null, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -272,14 +272,14 @@ const AdminInstructionEndpoints: Cumulonimbus.APIEndpointModule = [
             for (let instruction of instructions) {
               await instruction.destroy();
             }
-            res.status(200).json({ count, type: 'instruction' });
+            res.status(200).json({ count, type: "instruction" });
           } catch (error) {
             throw error;
           }
         }
       }
-    }
-  }
+    },
+  },
 ];
 
 export default AdminInstructionEndpoints;

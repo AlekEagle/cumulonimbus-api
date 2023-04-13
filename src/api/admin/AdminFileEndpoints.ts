@@ -1,15 +1,15 @@
-import { Cumulonimbus } from '../../types';
-import { Op } from 'sequelize/dist';
-import User from '../../utils/DB/User';
-import { ResponseConstructors } from '../../utils/RequestUtils';
-import File from '../../utils/DB/File';
-import { unlink } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { Cumulonimbus } from "../../types";
+import { Op } from "sequelize";
+import User from "../../utils/DB/User";
+import { ResponseConstructors } from "../../utils/RequestUtils";
+import File from "../../utils/DB/File";
+import { unlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
 
 const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'get',
-    path: '/files',
+    method: "get",
+    path: "/files",
     async handler(
       req: Cumulonimbus.Request<null, null, { offset: number; limit: number }>,
       res: Cumulonimbus.Response<
@@ -34,9 +34,9 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
             let { count, rows: files } = await File.findAndCountAll({
               limit,
               offset,
-              order: [['createdAt', 'DESC']]
+              order: [["createdAt", "DESC"]],
             });
-            let items = files.map(file => file.toJSON());
+            let items = files.map((file) => file.toJSON());
 
             res.status(200).json({ count, items });
           } catch (error) {
@@ -44,11 +44,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/user/:id([0-9]+)/files',
+    method: "get",
+    path: "/user/:id([0-9]+)/files",
     async handler(
       req: Cumulonimbus.Request<
         null,
@@ -68,8 +68,8 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
             if (!u)
               res
@@ -89,12 +89,12 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
               let { count, rows: files } = await File.findAndCountAll({
                 limit,
                 offset,
-                order: [['createdAt', 'DESC']],
+                order: [["createdAt", "DESC"]],
                 where: {
-                  userID: u.id
-                }
+                  userID: u.id,
+                },
               });
-              let items = files.map(file => file.toJSON());
+              let items = files.map((file) => file.toJSON());
 
               res.status(200).json({ count, items });
             }
@@ -103,11 +103,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/file/:id',
+    method: "get",
+    path: "/file/:id",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
@@ -121,8 +121,8 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let file = await File.findOne({
               where: {
-                filename: req.params.id
-              }
+                filename: req.params.id,
+              },
             });
 
             if (!file)
@@ -137,11 +137,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/file/:id',
+    method: "delete",
+    path: "/file/:id",
     async handler(
       req: Cumulonimbus.Request<null, { uid: string; id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
@@ -155,8 +155,8 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let file = await File.findOne({
               where: {
-                filename: req.params.id
-              }
+                filename: req.params.id,
+              },
             });
 
             if (!file)
@@ -182,11 +182,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/:id([0-9]+)/files/all',
+    method: "delete",
+    path: "/user/:id([0-9]+)/files/all",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -200,8 +200,8 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
             if (!u)
               res
@@ -211,8 +211,8 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
               try {
                 let files = await File.findAll({
                   where: {
-                    userID: u.id
-                  }
+                    userID: u.id,
+                  },
                 });
                 if (files.length > 0) {
                   for (let file of files) {
@@ -228,7 +228,7 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
                     await file.destroy();
                   }
                 }
-                res.status(200).json({ type: 'file', count: files.length });
+                res.status(200).json({ type: "file", count: files.length });
               } catch (error) {
                 throw error;
               }
@@ -238,11 +238,11 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/files',
+    method: "delete",
+    path: "/files",
     async handler(
       req: Cumulonimbus.Request<{ files: string[] }, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -257,9 +257,9 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
             let { count, rows: files } = await File.findAndCountAll({
               where: {
                 filename: {
-                  [Op.in]: req.body.files
-                }
-              }
+                  [Op.in]: req.body.files,
+                },
+              },
             });
 
             for (let file of files) {
@@ -275,14 +275,14 @@ const AdminFileEndpoints: Cumulonimbus.APIEndpointModule = [
               await file.destroy();
             }
 
-            res.status(200).json({ count, type: 'file' });
+            res.status(200).json({ count, type: "file" });
           } catch (error) {
             throw error;
           }
         }
       }
-    }
-  }
+    },
+  },
 ];
 
 export default AdminFileEndpoints;

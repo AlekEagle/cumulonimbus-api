@@ -1,5 +1,5 @@
 import { Cumulonimbus } from "../../types";
-import { Op, Sequelize } from "sequelize/dist";
+import { Sequelize } from "sequelize";
 import Multer from "multer";
 import { generateToken } from "../../utils/Token";
 import Bcrypt from "bcrypt";
