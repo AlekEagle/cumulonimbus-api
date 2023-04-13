@@ -57,7 +57,10 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           password: "string",
           rememberMe: new FieldTypeOptions("boolean", true),
         });
-        if (!req.body.username || !req.body.username.match(usernameRegex)) {
+        if (
+          (!req.body.username || !req.body.username.match(usernameRegex)) &&
+          !invalidFields.includes("username")
+        ) {
           invalidFields.push("username");
         }
         if (invalidFields.length > 0) {

@@ -62,7 +62,10 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           newPassword: new FieldTypeOptions("string", true),
           password: "string",
         });
-        if (req.body.username && !req.body.username.match(usernameRegex)) {
+        if (
+          (!req.body.username || !req.body.username.match(usernameRegex)) &&
+          !invalidFields.includes("username")
+        ) {
           invalidFields.push("username");
         }
         if (invalidFields.length > 0)
@@ -241,7 +244,10 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           repeatPassword: "string",
           rememberMe: new FieldTypeOptions("boolean", true),
         });
-        if (!req.body.username || !req.body.username.match(usernameRegex)) {
+        if (
+          (!req.body.username || !req.body.username.match(usernameRegex)) &&
+          !invalidFields.includes("username")
+        ) {
           invalidFields.push("username");
         }
         if (invalidFields.length > 0)
