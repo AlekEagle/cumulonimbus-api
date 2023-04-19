@@ -8,7 +8,7 @@ import Express from "express";
 import ExpressRateLimits from "express-rate-limit";
 import ms from "ms";
 import {
-  browserName,
+  sessionName,
   getInvalidFields,
   FieldTypeOptions,
   ResponseConstructors,
@@ -98,7 +98,7 @@ const UserSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                         typeof req.headers["x-token-name"] === "string" &&
                         req.headers["x-token-name"] !== ""
                           ? req.headers["x-token-name"]
-                          : browserName(req.ua);
+                          : sessionName(req);
                       let token = await generateToken(
                         u.id,
                         tName,

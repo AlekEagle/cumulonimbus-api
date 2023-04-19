@@ -1,7 +1,7 @@
 import Express from "express";
-import UA from "ua-parser-js";
 import User from "../utils/DB/User";
 import { TokenStructure } from "../utils/Token";
+import { DetectResult } from "node-device-detector";
 
 declare namespace NodeJS {
   export interface ProcessEnv {
@@ -29,7 +29,7 @@ declare namespace Cumulonimbus {
     ParamStruct = null,
     QueryStruct = null
   > extends Express.Request<ParamStruct, null, BodyStruct, QueryStruct> {
-    ua: UA.IResult;
+    ua: DetectResult;
     user?: User;
     session?: TokenStructure;
   }

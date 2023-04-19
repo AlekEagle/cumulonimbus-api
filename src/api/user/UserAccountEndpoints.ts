@@ -7,7 +7,7 @@ import ExpressRateLimits from "express-rate-limit";
 import ms from "ms";
 import Express from "express";
 import {
-  browserName,
+  sessionName,
   getInvalidFields,
   FieldTypeOptions,
   ResponseConstructors,
@@ -283,7 +283,7 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
                   ),
                   token = await generateToken(
                     userID,
-                    browserName(req.ua),
+                    sessionName(req),
                     !req.body.rememberMe
                   );
                 await User.create({

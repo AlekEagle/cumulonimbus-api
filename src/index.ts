@@ -4,7 +4,8 @@ import Express, { json, urlencoded, NextFunction } from "express";
 import ExpressRateLimit from "express-rate-limit";
 import ms from "ms";
 import compression, { filter as _filter } from "compression";
-import UAParser from "ua-parser-js";
+import DeviceDetector from "node-device-detector";
+import ClientHints from "node-device-detector/client-hints";
 import { Cumulonimbus } from "./types";
 import { TokenStructure, validateToken } from "./utils/Token";
 import User from "./utils/DB/User";
@@ -28,6 +29,12 @@ global.console = new Logger(
 const port: number =
   8000 + (!process.env.instance ? 0 : Number(process.env.instance));
 const app = Express();
+
+const detector = new DeviceDetector({
+    clientIndexes: true,
+    deviceIndexes: true,
+  }),
+  clientHints = new ClientHints();
 
 function shouldCompress(req: Express.Request, res: Express.Response): boolean {
   if (req.headers["x-no-compression"]) {
@@ -53,6 +60,21 @@ setInterval(async () => {
 }, ms("1h"));
 
 app.use(
+  (req, res, next) => {
+    // If process.env.DEBUG is true, set CORS headers and handle OPTIONS requests
+    if (process.env.DEBUG) {
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+      );
+      if (req.method === "OPTIONS") {
+        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+        return res.status(204).send();
+      }
+    }
+    next();
+  },
   compression({ filter: shouldCompress }),
   QueryStringParser({
     keyWithNoValueIsBool: true,
@@ -63,6 +85,8 @@ app.use(
     res: Express.Response,
     next: NextFunction
   ) => {
+    const clientHintData = clientHints.parse(req.headers);
+    req.ua = detector.detect(req.headers["user-agent"], clientHintData);
     if (req.headers.authorization) {
       try {
         let token = await validateToken(req.headers.authorization);
@@ -102,7 +126,6 @@ app.use(
         return;
       }
     }
-    req.ua = new UAParser(req.headers["user-agent"]).getResult();
     next();
   },
   json(),
