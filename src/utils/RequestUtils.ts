@@ -156,7 +156,7 @@ export function sessionName(req: Cumulonimbus.Request<any, any, any>): string {
     // Use the name of the browser
     name += req.ua.client.name;
     // If the browser version is available, use the major version
-    if (req.ua.client.version !== undefined)
+    if (req.ua.client.version !== "")
       name += " v" + req.ua.client.version.split(".")[0];
   }
 
@@ -168,13 +168,9 @@ export function sessionName(req: Cumulonimbus.Request<any, any, any>): string {
     // Use the name of the OS
     name += req.ua.os.name;
     // If the OS version is available, use the major version
-    if (req.ua.os.version !== undefined)
+    if (req.ua.os.version !== "")
       name += " v" + req.ua.os.version.split(".")[0];
   }
-
-  // If the device is a mobile device, add "(Mobile)" to the end
-  if (req.ua.device !== undefined && req.ua.device.type === "mobile")
-    name += " (Mobile)";
 
   return name;
 }
