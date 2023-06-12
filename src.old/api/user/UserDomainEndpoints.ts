@@ -1,11 +1,11 @@
-import { ResponseConstructors } from '../../utils/RequestUtils';
-import { Cumulonimbus } from '../../types';
-import Domain from '../../utils/DB/Domain';
+import { ResponseConstructors } from "../../utils/RequestUtils";
+import { Cumulonimbus } from "../..";
+import Domain from "../../utils/DB/Domain";
 
 const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'get',
-    path: '/domains',
+    method: "get",
+    path: "/domains",
     async handler(
       req: Cumulonimbus.Request<null, null, { limit: number; offset: number }>,
       res: Cumulonimbus.Response<
@@ -19,14 +19,20 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
             .json(new ResponseConstructors.Errors.InvalidSession());
         else {
           try {
-            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
-                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+            const limit =
+                req.query.limit && req.query.limit <= 50 && req.query.limit > 0
+                  ? req.query.limit
+                  : 50,
+              offset =
+                req.query.offset && req.query.offset >= 0
+                  ? req.query.offset
+                  : 0;
             let domains = await Domain.findAndCountAll({
                 limit,
                 offset,
-                order: [['createdAt', 'DESC']]
+                order: [["createdAt", "DESC"]],
               }),
-              rows = domains.rows.map(d => d.toJSON());
+              rows = domains.rows.map((d) => d.toJSON());
 
             res.status(200).json({ count: domains.count, items: rows });
           } catch (error) {
@@ -36,11 +42,11 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/domains/slim',
+    method: "get",
+    path: "/domains/slim",
     async handler(
       req: Cumulonimbus.Request<null, null, null>,
       res: Cumulonimbus.Response<
@@ -55,13 +61,13 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
         else {
           try {
             let domains = await Domain.findAndCountAll({
-                order: [['createdAt', 'DESC']]
+                order: [["createdAt", "DESC"]],
               }),
-              rows = domains.rows.map(d => {
+              rows = domains.rows.map((d) => {
                 let a = d.toJSON();
                 return {
                   domain: a.domain,
-                  allowsSubdomains: a.allowsSubdomains
+                  allowsSubdomains: a.allowsSubdomains,
                 };
               });
 
@@ -73,11 +79,11 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/domain/:id',
+    method: "get",
+    path: "/domain/:id",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Domain>
@@ -91,8 +97,8 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let domain = await Domain.findOne({
               where: {
-                domain: req.params.id
-              }
+                domain: req.params.id,
+              },
             });
 
             res.status(200).json(domain.toJSON());
@@ -103,8 +109,8 @@ const UserDomainEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
-  }
+    },
+  },
 ];
 
 export default UserDomainEndpoints;

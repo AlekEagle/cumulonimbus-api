@@ -3,13 +3,14 @@
     "outDir": "./dist/",
     "sourceMap": true,
     "noImplicitAny": true,
-    "module": "commonjs",
-    "target": "es2020",
+    "module": "ESNext",
+    "target": "ES2020",
     "rootDir": "./src/",
     "resolveJsonModule": true,
-    "typeRoots": ["node_modules/@types", "./src/types"],
+    "typeRoots": ["node_modules/@types"],
     "alwaysStrict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "moduleResolution": "nodenext"
   },
   "include": ["./src/**/*"]
 }

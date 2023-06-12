@@ -1,4 +1,4 @@
-import { Cumulonimbus } from "../../types";
+import { Cumulonimbus } from "../..";
 import Multer from "multer";
 import Bcrypt from "bcrypt";
 import User from "../../utils/DB/User";

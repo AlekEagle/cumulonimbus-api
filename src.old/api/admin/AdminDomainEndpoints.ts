@@ -1,4 +1,4 @@
-import { Cumulonimbus } from "../../types";
+import { Cumulonimbus } from "../..";
 import { Op } from "sequelize";
 import Multer from "multer";
 import User from "../../utils/DB/User";

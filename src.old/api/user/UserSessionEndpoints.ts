@@ -1,4 +1,4 @@
-import { Cumulonimbus } from "../../types";
+import { Cumulonimbus } from "../..";
 import { Sequelize } from "sequelize";
 import Multer from "multer";
 import { generateToken } from "../../utils/Token";

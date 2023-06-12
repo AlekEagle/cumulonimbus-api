@@ -10,8 +10,8 @@
       "name": "Launch Debug",
       "program": "${workspaceFolder}",
       "env": {
-        "DEBUG": "present",
-        "instance": "0"
+        "ENV": "development",
+        "INSTANCE": "0"
       },
       "sourceMaps": true,
       "preLaunchTask": "tsc: build - tsconfig.json"
@@ -21,7 +21,10 @@
       "request": "launch",
       "name": "Launch Production",
       "program": "${workspaceFolder}",
-      "env": { "instance": "0" },
+      "env": {
+        "ENV": "production",
+        "INSTANCE": "0"
+      },
       "sourceMaps": true,
       "preLaunchTask": "tsc: build - tsconfig.json"
     }

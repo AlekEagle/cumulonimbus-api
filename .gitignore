@@ -1,4 +1,8 @@
-node_modules
-.env
-dist
-certs
+# Unnecessary
+.vscode/settings.json
+node_modules/
+dist/
+
+# Sensitive data which should not be committed
+production.env
+certs/

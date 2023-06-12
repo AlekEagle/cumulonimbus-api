@@ -1,4 +1,4 @@
-import { Cumulonimbus } from "../types";
+import { Cumulonimbus } from "..";
 
 export namespace ResponseConstructors {
   export namespace Errors {

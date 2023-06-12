@@ -1,19 +1,19 @@
 import {
   FieldTypeOptions,
   getInvalidFields,
-  ResponseConstructors
-} from '../../utils/RequestUtils';
-import { Cumulonimbus } from '../../types';
-import { Op } from 'sequelize';
-import { unlink } from 'fs/promises';
-import File from '../../utils/DB/File';
-import Multer from 'multer';
-import { existsSync } from 'node:fs';
+  ResponseConstructors,
+} from "../../utils/RequestUtils";
+import { Cumulonimbus } from "../..";
+import { Op } from "sequelize";
+import { unlink } from "fs/promises";
+import File from "../../utils/DB/File";
+import Multer from "multer";
+import { existsSync } from "node:fs";
 
 const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'get',
-    path: '/user/files',
+    method: "get",
+    path: "/user/files",
     async handler(
       req: Cumulonimbus.Request<null, null, { limit: number; offset: number }>,
       res: Cumulonimbus.Response<
@@ -36,29 +36,29 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           let uls = await File.findAndCountAll({
             limit,
             offset,
-            order: [['createdAt', 'DESC']],
+            order: [["createdAt", "DESC"]],
             where: {
-              userID: req.user.id
-            }
+              userID: req.user.id,
+            },
           });
 
-          let files = uls.rows.map(u =>
+          let files = uls.rows.map((u) =>
             u.toJSON()
           ) as Cumulonimbus.Structures.File[];
 
           res.status(200).json({
             count: uls.count,
-            items: files
+            items: files,
           } as Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>);
         }
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/user/file/:id',
+    method: "get",
+    path: "/user/file/:id",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
@@ -72,8 +72,8 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           let ul = await File.findOne({
             where: {
               filename: req.params.id,
-              userID: req.user.id
-            }
+              userID: req.user.id,
+            },
           });
 
           if (!ul)
@@ -84,11 +84,11 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/file/:id',
+    method: "delete",
+    path: "/user/file/:id",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.File>
@@ -102,8 +102,8 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           let ul = await File.findOne({
             where: {
               filename: req.params.id,
-              userID: req.user.id
-            }
+              userID: req.user.id,
+            },
           });
 
           if (!ul)
@@ -129,11 +129,11 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/files',
+    method: "delete",
+    path: "/user/files",
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{ files: string[] }>,
@@ -152,17 +152,17 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           )
             res
               .status(400)
-              .json(new ResponseConstructors.Errors.MissingFields(['files']));
+              .json(new ResponseConstructors.Errors.MissingFields(["files"]));
           else {
             let uls = await File.findAndCountAll({
               where: {
                 filename: {
-                  [Op.in]: req.body.files
-                }
-              }
+                  [Op.in]: req.body.files,
+                },
+              },
             });
 
-            if (uls.count < 1) res.status(200).json({ count: 0, type: 'file' });
+            if (uls.count < 1) res.status(200).json({ count: 0, type: "file" });
             else {
               for (let ul of uls.rows) {
                 try {
@@ -180,18 +180,18 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
                   throw error;
                 }
               }
-              res.status(200).json({ count: uls.count, type: 'file' });
+              res.status(200).json({ count: uls.count, type: "file" });
             }
           }
         }
       } catch (error) {
         throw error;
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/files/all',
+    method: "delete",
+    path: "/user/files/all",
     async handler(
       req,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -205,8 +205,8 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let uls = await File.findAndCountAll({
               where: {
-                userID: req.user.id
-              }
+                userID: req.user.id,
+              },
             });
 
             for (let ul of uls.rows) {
@@ -226,7 +226,7 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
               }
             }
 
-            res.status(200).json({ count: uls.count, type: 'file' });
+            res.status(200).json({ count: uls.count, type: "file" });
           } catch (error) {
             throw error;
           }
@@ -234,8 +234,8 @@ const UserFileEndpoints: Cumulonimbus.APIEndpointModule = [
       } catch (error) {
         throw error;
       }
-    }
-  }
+    },
+  },
 ];
 
 export default UserFileEndpoints;

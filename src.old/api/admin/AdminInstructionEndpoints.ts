@@ -1,4 +1,4 @@
-import { Cumulonimbus } from "../../types";
+import { Cumulonimbus } from "../..";
 import Multer from "multer";
 import Instruction from "../../utils/DB/Instruction";
 import {

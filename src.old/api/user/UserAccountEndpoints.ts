@@ -1,8 +1,7 @@
-import { Cumulonimbus } from "../../types";
 import { Sequelize } from "sequelize";
 import Multer from "multer";
 import Bcrypt from "bcrypt";
-import User from "../../utils/DB/User";
+import User from "../../utils/DB/User.js";
 import ExpressRateLimits from "express-rate-limit";
 import ms from "ms";
 import Express from "express";
@@ -12,15 +11,15 @@ import {
   FieldTypeOptions,
   ResponseConstructors,
   validateSubdomain,
-} from "../../utils/RequestUtils";
-import { generateToken } from "../../utils/Token";
+} from "../../utils/RequestUtils.js";
+import { generateToken } from "../../utils/Token.js";
 import { randomInt } from "crypto";
 import { unlink } from "fs/promises";
-import File from "../../utils/DB/File";
-import Domain from "../../utils/DB/Domain";
+import File from "../../utils/DB/File.js";
+import Domain from "../../utils/DB/Domain.js";
 import { existsSync } from "node:fs";
-import { usernameRegex } from "../..";
-import AutoTrim from "../../utils/AutoTrim";
+import { usernameRegex } from "../../index.js";
+import AutoTrim from "../../utils/AutoTrim.js";
 
 const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
   {

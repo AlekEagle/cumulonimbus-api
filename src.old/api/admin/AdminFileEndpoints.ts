@@ -1,4 +1,4 @@
-import { Cumulonimbus } from "../../types";
+import { Cumulonimbus } from "../..";
 import { Op } from "sequelize";
 import User from "../../utils/DB/User";
 import { ResponseConstructors } from "../../utils/RequestUtils";

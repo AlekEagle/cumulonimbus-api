@@ -1,0 +1,20 @@
+[Unit]
+Description=Cumulonimbus API Instance #%i
+Requires=network-online.target
+Requires=postgresql.service
+Requires=nginx.service
+After=network-online.target
+
+[Service]
+Type=simple
+Environment=INSTANCE=%i
+Restart=always
+# TO BE FILLED BY OEM
+User=cumulonimbus
+Group=cumulonimbus
+WorkingDirectory=/opt/cumulonimbus/api
+# END OF TO BE FILLED BY OEM
+ExecStart=/usr/bin/node ./
+
+[Install]
+WantedBy=multi-user.target

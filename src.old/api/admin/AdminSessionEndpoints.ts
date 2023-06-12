@@ -1,12 +1,12 @@
-import { Cumulonimbus } from '../../types';
-import Multer from 'multer';
-import User from '../../utils/DB/User';
-import { ResponseConstructors } from '../../utils/RequestUtils';
+import { Cumulonimbus } from "../..";
+import Multer from "multer";
+import User from "../../utils/DB/User";
+import { ResponseConstructors } from "../../utils/RequestUtils";
 
 const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
   {
-    method: 'get',
-    path: '/user/:id([0-9]+)/sessions',
+    method: "get",
+    path: "/user/:id([0-9]+)/sessions",
     async handler(
       req: Cumulonimbus.Request<
         null,
@@ -24,12 +24,18 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           res.status(403).json(new ResponseConstructors.Errors.Permissions());
         else {
           try {
-            const limit = req.query.limit && req.query.limit <= 50 && req.query.limit > 0 ? req.query.limit : 50,
-                  offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+            const limit =
+                req.query.limit && req.query.limit <= 50 && req.query.limit > 0
+                  ? req.query.limit
+                  : 50,
+              offset =
+                req.query.offset && req.query.offset >= 0
+                  ? req.query.offset
+                  : 0;
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
 
             if (!u)
@@ -53,11 +59,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'get',
-    path: '/user/:id([0-9]+)/session/:sid',
+    method: "get",
+    path: "/user/:id([0-9]+)/session/:sid",
     async handler(
       req: Cumulonimbus.Request<null, { id: string; sid: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
@@ -71,8 +77,8 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
 
             if (!u)
@@ -81,8 +87,9 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
               if (
-                u.sessions.findIndex(s => s.iat === Number(req.params.sid)) ===
-                -1
+                u.sessions.findIndex(
+                  (s) => s.iat === Number(req.params.sid)
+                ) === -1
               )
                 res
                   .status(404)
@@ -90,9 +97,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
               else {
                 let session = {
                   ...u.sessions[
-                    u.sessions.findIndex(s => s.iat === Number(req.params.sid))
+                    u.sessions.findIndex(
+                      (s) => s.iat === Number(req.params.sid)
+                    )
                   ],
-                  sub: u.id
+                  sub: u.id,
                 };
                 res.status(200).json(session);
               }
@@ -102,11 +111,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/:id([0-9]+)/session/:sid',
+    method: "delete",
+    path: "/user/:id([0-9]+)/session/:sid",
     async handler(
       req: Cumulonimbus.Request<null, { id: string; sid: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.Session>
@@ -120,8 +129,8 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
 
             if (!u)
@@ -130,8 +139,9 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
               if (
-                u.sessions.findIndex(s => s.iat === Number(req.params.sid)) ===
-                -1
+                u.sessions.findIndex(
+                  (s) => s.iat === Number(req.params.sid)
+                ) === -1
               )
                 res
                   .status(404)
@@ -139,14 +149,16 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
               else {
                 let session = {
                   ...u.sessions[
-                    u.sessions.findIndex(s => s.iat === Number(req.params.sid))
+                    u.sessions.findIndex(
+                      (s) => s.iat === Number(req.params.sid)
+                    )
                   ],
-                  sub: u.id
+                  sub: u.id,
                 };
                 await u.update({
                   sessions: u.sessions.filter(
-                    s => s.iat !== Number(req.params.sid)
-                  )
+                    (s) => s.iat !== Number(req.params.sid)
+                  ),
                 });
                 res.status(200).json(session);
               }
@@ -156,11 +168,11 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/:id([0-9]+)/sessions',
+    method: "delete",
+    path: "/user/:id([0-9]+)/sessions",
     preHandlers: Multer().none(),
     async handler(
       req: Cumulonimbus.Request<{ sessions: string[] }, { id: string }, null>,
@@ -175,8 +187,8 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
 
             if (!u)
@@ -184,28 +196,28 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
                 .status(404)
                 .json(new ResponseConstructors.Errors.InvalidUser());
             else {
-              let count = u.sessions.filter(s =>
+              let count = u.sessions.filter((s) =>
                   req.body.sessions.includes(s.iat.toString())
                 ).length,
                 sessions = u.sessions.filter(
-                  s => !req.body.sessions.includes(s.iat.toString())
+                  (s) => !req.body.sessions.includes(s.iat.toString())
                 );
 
               await u.update({
-                sessions
+                sessions,
               });
-              res.status(200).json({ count, type: 'session' });
+              res.status(200).json({ count, type: "session" });
             }
           } catch (error) {
             throw error;
           }
         }
       }
-    }
+    },
   },
   {
-    method: 'delete',
-    path: '/user/:id([0-9]+)/sessions/all',
+    method: "delete",
+    path: "/user/:id([0-9]+)/sessions/all",
     async handler(
       req: Cumulonimbus.Request<null, { id: string }, null>,
       res: Cumulonimbus.Response<Cumulonimbus.Structures.DeleteBulk>
@@ -219,8 +231,8 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
           try {
             let u = await User.findOne({
               where: {
-                id: req.params.id
-              }
+                id: req.params.id,
+              },
             });
 
             if (!u)
@@ -230,17 +242,17 @@ const AdminSessionEndpoints: Cumulonimbus.APIEndpointModule = [
             else {
               let count = u.sessions.length;
               await u.update({
-                sessions: []
+                sessions: [],
               });
-              res.status(200).json({ count, type: 'session' });
+              res.status(200).json({ count, type: "session" });
             }
           } catch (error) {
             throw error;
           }
         }
       }
-    }
-  }
+    },
+  },
 ];
 
 export default AdminSessionEndpoints;

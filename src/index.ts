@@ -1,225 +1,69 @@
-import Logger, { Level } from "./utils/Logger";
-import configureEnv from "./utils/Env";
-import Express, { json, urlencoded, NextFunction } from "express";
+// Yummy yum yum imports, we love them
+
+// In-house modules because we're cool like that
+import "./utils/Env.js";
+import Logger, { Level } from "./utils/Logger.js";
+import { PORT, API_VERSION } from "./utils/Constants.js";
+import DeviceDetector from "./middleware/DeviceDetector.js";
+import DevelopmentCORS from "./middleware/DevelopmentCORS.js";
+import Compression from "./middleware/Compression.js";
+import QueryStringParser from "./middleware/QueryStringParser.js";
+import AuthProvider from "./middleware/AuthProvider.js";
+import { keyGenerator, handler } from "./utils/RateLimitUtils.js";
+
+// Node Modules that are huge and stinky and we don't want to look at them
+// (JK we love the developers that made these awesome modules)
+import Express, { json, urlencoded } from "express";
+import Multer from "multer";
 import ExpressRateLimit from "express-rate-limit";
-import ms from "ms";
-import compression, { filter as _filter } from "compression";
-import DeviceDetector from "node-device-detector";
-import ClientHints from "node-device-detector/client-hints";
-import { Cumulonimbus } from "./types";
-import { TokenStructure, validateToken } from "./utils/Token";
-import User from "./utils/DB/User";
-import Endpoints from "./api";
-import { ResponseConstructors } from "./utils/RequestUtils";
-import QueryStringParser from "./utils/QueryStringParser";
-import { readFileSync } from "node:fs";
-import { Sequelize } from "sequelize";
+import { pruneAllStaleSessions } from "./utils/StaleSessionPruner.js";
 
-const packageJSON = JSON.parse(readFileSync("./package.json", "utf-8"));
+// Create a new logger instance
+export const logger = new Logger(
+  process.env.ENV === "development" ? Level.DEBUG : Level.INFO
+);
 
-configureEnv();
+// Create a new express instance
+export const app = Express();
 
-// Usernames can only contain alphanumeric characters, underscores, dashes, periods and must not exceed 60 characters.
-export const usernameRegex = /^[a-z0-9_\-\.]{1,60}$/i;
+// Remove the X-Powered-By header because it's stinky and we don't like it
+app.disable("x-powered-by");
 
-global.console = new Logger(
-  process.env.DEBUG ? Level.DEBUG : Level.INFO
-) as any;
-
-const port: number =
-  8000 + (!process.env.instance ? 0 : Number(process.env.instance));
-const app = Express();
-
-const detector = new DeviceDetector({
-    clientIndexes: true,
-    deviceIndexes: true,
-  }),
-  clientHints = new ClientHints();
-
-function shouldCompress(req: Express.Request, res: Express.Response): boolean {
-  if (req.headers["x-no-compression"]) {
-    return false;
-  }
-
-  return _filter(req, res);
-}
-
-async function pruneExpiredSessions(user: User): Promise<void> {
-  const staleSessionTime = Math.floor(Date.now() / 1000);
-  if (user.sessions.some((s) => s.exp < staleSessionTime)) {
-    await user.update({
-      sessions: user.sessions.filter((s) => s.exp > staleSessionTime),
-    });
-  }
-  return;
-}
-
-setInterval(async () => {
-  let users = await User.findAll();
-  users.forEach(pruneExpiredSessions);
-}, ms("1h"));
-
+// Bloat the express instance with middleware
 app.use(
-  (req, res, next) => {
-    // If process.env.DEBUG is true, set CORS headers and handle OPTIONS requests
-    if (process.env.DEBUG) {
-      res.header("Access-Control-Allow-Origin", "*");
-      res.header(
-        "Access-Control-Allow-Headers",
-        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-      );
-      if (req.method === "OPTIONS") {
-        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-        return res.status(204).send();
-      }
-    }
-    next();
-  },
-  compression({ filter: shouldCompress }),
+  DevelopmentCORS,
+  Compression,
+  DeviceDetector,
   QueryStringParser({
     keyWithNoValueIsBool: true,
     ignoreKeyWithNoValue: false,
   }),
-  async (
-    req: Cumulonimbus.Request,
-    res: Express.Response,
-    next: NextFunction
-  ) => {
-    const clientHintData = clientHints.parse(req.headers);
-    req.ua = detector.detect(req.headers["user-agent"], clientHintData);
-    if (req.headers.authorization) {
-      try {
-        let token = await validateToken(req.headers.authorization);
-        if (token instanceof Error) {
-          req.user = null;
-          req.session = null;
-        } else {
-          let user = await User.findOne({
-            where: Sequelize.where(Sequelize.col("id"), token.payload.sub),
-          });
-          if (!user) {
-            req.user = null;
-            req.session = null;
-          } else {
-            if (user.bannedAt) {
-              res.status(403).json(new ResponseConstructors.Errors.Banned());
-              return;
-            } else {
-              if (
-                user.sessions.some(
-                  (s) => s.iat === (token as TokenStructure).payload.iat
-                )
-              ) {
-                await pruneExpiredSessions(user);
-                req.user = user;
-                req.session = token;
-              } else {
-                req.user = null;
-                req.session = null;
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error(error);
-        res.status(500).json(new ResponseConstructors.Errors.Internal());
-        return;
-      }
-    }
-    next();
-  },
   json(),
   urlencoded({ extended: true }),
+  Multer().none(),
+  AuthProvider,
   ExpressRateLimit({
-    windowMs: ms("5mins"),
-    max: 200,
-    keyGenerator: (req: Cumulonimbus.Request, res: Express.Response) => {
-      return req.user
-        ? req.user.id
-        : (Array.isArray(req.headers["x-forwarded-for"])
-            ? req.headers["x-forwarded-for"][0]
-            : req.headers["x-forwarded-for"]) || req.ip;
-    },
-    handler(
-      req: Express.Request,
-      res: Express.Response,
-      next: Express.NextFunction
-    ) {
-      res.status(429).send(new ResponseConstructors.Errors.RateLimited());
-    },
+    windowMs: 1000 * 60 * 5, // 5 minutes
+    max: 150,
+    keyGenerator,
+    handler,
     skipFailedRequests: true,
     standardHeaders: true,
-    legacyHeaders: true,
+    legacyHeaders: false,
   })
 );
 
-app.all("/api/", (req: Cumulonimbus.Request, res: Express.Response) => {
-  res.json({ hello: "world", version: packageJSON.version });
-});
+// Prune all stale sessions every hour
+setInterval(pruneAllStaleSessions, 1000 * 60 * 60);
 
-Endpoints.forEach((endpointModule) => {
-  endpointModule.forEach(async (endpoint) => {
-    let path = `/api${endpoint.path}`;
-    console.log(
-      "Initializing endpoint: %s",
-      endpoint.method.toUpperCase(),
-      path
-    );
-    if (endpoint.preHandlers === null || endpoint.preHandlers === undefined)
-      app[endpoint.method](
-        path,
-        async (req: Cumulonimbus.Request, res: Cumulonimbus.Response, next) => {
-          try {
-            await endpoint.handler(req, res, next);
-          } catch (error) {
-            console.error(error);
-            res.status(500).json(new ResponseConstructors.Errors.Internal());
-          }
-        }
-      );
-    else {
-      if (Array.isArray(endpoint.preHandlers))
-        app[endpoint.method](
-          path,
-          ...endpoint.preHandlers,
-          async (
-            req: Cumulonimbus.Request,
-            res: Cumulonimbus.Response,
-            next
-          ) => {
-            try {
-              await endpoint.handler(req, res, next);
-            } catch (error) {
-              console.error(error);
-              res.status(500).json(new ResponseConstructors.Errors.Internal());
-            }
-          }
-        );
-      else
-        app[endpoint.method](
-          path,
-          endpoint.preHandlers,
-          async (
-            req: Cumulonimbus.Request,
-            res: Cumulonimbus.Response,
-            next
-          ) => {
-            try {
-              await endpoint.handler(req, res, next);
-            } catch (error) {
-              console.error(error);
-              res.status(500).json(new ResponseConstructors.Errors.Internal());
-            }
-          }
-        );
-    }
-  });
+// Cute little hello world endpoint
+app.all("/api/", (_, res) => {
+  res.json({ hello: "world", version: API_VERSION });
 });
+// Invoke the route importer
+import("./routes/index.js");
 
-app.all("/api/*", (req, res) => {
-  res.status(404).json(new ResponseConstructors.Errors.InvalidEndpoint());
-});
-
-app.listen(port, () => {
-  console.log("Listening on port %s", port);
+// listen to things from stuff and things
+app.listen(PORT, () => {
+  logger.info(`Listening on port ${PORT}`);
 });
