@@ -84,7 +84,7 @@ export function extractToken(token: string): TokenStructure {
 // A function that constructs a pretty user readable name for a session
 // The name is based on the device that the user is using.
 // Example: "Chrome on Windows 10 Desktop"
-export function sessionName(req: Request): string {
+export function nameSession(req: Request): string {
   // If req.useragent.os and req.useragent.device are empty objects, fallback to the user agent string
   if (
     Object.keys(req.useragent.os).length === 0 &&

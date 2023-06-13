@@ -14,7 +14,6 @@ export default async function AuthProvider(
 ): Promise<void> {
   // Check if the request has a token to be validated
   if (req.headers.authorization) {
-    logger.debug("Authorization header found, validating token...");
     try {
       // Validate and retrieve token
       let token = await validateToken(req.headers.authorization);
@@ -26,10 +25,7 @@ export default async function AuthProvider(
         req.user = null;
         req.session = null;
       } else {
-        logger.debug("Token validation succeeded, fetching associated user...");
-        let user = await User.findOne({
-          where: Sequelize.where(Sequelize.col("id"), token.payload.sub),
-        });
+        let user = await User.findByPk(token.payload.sub);
         // Check if user exists
         if (!user) {
           // If user does not exist, set user and session to null
@@ -38,7 +34,6 @@ export default async function AuthProvider(
           req.session = null;
         } else {
           // Check if the user is banned
-          logger.debug("User found, checking if user is banned...");
           if (user.bannedAt) {
             // If user is banned, return a 403 Forbidden error
             logger.warn(
@@ -48,20 +43,14 @@ export default async function AuthProvider(
             return;
           } else {
             // Check if this session has been revoked
-            logger.debug(
-              "User is not banned, checking if session is revoked..."
-            );
             if (
               user.sessions.some(
                 (s) => s.iat === (token as TokenStructure).payload.iat
               )
             ) {
               // If session is not revoked, prune expired sessions and set user and session
-              logger.debug(
-                "Session is not revoked, pruning expired sessions..."
-              );
               await staleSessionPruner(user);
-              logger.debug("Pruning complete, continuing authenticated.");
+              logger.debug(`User ${user.username} (${user.id}) authenticated.`);
               req.user = user;
               req.session = token;
             } else {

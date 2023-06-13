@@ -9,7 +9,7 @@ import DevelopmentCORS from "./middleware/DevelopmentCORS.js";
 import Compression from "./middleware/Compression.js";
 import QueryStringParser from "./middleware/QueryStringParser.js";
 import AuthProvider from "./middleware/AuthProvider.js";
-import { keyGenerator, handler } from "./utils/RateLimitUtils.js";
+import defaultRateLimitConfig from "./utils/RateLimitUtils.js";
 
 // Node Modules that are huge and stinky and we don't want to look at them
 // (JK we love the developers that made these awesome modules)
@@ -42,15 +42,7 @@ app.use(
   urlencoded({ extended: true }),
   Multer().none(),
   AuthProvider,
-  ExpressRateLimit({
-    windowMs: 1000 * 60 * 5, // 5 minutes
-    max: 150,
-    keyGenerator,
-    handler,
-    skipFailedRequests: true,
-    standardHeaders: true,
-    legacyHeaders: false,
-  })
+  ExpressRateLimit(defaultRateLimitConfig)
 );
 
 // Prune all stale sessions every hour

@@ -102,10 +102,7 @@ export namespace Errors {
   export class MissingFields implements Cumulonimbus.Structures.Error {
     public readonly code: string = "MISSING_FIELDS_ERROR";
     public readonly message: string = "Missing Fields";
-    public fields: string[];
-    constructor(fields: string[]) {
-      this.fields = fields;
-    }
+    constructor(public readonly fields: string[]) {}
   }
 
   export class Banned implements Cumulonimbus.Structures.Error {
@@ -135,10 +132,7 @@ export namespace Errors {
 
   export class Generic implements Cumulonimbus.Structures.Error {
     public readonly code: string = "GENERIC_ERROR";
-    public message: string;
-    constructor(message: string) {
-      this.message = message;
-    }
+    constructor(public readonly message: string = undefined) {}
   }
 }
 
@@ -149,13 +143,20 @@ export namespace Success {
     constructor() {}
   }
 
+  export class DeleteFile implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_FILE_SUCCESS";
+    public readonly message: string = "File Successfully Deleted";
+    constructor() {}
+  }
+
+  export class DeleteFiles implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_FILES_SUCCESS";
+    public readonly message: string = "Files Successfully Deleted";
+    constructor(public readonly count: number) {}
+  }
+
   export class Generic implements Cumulonimbus.Structures.Success {
     public readonly code: string = "GENERIC_SUCCESS";
-    public message?: string = undefined;
-    constructor(message?: string) {
-      if (message !== undefined) {
-        this.message = message;
-      }
-    }
+    constructor(public readonly message: string = undefined) {}
   }
 }

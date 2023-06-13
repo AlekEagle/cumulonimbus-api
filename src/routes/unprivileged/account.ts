@@ -9,16 +9,18 @@ import SubdomainFormatter from "../../utils/SubdomainFormatter.js";
 import AutoTrim from "../../middleware/AutoTrim.js";
 import Domain from "../../DB/Domain.js";
 import User from "../../DB/User.js";
+import { generateToken, nameSession } from "../../utils/Token.js";
+import defaultRateLimitConfig from "../../utils/RateLimitUtils.js";
 
 import { Request, Response } from "express";
 import Bcrypt from "bcrypt";
 import { Op } from "sequelize";
-import { randomInt } from "node:crypto";
-import { generateToken, sessionName } from "../../utils/Token.js";
+import ExpressRateLimit from "express-rate-limit";
 
-logger.debug("Unprivileged user account routes loaded.");
+logger.debug("Loading unprivileged/account.ts...");
 
 app.get(
+  // GET /api/user
   "/api/user",
   async (
     req: Request,
@@ -38,6 +40,7 @@ app.get(
 );
 
 app.patch(
+  // PATCH /api/user/username
   "/api/user/username",
   AutoTrim(["password"]),
   async (
@@ -89,6 +92,7 @@ app.patch(
 );
 
 app.patch(
+  // PATCH /api/user/email
   "/api/user/email",
   AutoTrim(["password"]),
   async (
@@ -140,6 +144,7 @@ app.patch(
 );
 
 app.patch(
+  // PATCH /api/user/password
   "/api/user/password",
   async (
     req: Request<
@@ -190,6 +195,7 @@ app.patch(
 );
 
 app.patch(
+  // PATCH /api/user/domain
   "/api/user/domain",
   AutoTrim(),
   async (
@@ -256,11 +262,14 @@ app.patch(
 );
 
 app.delete(
+  // DELETE /api/user
   "/api/user",
   AutoTrim(["password"]),
   async (
     req: Request<null, null, { username: string; password: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >
   ) => {
     // If there is no session present, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -295,8 +304,14 @@ app.delete(
 );
 
 app.post(
+  // POST /api/user
   "/api/user",
   AutoTrim(["password", "confirmPassword"]),
+  ExpressRateLimit({
+    ...defaultRateLimitConfig,
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 1,
+  }),
   async (
     req: Request<
       null,
@@ -355,7 +370,7 @@ app.post(
       // Generate a session token.
       const token = await generateToken(
         now,
-        sessionName(req),
+        nameSession(req),
         req.body.rememberMe
       );
 

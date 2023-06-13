@@ -15,6 +15,8 @@ declare global {
       DATABASE_PASS: string;
       DATABASE: string;
       INSTANCE: string;
+      BASE_UPLOAD_PATH: string;
+      BASE_THUMBNAIL_PATH: string;
     }
   }
 
