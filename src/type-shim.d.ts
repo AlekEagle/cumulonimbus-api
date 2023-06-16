@@ -17,6 +17,7 @@ declare global {
       INSTANCE: string;
       BASE_UPLOAD_PATH: string;
       BASE_THUMBNAIL_PATH: string;
+      DEFAULT_DOMAIN: string;
     }
   }
 

@@ -46,7 +46,9 @@ app.get(
         let files = uls.rows.map((u) =>
           u.toJSON()
         ) as Cumulonimbus.Structures.File[];
-
+        logger.debug(
+          `User ${req.user.username} (${req.user.id}) requested ${files.length} files.`
+        );
         res.status(200).send({
           count: uls.count,
           items: files,
@@ -113,6 +115,9 @@ app.delete(
         await unlink(
           join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
         );
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted file ${file.filename}.)`
+      );
       // Delete the file from the database.
       await file.destroy();
       // Send a success response.
@@ -127,6 +132,7 @@ app.delete(
 app.delete(
   // DELETE /api/user/files
   "/api/user/files",
+
   async (
     req: Request<null, null, { files: string[] }>,
     res: Response<
@@ -171,6 +177,9 @@ app.delete(
               join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
             );
         })
+      );
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted ${files.count} files.)`
       );
       // Delete all files from the database.
       await File.destroy({
@@ -236,6 +245,10 @@ app.delete(
             );
         })
       );
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted ${files.count} files.)`
+      );
+
       // Delete all files from the database.
       await File.destroy({
         where: {

@@ -295,7 +295,7 @@ app.delete(
       );
       // Delete the user and send the deleted user object.
       await req.user.destroy();
-      return res.status(200).send(new Success.DeleteAccount());
+      return res.status(200).send(new Success.DeleteUser());
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());

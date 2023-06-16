@@ -17,7 +17,7 @@ app.get(
     >
   ) => {
     try {
-      if (!req.user) res.status(401).json(new Errors.InvalidSession());
+      if (!req.user) res.status(401).send(new Errors.InvalidSession());
       else {
         try {
           const limit =
@@ -32,8 +32,10 @@ app.get(
               order: [["createdAt", "DESC"]],
             }),
             rows = domains.rows.map((d) => d.toJSON());
-
-          res.status(200).json({ count: domains.count, items: rows });
+          logger.debug(
+            `User ${req.user.username} (${req.user.id}) requested ${rows.length} domains.`
+          );
+          res.status(200).send({ count: domains.count, items: rows });
         } catch (error) {
           throw error;
         }
@@ -55,7 +57,7 @@ app.get(
     >
   ) => {
     try {
-      if (!req.user) res.status(401).json(new Errors.InvalidSession());
+      if (!req.user) res.status(401).send(new Errors.InvalidSession());
       else {
         try {
           let domains = await Domain.findAndCountAll({
@@ -69,7 +71,10 @@ app.get(
               };
             });
 
-          res.status(200).json({ count: domains.count, items: rows });
+          logger.debug(
+            `User ${req.user.username} (${req.user.id}) requested slim domains.`
+          );
+          res.status(200).send({ count: domains.count, items: rows });
         } catch (error) {
           throw error;
         }
@@ -90,13 +95,16 @@ app.get(
     >
   ) => {
     try {
-      if (!req.user) res.status(401).json(new Errors.InvalidSession());
+      if (!req.user) res.status(401).send(new Errors.InvalidSession());
       else {
         try {
           let domain = await Domain.findByPk(req.params.domain);
 
-          if (domain) res.status(200).json(domain.toJSON());
-          else res.status(404).json(new Errors.InvalidDomain());
+          logger.debug(
+            `User ${req.user.username} (${req.user.id}) requested domain ${req.params.domain}.`
+          );
+          if (domain) res.status(200).send(domain.toJSON());
+          else res.status(404).send(new Errors.InvalidDomain());
         } catch (error) {
           throw error;
         }

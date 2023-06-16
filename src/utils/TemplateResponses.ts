@@ -50,11 +50,7 @@ export namespace Errors {
   export class InvalidSubdomain implements Cumulonimbus.Structures.Error {
     public readonly code: string = "INVALID_SUBDOMAIN_ERROR";
     public readonly message: string = "Invalid Subdomain";
-    public parsedSubdomain: string;
-
-    constructor(parsedSubdomain: string) {
-      this.parsedSubdomain = parsedSubdomain;
-    }
+    constructor(public readonly parsedDomain: string) {}
   }
 
   export class InvalidFile implements Cumulonimbus.Structures.Error {
@@ -129,18 +125,19 @@ export namespace Errors {
     public readonly message: string = "Internal Server Error";
     constructor() {}
   }
-
-  export class Generic implements Cumulonimbus.Structures.Error {
-    public readonly code: string = "GENERIC_ERROR";
-    constructor(public readonly message: string = undefined) {}
-  }
 }
 
 export namespace Success {
-  export class DeleteAccount implements Cumulonimbus.Structures.Success {
-    public readonly code: string = "DELETE_ACCOUNT_SUCCESS";
-    public readonly message: string = "Account Successfully Deleted";
+  export class DeleteUser implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_USER_SUCCESS";
+    public readonly message: string = "User Successfully Deleted";
     constructor() {}
+  }
+
+  export class DeleteUsers implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_USERS_SUCCESS";
+    public readonly message: string = "Users Successfully Deleted";
+    constructor(public readonly count: number) {}
   }
 
   export class DeleteFile implements Cumulonimbus.Structures.Success {
@@ -155,8 +152,39 @@ export namespace Success {
     constructor(public readonly count: number) {}
   }
 
-  export class Generic implements Cumulonimbus.Structures.Success {
-    public readonly code: string = "GENERIC_SUCCESS";
-    constructor(public readonly message: string = undefined) {}
+  export class DeleteSession implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_SESSION_SUCCESS";
+    public readonly message: string = "Session Successfully Deleted";
+    constructor() {}
+  }
+
+  export class DeleteSessions implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_SESSIONS_SUCCESS";
+    public readonly message: string = "Sessions Successfully Deleted";
+    constructor(public readonly count: number) {}
+  }
+
+  export class DeleteDomain implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_DOMAIN_SUCCESS";
+    public readonly message: string = "Domain Successfully Deleted";
+    constructor() {}
+  }
+
+  export class DeleteDomains implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_DOMAINS_SUCCESS";
+    public readonly message: string = "Domains Successfully Deleted";
+    constructor(public readonly count: number) {}
+  }
+
+  export class DeleteInstruction implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_INSTRUCTION_SUCCESS";
+    public readonly message: string = "Instruction Successfully Deleted";
+    constructor() {}
+  }
+
+  export class DeleteInstructions implements Cumulonimbus.Structures.Success {
+    public readonly code: string = "DELETE_INSTRUCTIONS_SUCCESS";
+    public readonly message: string = "Instructions Successfully Deleted";
+    constructor(public readonly count: number) {}
   }
 }

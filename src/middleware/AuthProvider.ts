@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { Sequelize } from "sequelize";
 
 import { Errors } from "../utils/TemplateResponses.js";
 import { logger } from "../index.js";
