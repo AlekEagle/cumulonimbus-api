@@ -63,7 +63,8 @@ const UserAccountEndpoints: Cumulonimbus.APIEndpointModule = [
           password: "string",
         });
         if (
-          (!req.body.username || !req.body.username.match(usernameRegex)) &&
+          req.body.username &&
+          !req.body.username.match(usernameRegex) &&
           !invalidFields.includes("username")
         ) {
           invalidFields.push("username");
