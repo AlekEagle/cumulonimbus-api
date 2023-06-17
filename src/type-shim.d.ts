@@ -18,6 +18,8 @@ declare global {
       BASE_UPLOAD_PATH: string;
       BASE_THUMBNAIL_PATH: string;
       DEFAULT_DOMAIN: string;
+      FRONTEND_BASE_URL: string;
+      THUMBNAIL_BASE_URL: string;
     }
   }
 

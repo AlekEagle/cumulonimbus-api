@@ -6,6 +6,7 @@ import {
 } from "../../utils/FieldValidator.js";
 import AutoTrim from "../../middleware/AutoTrim.js";
 import Instruction from "../../DB/Instruction.js";
+import { INSTRUCTION_REGEX } from "../../utils/Constants.js";
 
 import { Request, Response } from "express";
 import { Op } from "sequelize";
@@ -47,6 +48,9 @@ app.post(
 
     if (invalidFields.length > 0)
       return res.status(400).send(new Errors.MissingFields(invalidFields));
+
+    if (!req.body.name.match(INSTRUCTION_REGEX))
+      return res.status(400).send(new Errors.MissingFields(["name"]));
 
     try {
       if (await Instruction.findByPk(req.body.name))
@@ -188,7 +192,7 @@ app.patch(
 
 app.patch(
   // PATCH /api/instruction/:name/display-name
-  "/api/instruction/:name/display-name",
+  "/api/instruction/:name(a-z0-9-)/display-name",
   AutoTrim(),
   async (
     req: Request<{ name: string }, null, { displayName: string }>,

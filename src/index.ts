@@ -14,7 +14,6 @@ import defaultRateLimitConfig from "./utils/RateLimitUtils.js";
 // Node Modules that are huge and stinky and we don't want to look at them
 // (JK we love the developers that made these awesome modules)
 import Express, { json, urlencoded } from "express";
-import Multer from "multer";
 import ExpressRateLimit from "express-rate-limit";
 import { pruneAllStaleSessions } from "./utils/StaleSessionPruner.js";
 
@@ -40,7 +39,6 @@ app.use(
   }),
   json(),
   urlencoded({ extended: true }),
-  Multer().none(),
   AuthProvider,
   ExpressRateLimit(defaultRateLimitConfig)
 );

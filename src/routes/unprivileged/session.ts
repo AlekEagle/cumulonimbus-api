@@ -97,7 +97,7 @@ app.get(
   ) => {
     if (!req.session) return res.status(401).send(new Errors.InvalidSession());
     logger.debug(
-      `User ${req.session.payload.name} (${req.session.payload.sub}) requested session information.`
+      `User ${req.user.username} (${req.user.id}) requested session information.`
     );
     return res.status(200).send({
       iat: req.session.payload.iat,
@@ -222,23 +222,22 @@ app.delete(
   // DELETE /api/user/sessions/all
   "/api/user/sessions/all",
   async (
-    req: Request<null, null, null, { includeSelf: boolean }>,
+    req: Request<null, null, null, { "include-self": boolean }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    let newSessions = req.query.includeSelf
+    let newSessions = req.query["include-self"]
       ? []
       : req.user.sessions.filter(
           (session) => session.iat === req.session.payload.iat
         );
+    let count = req.user.sessions.length - newSessions.length;
     logger.debug(
-      `User ${req.user.username} (${req.user.id}) deleted ${
-        req.user.sessions.length - newSessions.length
-      } sessions.`
+      `User ${req.user.username} (${req.user.id}) deleted ${count} sessions.`
     );
     await req.user.update({ sessions: newSessions });
-    return res.status(200).send(new Success.DeleteSessions(newSessions.length));
+    return res.status(200).send(new Success.DeleteSessions(count));
   }
 );

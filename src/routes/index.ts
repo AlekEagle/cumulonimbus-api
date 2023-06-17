@@ -1,14 +1,24 @@
-import { logger } from "../index.js";
+import { logger, app } from "../index.js";
+import { Errors } from "../utils/TemplateResponses.js";
 
 logger.log("Route importer invoked! Routes are being imported...");
 
-import("./unprivileged/account.js");
-import("./unprivileged/domain.js");
-import("./unprivileged/file.js");
-import("./unprivileged/instruction.js");
-import("./unprivileged/session.js");
+await import("./unprivileged/account.js");
+await import("./unprivileged/domain.js");
+await import("./unprivileged/file.js");
+await import("./unprivileged/instruction.js");
+await import("./unprivileged/session.js");
+await import("./unprivileged/upload.js");
 
-import("./privileged/account.js");
-import("./privileged/domain.js");
-import("./privileged/file.js");
-import("./privileged/instruction.js");
+await import("./privileged/account.js");
+await import("./privileged/domain.js");
+await import("./privileged/file.js");
+await import("./privileged/instruction.js");
+await import("./privileged/session.js");
+
+app.all("*", (req, res) => {
+  logger.warn(`A request was made to an invalid endpoint: ${req.path}`);
+  res.status(404).send(new Errors.InvalidEndpoint());
+});
+
+logger.log("Loaded catch-all 404 route.");

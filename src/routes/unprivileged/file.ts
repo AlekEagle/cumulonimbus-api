@@ -61,10 +61,10 @@ app.get(
 );
 
 app.get(
-  // GET /api/user/file/:id
-  "/api/user/file/:id",
+  // GET /api/user/file/:filename
+  "/api/user/file/:filename",
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ filename: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>
   ) => {
     // If there is no session present, return an InvalidSession error.
@@ -73,7 +73,7 @@ app.get(
     // Find the file that belongs to the user.
     let file = await File.findOne({
       where: {
-        id: req.params.id,
+        filename: req.params.filename,
         userID: req.user.id,
       },
     });
@@ -84,10 +84,10 @@ app.get(
 );
 
 app.delete(
-  // DELETE /api/user/file/:id
-  "/api/user/file/:id",
+  // DELETE /api/user/file/:filename
+  "/api/user/file/:filename",
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ filename: string }, null, null, null>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
@@ -97,7 +97,7 @@ app.delete(
 
     let file = await File.findOne({
       where: {
-        id: req.params.id,
+        filename: req.params.filename,
         userID: req.user.id,
       },
     });
@@ -116,7 +116,7 @@ app.delete(
           join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
         );
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted file ${file.filename}.)`
+        `User ${req.user.username} (${req.user.id}) deleted file ${file.filename}.`
       );
       // Delete the file from the database.
       await file.destroy();
@@ -132,9 +132,8 @@ app.delete(
 app.delete(
   // DELETE /api/user/files
   "/api/user/files",
-
   async (
-    req: Request<null, null, { files: string[] }>,
+    req: Request<null, null, { filenames: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
@@ -144,17 +143,17 @@ app.delete(
 
     // Check if the request body contains the files array.
     if (
-      !req.body.files ||
-      req.body.files.length < 1 ||
-      req.body.files.length > 50
+      !req.body.filenames ||
+      req.body.filenames.length < 1 ||
+      req.body.filenames.length > 50
     )
-      return res.status(400).send(new Errors.MissingFields(["files"]));
+      return res.status(400).send(new Errors.MissingFields(["filenames"]));
 
     // Find all files that belong to the user.
     let files = await File.findAndCountAll({
       where: {
-        id: {
-          [Op.in]: req.body.files,
+        filename: {
+          [Op.in]: req.body.filenames,
         },
         userID: req.user.id,
       },
@@ -179,13 +178,13 @@ app.delete(
         })
       );
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted ${files.count} files.)`
+        `User ${req.user.username} (${req.user.id}) deleted ${files.count} files.`
       );
       // Delete all files from the database.
       await File.destroy({
         where: {
-          id: {
-            [Op.in]: req.body.files,
+          filename: {
+            [Op.in]: req.body.filenames,
           },
           userID: req.user.id,
         },
@@ -246,7 +245,7 @@ app.delete(
         })
       );
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted ${files.count} files.)`
+        `User ${req.user.username} (${req.user.id}) deleted ${files.count} files.`
       );
 
       // Delete all files from the database.
@@ -255,6 +254,7 @@ app.delete(
           userID: req.user.id,
         },
       });
+
       // Send a success response.
       res.status(200).send(new Success.DeleteFiles(files.count));
     } catch (error) {
