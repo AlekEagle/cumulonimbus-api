@@ -43,7 +43,7 @@ app.get(
 
 app.get(
   // GET /api/instructions/:id
-  "/api/instruction/:id",
+  "/api/instructions/:id",
   async (
     req: Request<{ id: string }, null, null>,
     res: Response<

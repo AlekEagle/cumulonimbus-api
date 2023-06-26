@@ -39,7 +39,7 @@ declare global {
         id: string;
         username: string;
         email: string;
-        staff?: string;
+        staff: boolean;
         domain: string;
         subdomain?: string;
         bannedAt?: string;
@@ -61,12 +61,7 @@ declare global {
 
       export interface Success {
         code: string;
-        message?: string;
-      }
-
-      export interface DeleteBulk {
-        count: number;
-        type: "user" | "session" | "file" | "domain" | "instruction";
+        message: string;
       }
 
       export interface Instruction {

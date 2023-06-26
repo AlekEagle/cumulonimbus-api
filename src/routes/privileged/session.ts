@@ -17,7 +17,8 @@ app.get(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
     const limit =
       req.query.limit && req.query.limit <= 50 && req.query.limit > 0
         ? req.query.limit
@@ -51,7 +52,8 @@ app.get(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
     let user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).send(new Errors.InvalidUser());
     let session = user.sessions.find(
@@ -75,7 +77,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
     let user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).send(new Errors.InvalidUser());
 
@@ -105,7 +108,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
     let user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).send(new Errors.InvalidUser());
     let newSessions = user.sessions.filter(
@@ -130,7 +134,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
     let user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).send(new Errors.InvalidUser());
     await user.update({ sessions: [] });

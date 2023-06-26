@@ -20,8 +20,8 @@ import ExpressRateLimit from "express-rate-limit";
 logger.debug("Loading unprivileged/account.ts...");
 
 app.get(
-  // GET /api/user
-  "/api/user",
+  // GET /api/users/me
+  "/api/users/me",
   async (
     req: Request,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
@@ -39,9 +39,9 @@ app.get(
   }
 );
 
-app.patch(
-  // PATCH /api/user/username
-  "/api/user/username",
+app.put(
+  // PUT /api/users/me/username
+  "/api/users/me/username",
   AutoTrim(["password"]),
   async (
     req: Request<null, null, { username: string; password: string }>,
@@ -91,9 +91,9 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/email
-  "/api/user/email",
+app.put(
+  // PUT /api/users/me/email
+  "/api/users/me/email",
   AutoTrim(["password"]),
   async (
     req: Request<null, null, { email: string; password: string }>,
@@ -143,9 +143,9 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/password
-  "/api/user/password",
+app.put(
+  // PUT /api/users/me/password
+  "/api/users/me/password",
   async (
     req: Request<
       null,
@@ -195,8 +195,8 @@ app.patch(
 );
 
 app.patch(
-  // PATCH /api/user/domain
-  "/api/user/domain",
+  // PATCH /api/users/me/domain
+  "/api/users/me/domain",
   AutoTrim(),
   async (
     req: Request<null, null, { domain: string; subdomain: string }>,
@@ -231,14 +231,12 @@ app.patch(
       } else {
         // If the domain does not allow subdomains, return a SubdomainNotSupported error.
         if (!domain.allowsSubdomains)
-          return res.status(400).send(new Errors.SubdomainNotSupported());
+          return res.status(400).send(new Errors.SubdomainNotAllowed());
         // Format the subdomain.
         const formattedSubdomain = SubdomainFormatter(req.body.subdomain);
         // Check if the subdomain exceeds the maximum length.
         if (formattedSubdomain.length > 63)
-          return res
-            .status(400)
-            .send(new Errors.InvalidSubdomain(formattedSubdomain));
+          return res.status(400).send(new Errors.SubdomainTooLong());
 
         // Update the user's domain and subdomain and send the updated user object.
         logger.debug(
@@ -262,8 +260,8 @@ app.patch(
 );
 
 app.delete(
-  // DELETE /api/user
-  "/api/user",
+  // DELETE /api/users/me
+  "/api/users/me",
   AutoTrim(["password"]),
   async (
     req: Request<null, null, { username: string; password: string }>,
@@ -304,8 +302,8 @@ app.delete(
 );
 
 app.post(
-  // POST /api/user
-  "/api/user",
+  // POST /api/register
+  "/api/register",
   AutoTrim(["password", "confirmPassword"]),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
@@ -328,6 +326,8 @@ app.post(
       Cumulonimbus.Structures.SuccessfulAuth | Cumulonimbus.Structures.Error
     >
   ) => {
+    // If someone attempts to register while logged in, return an InvalidSession error.
+    if (req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the request body is missing the username, password, confirmPassword, or email fields, return a MissingFields error.
     const invalidFields = getInvalidFields(req.body, {
       username: "string",
@@ -343,7 +343,7 @@ app.post(
     if (req.body.password !== req.body.confirmPassword)
       return res.status(400).send(new Errors.PasswordsDoNotMatch());
 
-    // If the username or email do not match their respective regexes, return an InvalidUsername or InvalidEmail error.
+    // If the username or email do not match their respective RegExp, return an InvalidUsername or InvalidEmail error.
     if (!req.body.username.match(USERNAME_REGEX))
       return res.status(400).send(new Errors.InvalidUsername());
 
@@ -353,7 +353,10 @@ app.post(
     // Check if the username or email are already in use.
     const existingUser = await User.findOne({
       where: {
-        [Op.or]: [{ username: req.body.username }, { email: req.body.email }],
+        [Op.or]: [
+          { username: req.body.username.toLowerCase() },
+          { email: req.body.email },
+        ],
       },
     });
 
@@ -380,7 +383,7 @@ app.post(
         username: req.body.username,
         password: hashedPassword,
         email: req.body.email,
-        domain: "alekeagle.me",
+        domain: process.env.DEFAULT_DOMAIN,
         subdomain: null,
         sessions: [
           {
@@ -391,7 +394,9 @@ app.post(
         ],
       });
       logger.debug(`User ${user.username} (${user.id}) created an account.`);
-      res.status(201).send({ token: token.token, exp: token.data.payload.exp });
+      return res
+        .status(201)
+        .send({ token: token.token, exp: token.data.payload.exp });
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());

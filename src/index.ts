@@ -11,9 +11,9 @@ import QueryStringParser from "./middleware/QueryStringParser.js";
 import AuthProvider from "./middleware/AuthProvider.js";
 import defaultRateLimitConfig from "./utils/RateLimitUtils.js";
 
-// Node Modules that are huge and stinky and we don't want to look at them
+// Node modules that are huge and stinky and we don't want to look at them
 // (JK we love the developers that made these awesome modules)
-import Express, { json, urlencoded } from "express";
+import Express, { json } from "express";
 import ExpressRateLimit from "express-rate-limit";
 import { pruneAllStaleSessions } from "./utils/StaleSessionPruner.js";
 
@@ -38,7 +38,6 @@ app.use(
     ignoreKeyWithNoValue: false,
   }),
   json(),
-  urlencoded({ extended: true }),
   AuthProvider,
   ExpressRateLimit(defaultRateLimitConfig)
 );

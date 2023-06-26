@@ -14,8 +14,8 @@ export function handler(_: Request, res: Response) {
 }
 
 const defaultRateLimitConfig = {
-  windowMs: 60 * 1000 * 5, // 5 minutes
-  max: 150,
+  windowMs: 60 * 1000 * 1, // 1 minutes
+  max: 100,
   keyGenerator,
   handler,
   skipFailedRequests: true,

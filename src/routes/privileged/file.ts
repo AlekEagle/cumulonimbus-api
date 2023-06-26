@@ -26,7 +26,8 @@ app.get(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const limit =
@@ -65,7 +66,8 @@ app.get(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const limit =
@@ -108,7 +110,8 @@ app.get(
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       let file = await File.findByPk(req.params.filename);
@@ -136,7 +139,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       let file = await File.findByPk(req.params.filename);
@@ -177,7 +181,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     const invalidFields = getInvalidFields(req.body, {
       filenames: new FieldTypeOptions("array", false, "string"),
@@ -235,7 +240,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       let user = await User.findByPk(req.params.id);

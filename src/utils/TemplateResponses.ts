@@ -1,7 +1,9 @@
 export namespace Errors {
-  export class Permissions implements Cumulonimbus.Structures.Error {
+  export class InsufficientPermissions
+    implements Cumulonimbus.Structures.Error
+  {
     public readonly code: string = "INSUFFICIENT_PERMISSIONS_ERROR";
-    public readonly message: string = "Missing Permissions";
+    public readonly message: string = "Insufficient Permissions";
     constructor() {}
   }
 
@@ -47,10 +49,10 @@ export namespace Errors {
     constructor() {}
   }
 
-  export class InvalidSubdomain implements Cumulonimbus.Structures.Error {
-    public readonly code: string = "INVALID_SUBDOMAIN_ERROR";
-    public readonly message: string = "Invalid Subdomain";
-    constructor(public readonly parsedDomain: string) {}
+  export class SubdomainTooLong implements Cumulonimbus.Structures.Error {
+    public readonly code: string = "SUBDOMAIN_TOO_LONG_ERROR";
+    public readonly message: string = "Subdomain Too Long";
+    constructor() {}
   }
 
   export class InvalidFile implements Cumulonimbus.Structures.Error {
@@ -71,9 +73,9 @@ export namespace Errors {
     constructor() {}
   }
 
-  export class SubdomainNotSupported implements Cumulonimbus.Structures.Error {
-    public readonly code: string = "SUBDOMAIN_NOT_SUPPORTED_ERROR";
-    public readonly message: string = "Subdomain Not Supported";
+  export class SubdomainNotAllowed implements Cumulonimbus.Structures.Error {
+    public readonly code: string = "SUBDOMAIN_NOT_ALLOWED_ERROR";
+    public readonly message: string = "Subdomain Not Allowed";
     constructor() {}
   }
 

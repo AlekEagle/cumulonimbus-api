@@ -35,7 +35,8 @@ app.post(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       steps: new FieldTypeOptions("array", false, "string"),
@@ -84,7 +85,8 @@ app.patch(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       steps: new FieldTypeOptions("array", false, "string"),
@@ -125,7 +127,8 @@ app.patch(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       filename: new FieldTypeOptions("string", true),
@@ -164,7 +167,8 @@ app.patch(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       description: "string",
@@ -201,7 +205,8 @@ app.patch(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       displayName: "string",
@@ -237,7 +242,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       let instruction = await Instruction.findByPk(req.params.name);
@@ -264,7 +270,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       names: new FieldTypeOptions("array", false, "string"),

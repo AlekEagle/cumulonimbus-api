@@ -37,7 +37,8 @@ app.get(
       offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
 
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       let users = await User.findAndCountAll({
@@ -67,14 +68,15 @@ app.get(
 );
 
 app.get(
-  // GET /api/user/:id
-  "/api/user/:id",
+  // GET /api/users/:id
+  "/api/users/:id",
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -96,16 +98,17 @@ app.get(
   }
 );
 
-app.patch(
-  // PATCH /api/user/:id([0-9]+)/username
-  "/api/user/:id([0-9]+)/username",
+app.put(
+  // PUT /api/users/:id([0-9]+)/username
+  "/api/users/:id([0-9]+)/username",
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { username: string }, null>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -118,7 +121,11 @@ app.patch(
       if (!USERNAME_REGEX.test(req.body.username))
         return res.status(400).send(new Errors.InvalidUsername());
 
-      if (await User.findOne({ where: { username: req.body.username } }))
+      if (
+        await User.findOne({
+          where: { username: req.body.username.toLowerCase() },
+        })
+      )
         return res.status(409).send(new Errors.UserExists());
 
       logger.debug(
@@ -137,16 +144,17 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/:id([0-9]+)/email
-  "/api/user/:id([0-9]+)/email",
+app.put(
+  // PUT /api/users/:id([0-9]+)/email
+  "/api/users/:id([0-9]+)/email",
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { email: string }, null>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -178,9 +186,9 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/:id([0-9]+)/password
-  "/api/user/:id([0-9]+)/password",
+app.put(
+  // PUT /api/users/:id([0-9]+)/password
+  "/api/users/:id([0-9]+)/password",
   async (
     req: Request<
       { id: string },
@@ -191,7 +199,8 @@ app.patch(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -224,15 +233,16 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/:id([0-9]+)/staff
-  "/api/user/:id([0-9]+)/staff",
+app.put(
+  // PUT /api/users/:id([0-9]+)/staff
+  "/api/users/:id([0-9]+)/staff",
   async (
     req: Request<{ id: string }, null, { staff: boolean }, null>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -260,15 +270,16 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/:id([0-9]+)/banned
+app.put(
+  // PUT /api/user/:id([0-9]+)/banned
   "/api/user/:id([0-9]+)/banned",
   async (
     req: Request<{ id: string }, null, { banned: boolean }, null>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -296,8 +307,8 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/user/:id([0-9]+)/domain
+app.put(
+  // PUT /api/user/:id([0-9]+)/domain
   "/api/user/:id([0-9]+)/domain",
   AutoTrim(),
   async (
@@ -310,7 +321,8 @@ app.patch(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -339,12 +351,10 @@ app.patch(
         return res.status(200).send(a);
       } else {
         if (!domain.allowsSubdomains)
-          return res.status(400).send(new Errors.SubdomainNotSupported());
+          return res.status(400).send(new Errors.SubdomainNotAllowed());
         const formattedSubdomain = SubdomainFormatter(req.body.subdomain);
         if (formattedSubdomain.length > 63)
-          return res
-            .status(400)
-            .send(new Errors.InvalidSubdomain(formattedSubdomain));
+          return res.status(400).send(new Errors.SubdomainTooLong());
 
         logger.debug(
           `User ${req.user.username} (${req.user.id}) changed domain of user ${user.username} (${user.id}) to ${formattedSubdomain}.${domain.domain}.`
@@ -377,7 +387,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const user = await User.findByPk(req.params.id);
@@ -424,7 +435,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
       const invalidFields = getInvalidFields(req.body, {

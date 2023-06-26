@@ -86,8 +86,8 @@ app.get(
 );
 
 app.get(
-  // GET /api/domain/:domain
-  "/api/domain/:domain",
+  // GET /api/domains/:domain
+  "/api/domains/:domain",
   async (
     req: Request<{ domain: string }, null, null, null>,
     res: Response<

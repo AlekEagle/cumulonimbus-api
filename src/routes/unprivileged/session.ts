@@ -17,8 +17,8 @@ import ExpressRateLimit from "express-rate-limit";
 logger.debug("Loading unprivileged/session.ts...");
 
 app.post(
-  // POST /api/user/session
-  "/api/user/session",
+  // POST /api/login
+  "/api/login",
   AutoTrim(["password"]),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
@@ -87,8 +87,8 @@ app.post(
 );
 
 app.get(
-  // GET /api/user/session
-  "/api/user/session",
+  // GET /api/users/me/sessions
+  "/api/users/me/sessions",
   async (
     req,
     res: Response<
@@ -109,8 +109,8 @@ app.get(
 );
 
 app.get(
-  // GET /api/user/sessions
-  "/api/user/sessions",
+  // GET /api/users/me/sessions
+  "/api/users/me/sessions",
   async (
     req: Request<null, null, null, { limit: number; offset: number }>,
     res: Response<
@@ -140,8 +140,8 @@ app.get(
 );
 
 app.get(
-  // GET /api/user/session/:iat
-  "/api/user/session/:iat([0-9]+)",
+  // GET /api/users/me/sessions/:iat
+  "/api/users/me/session/:iat([0-9]+)",
   async (
     req: Request<{ iat: string }>,
     res: Response<
@@ -161,8 +161,8 @@ app.get(
 );
 
 app.delete(
-  // DELETE /api/user/session/:iat
-  "/api/user/session/:iat([0-9]+)",
+  // DELETE /api/users/me/sessions/:iat
+  "/api/users/me/session/:iat([0-9]+)",
   async (
     req: Request<{ iat: string }>,
     res: Response<
@@ -186,8 +186,8 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/user/sessions
-  "/api/user/sessions",
+  // DELETE /api/users/me/sessions
+  "/api/users/me/sessions",
   async (
     req: Request<null, null, { iats: string[] }>,
     res: Response<
@@ -219,8 +219,8 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/user/sessions/all
-  "/api/user/sessions/all",
+  // DELETE /api/users/me/sessions/all
+  "/api/users/me/sessions/all",
   async (
     req: Request<null, null, null, { "include-self": boolean }>,
     res: Response<

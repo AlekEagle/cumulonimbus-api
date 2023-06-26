@@ -15,7 +15,7 @@ logger.debug("Loading privileged/domain.ts...");
 
 app.post(
   // POST /api/domain
-  "/api/domain",
+  "/api/domains",
   AutoTrim(),
   async (
     req: Request<null, null, { domain: string; allowSubdomains?: boolean }>,
@@ -24,7 +24,8 @@ app.post(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       domain: "string",
@@ -52,7 +53,7 @@ app.post(
 
 app.patch(
   // PATCH /api/domain/:domain
-  "/api/domain/:domain",
+  "/api/domains/:domain",
   AutoTrim(),
   async (
     req: Request<{ domain: string }, null, { allowSubdomains: boolean }>,
@@ -61,7 +62,8 @@ app.patch(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       allowSubdomains: "boolean",
@@ -88,7 +90,7 @@ app.patch(
 
 app.delete(
   // DELETE /api/domain/:domain
-  "/api/domain/:domain",
+  "/api/domains/:domain",
   async (
     req: Request<{ domain: string }>,
     res: Response<
@@ -96,7 +98,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let domain = await Domain.findByPk(req.params.domain);
 
@@ -132,7 +135,8 @@ app.delete(
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    if (!req.user.staff) return res.status(403).send(new Errors.Permissions());
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
       domains: new FieldTypeOptions("array", false, "string"),

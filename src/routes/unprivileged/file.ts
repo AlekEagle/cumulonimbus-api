@@ -12,8 +12,8 @@ import { Request, Response } from "express";
 logger.debug("Loading unprivileged/file.ts...");
 
 app.get(
-  // GET /api/user/files
-  "/api/user/files",
+  // GET /api/users/me/files
+  "/api/users/me/files",
   async (
     req: Request<null, null, null, { limit: number; offset: number }>,
     res: Response<
@@ -61,8 +61,8 @@ app.get(
 );
 
 app.get(
-  // GET /api/user/file/:filename
-  "/api/user/file/:filename",
+  // GET /api/users/me/files/:filename
+  "/api/users/me/files/:filename",
   async (
     req: Request<{ filename: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>
@@ -84,8 +84,8 @@ app.get(
 );
 
 app.delete(
-  // DELETE /api/user/file/:filename
-  "/api/user/file/:filename",
+  // DELETE /api/users/me/files/:filename
+  "/api/users/me/files/:filename",
   async (
     req: Request<{ filename: string }, null, null, null>,
     res: Response<
@@ -130,8 +130,8 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/user/files
-  "/api/user/files",
+  // DELETE /api/users/me/files
+  "/api/users/me/files",
   async (
     req: Request<null, null, { filenames: string[] }>,
     res: Response<
@@ -199,8 +199,8 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/user/files/all
-  "/api/user/files/all",
+  // DELETE /api/users/me/files/all
+  "/api/users/me/files/all",
   async (
     req: Request<null, null, { password: string }, null>,
     res: Response<
