@@ -1,6 +1,7 @@
 import { logger, app } from "../../index.js";
 import { Errors } from "../../utils/TemplateResponses.js";
 import Instruction from "../../DB/Instruction.js";
+import FieldExtractor from "../../utils/FieldExtractor.js";
 
 import { Request, Response } from "express";
 
@@ -29,7 +30,9 @@ app.get(
         offset,
       });
 
-      let items = instructions.map((i) => i.toJSON());
+      let items = instructions.map((i) =>
+        FieldExtractor(i.toJSON(), ["id", "name", "description"])
+      );
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested ${items.length} instructions.`
       );

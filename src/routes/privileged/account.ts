@@ -10,6 +10,7 @@ import AutoTrim from "../../middleware/AutoTrim.js";
 import File from "../../DB/File.js";
 import Domain from "../../DB/Domain.js";
 import User from "../../DB/User.js";
+import FieldExtractor from "../../utils/FieldExtractor.js";
 
 import Bcrypt from "bcrypt";
 import { Request, Response } from "express";
@@ -51,18 +52,15 @@ app.get(
         `User ${req.user.username} (${req.user.id}) requested ${users.count} users.`
       );
 
-      res.status(200).send({
+      return res.status(200).send({
         count: users.count,
-        items: users.rows.map((u) => {
-          let a = u.toJSON();
-          delete a.password;
-          delete a.sessions;
-          return a;
-        }),
+        items: users.rows.map((u) =>
+          FieldExtractor(u.toJSON(), ["id", "username"])
+        ),
       });
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -82,18 +80,16 @@ app.get(
       const user = await User.findByPk(req.params.id);
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
-      let a = user.toJSON();
-      delete a.password;
-      delete a.sessions;
-
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id}).`
       );
 
-      res.status(200).send(a);
+      return res
+        .status(200)
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -133,13 +129,12 @@ app.put(
       );
 
       await user.update({ username: req.body.username });
-      let a = user.toJSON();
-      delete a.password;
-      delete a.sessions;
-      res.status(200).send(a);
+      return res
+        .status(200)
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -175,10 +170,10 @@ app.put(
       );
 
       await user.update({ email: req.body.email });
-      let a = user.toJSON();
-      delete a.password;
-      delete a.sessions;
-      res.status(200).send(a);
+
+      return res
+        .status(200)
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       res.status(500).send(new Errors.Internal());
@@ -217,15 +212,14 @@ app.put(
         return res.status(400).send(new Errors.PasswordsDoNotMatch());
 
       await user.update({ password: await Bcrypt.hash(req.body.password, 15) });
-      let a = user.toJSON();
-      delete a.password;
-      delete a.sessions;
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed password of user ${user.username} (${user.id}).`
       );
 
-      res.status(200).send(a);
+      return res
+        .status(200)
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       res.status(500).send(new Errors.Internal());
@@ -254,18 +248,17 @@ app.put(
         return res.status(400).send(new Errors.MissingFields(invalidFields));
 
       await user.update({ staff: req.body.staff });
-      let a = user.toJSON();
-      delete a.password;
-      delete a.sessions;
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed staff status of user ${user.username} (${user.id}) to ${req.body.staff}.`
       );
 
-      res.status(200).send(a);
+      return res
+        .status(200)
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -291,18 +284,17 @@ app.put(
         return res.status(400).send(new Errors.MissingFields(invalidFields));
 
       await user.update({ banned: req.body.banned });
-      let a = user.toJSON();
-      delete a.password;
-      delete a.sessions;
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed banned status of user ${user.username} (${user.id}) to ${req.body.banned}.`
       );
 
-      res.status(200).send(a);
+      return res
+        .status(200)
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -341,9 +333,9 @@ app.put(
 
       if (!req.body.subdomain) {
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed domain of user ${user.username} (${user.id}) to ${domain.domain}.`
+          `User ${req.user.username} (${req.user.id}) changed domain of user ${user.username} (${user.id}) to ${domain.id}.`
         );
-        await user.update({ domain: domain.domain, subdomain: null });
+        await user.update({ domain: domain.id, subdomain: null });
 
         let a = user.toJSON();
         delete a.password;
@@ -357,22 +349,21 @@ app.put(
           return res.status(400).send(new Errors.SubdomainTooLong());
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed domain of user ${user.username} (${user.id}) to ${formattedSubdomain}.${domain.domain}.`
+          `User ${req.user.username} (${req.user.id}) changed domain of user ${user.username} (${user.id}) to ${formattedSubdomain}.${domain.id}.`
         );
 
         await user.update({
-          domain: domain.domain,
+          domain: domain.id,
           subdomain: formattedSubdomain,
         });
 
-        let a = user.toJSON();
-        delete a.password;
-        delete a.sessions;
-        return res.status(200).send(a);
+        return res
+          .status(200)
+          .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
       }
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -397,15 +388,13 @@ app.delete(
       const files = await File.findAll({ where: { userID: user.id } });
 
       for (const file of files) {
-        await unlink(join(process.env.BASE_UPLOAD_PATH, file.filename));
+        await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
 
         if (
-          existsSync(
-            join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
-          )
+          existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
         )
           await unlink(
-            join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
+            join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
           );
 
         await file.destroy();
@@ -420,7 +409,7 @@ app.delete(
       return res.status(200).send(new Success.DeleteUser());
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );
@@ -461,15 +450,13 @@ app.delete(
         const files = await File.findAll({ where: { userID: user.id } });
 
         for (const file of files) {
-          await unlink(join(process.env.BASE_UPLOAD_PATH, file.filename));
+          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
 
           if (
-            existsSync(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
-            )
+            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
           )
             await unlink(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.filename}.webp`)
+              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
             );
 
           await file.destroy();
@@ -485,7 +472,7 @@ app.delete(
       return res.status(200).send(new Success.DeleteUsers(users.length));
     } catch (error) {
       logger.error(error);
-      res.status(500).send(new Errors.Internal());
+      return res.status(500).send(new Errors.Internal());
     }
   }
 );

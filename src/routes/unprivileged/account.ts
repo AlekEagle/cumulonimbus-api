@@ -11,6 +11,7 @@ import Domain from "../../DB/Domain.js";
 import User from "../../DB/User.js";
 import { generateToken, nameSession } from "../../utils/Token.js";
 import defaultRateLimitConfig from "../../utils/RateLimitUtils.js";
+import FieldExtractor from "../../utils/FieldExtractor.js";
 
 import { Request, Response } from "express";
 import Bcrypt from "bcrypt";
@@ -32,10 +33,10 @@ app.get(
       `User ${req.user.username} (${req.user.id}) requested their user data.`
     );
     // Convert the user object to JSON, remove the password and sessions fields, and send it.
-    let u = req.user.toJSON();
-    delete u.password;
-    delete u.sessions;
-    return res.status(200).send(u);
+
+    return res
+      .status(200)
+      .send(FieldExtractor(req.user.toJSON(), ["password", "sessions"], true));
   }
 );
 
@@ -80,10 +81,11 @@ app.put(
 
       // Update the user's username and send the updated user object.
       await req.user.update({ username: req.body.username });
-      let u = req.user.toJSON();
-      delete u.password;
-      delete u.sessions;
-      return res.status(200).send(u);
+      return res
+        .status(200)
+        .send(
+          FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+        );
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
@@ -132,10 +134,11 @@ app.put(
 
       // Update the user's email and send the updated user object.
       await req.user.update({ email: req.body.email });
-      let u = req.user.toJSON();
-      delete u.password;
-      delete u.sessions;
-      return res.status(200).send(u);
+      return res
+        .status(200)
+        .send(
+          FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+        );
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
@@ -183,10 +186,11 @@ app.put(
 
       // Update the user's password and send the updated user object.
       await req.user.update({ password: hashedPassword });
-      let u = req.user.toJSON();
-      delete u.password;
-      delete u.sessions;
-      return res.status(200).send(u);
+      return res
+        .status(200)
+        .send(
+          FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+        );
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
@@ -224,10 +228,11 @@ app.patch(
           `User ${req.user.username} (${req.user.id}) changed their domain to ${req.body.domain}`
         );
         await req.user.update({ domain: req.body.domain, subdomain: null });
-        let u = req.user.toJSON();
-        delete u.password;
-        delete u.sessions;
-        return res.status(200).send(u);
+        return res
+          .status(200)
+          .send(
+            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          );
       } else {
         // If the domain does not allow subdomains, return a SubdomainNotSupported error.
         if (!domain.allowsSubdomains)
@@ -247,10 +252,11 @@ app.patch(
           domain: req.body.domain,
           subdomain: formattedSubdomain,
         });
-        let u = req.user.toJSON();
-        delete u.password;
-        delete u.sessions;
-        return res.status(200).send(u);
+        return res
+          .status(200)
+          .send(
+            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          );
       }
     } catch (e) {
       logger.error(e);

@@ -3,6 +3,7 @@ import { Errors } from "../../utils/TemplateResponses.js";
 import Domain from "../../DB/Domain.js";
 
 import { Request, Response } from "express";
+import FieldExtractor from "../../utils/FieldExtractor.js";
 
 logger.debug("Loading unprivileged/domain.ts...");
 
@@ -20,18 +21,23 @@ app.get(
       if (!req.user) res.status(401).send(new Errors.InvalidSession());
       else {
         try {
-          const limit =
+          let limit: number, offset: number;
+          if (req.query.limit !== -1) {
+            limit =
               req.query.limit && req.query.limit <= 50 && req.query.limit > 0
                 ? req.query.limit
-                : 50,
+                : 50;
             offset =
               req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
+          }
           let domains = await Domain.findAndCountAll({
               limit,
               offset,
               order: [["createdAt", "DESC"]],
             }),
-            rows = domains.rows.map((d) => d.toJSON());
+            rows = domains.rows.map((d) =>
+              FieldExtractor(d.toJSON(), ["id", "allowsSubdomains"])
+            );
           logger.debug(
             `User ${req.user.username} (${req.user.id}) requested ${rows.length} domains.`
           );
@@ -47,49 +53,10 @@ app.get(
 );
 
 app.get(
-  // GET /api/domains/slim
-  "/api/domains/slim",
+  // GET /api/domains/:id
+  "/api/domains/:id",
   async (
-    req: Request<null, null, null, null>,
-    res: Response<
-      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.DomainSlim>
-      | Cumulonimbus.Structures.Error
-    >
-  ) => {
-    try {
-      if (!req.user) res.status(401).send(new Errors.InvalidSession());
-      else {
-        try {
-          let domains = await Domain.findAndCountAll({
-              order: [["createdAt", "DESC"]],
-            }),
-            rows = domains.rows.map((d) => {
-              let a = d.toJSON();
-              return {
-                domain: a.domain,
-                allowsSubdomains: a.allowsSubdomains,
-              };
-            });
-
-          logger.debug(
-            `User ${req.user.username} (${req.user.id}) requested slim domains.`
-          );
-          res.status(200).send({ count: domains.count, items: rows });
-        } catch (error) {
-          throw error;
-        }
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-);
-
-app.get(
-  // GET /api/domains/:domain
-  "/api/domains/:domain",
-  async (
-    req: Request<{ domain: string }, null, null, null>,
+    req: Request<{ id: string }, null, null, null>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >
@@ -98,10 +65,10 @@ app.get(
       if (!req.user) res.status(401).send(new Errors.InvalidSession());
       else {
         try {
-          let domain = await Domain.findByPk(req.params.domain);
+          let domain = await Domain.findByPk(req.params.id);
 
           logger.debug(
-            `User ${req.user.username} (${req.user.id}) requested domain ${req.params.domain}.`
+            `User ${req.user.username} (${req.user.id}) requested domain ${req.params.id}.`
           );
           if (domain) res.status(200).send(domain.toJSON());
           else res.status(404).send(new Errors.InvalidDomain());

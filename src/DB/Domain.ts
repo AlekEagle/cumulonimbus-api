@@ -2,7 +2,7 @@ import { sequelize, init as initDB } from "./index.js";
 import { Model, DataTypes } from "sequelize";
 
 export default class Domain extends Model {
-  domain: string;
+  id: string;
   allowsSubdomains: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -12,7 +12,7 @@ export default class Domain extends Model {
   await initDB();
   Domain.init(
     {
-      domain: {
+      id: {
         type: DataTypes.STRING,
         primaryKey: true,
       },

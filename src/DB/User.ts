@@ -10,13 +10,12 @@ export default class User extends Model {
   domain: string;
   subdomain: string;
   bannedAt: string;
-  createdAt: string;
-  updatedAt: string;
   sessions: {
     iat: number;
     exp: number;
     name: string;
   }[];
+  verified: boolean;
 }
 
 (async function () {
@@ -39,6 +38,11 @@ export default class User extends Model {
       subdomain: DataTypes.STRING,
       bannedAt: DataTypes.DATE,
       sessions: DataTypes.ARRAY(DataTypes.JSONB),
+      verified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+      },
     },
     {
       sequelize,

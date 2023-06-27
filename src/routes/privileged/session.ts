@@ -28,8 +28,13 @@ app.get(
     let user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).send(new Errors.InvalidUser());
     let sessions = user.sessions
-      .map((session: Cumulonimbus.Structures.Session) => {
-        return { ...session, sub: user.id };
+      .map((session: { name: string; iat: number; exp: number }) => {
+        return {
+          id: session.iat,
+          exp: session.exp,
+          name: session.name,
+          sub: user.id,
+        };
       })
       .reverse()
       .slice(offset, offset + limit);
@@ -63,7 +68,12 @@ app.get(
     logger.debug(
       `User ${req.user.username} (${req.user.id}) requested session ${session.name} (${session.iat}) for user ${user.username} (${user.id}).`
     );
-    return res.status(200).send({ ...session, sub: user.id });
+    return res.status(200).send({
+      id: session.iat,
+      exp: session.exp,
+      name: session.name,
+      sub: user.id,
+    });
   }
 );
 

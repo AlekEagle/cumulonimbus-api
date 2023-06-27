@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { errors } from "jose";
 
 import { Errors } from "../utils/TemplateResponses.js";
 import { logger } from "../index.js";
@@ -20,7 +21,9 @@ export default async function AuthProvider(
       if (token instanceof Error) {
         // If token is invalid, set user and session to null
         logger.debug("Token validation failed, continuing unauthenticated.");
-        logger.debug("Error: ", token);
+        if (token instanceof errors.JWTExpired) logger.debug("Token expired.");
+        else logger.debug("Error: ", token);
+
         req.user = null;
         req.session = null;
       } else {

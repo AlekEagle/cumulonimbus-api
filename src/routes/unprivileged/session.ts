@@ -87,8 +87,8 @@ app.post(
 );
 
 app.get(
-  // GET /api/users/me/sessions
-  "/api/users/me/sessions",
+  // GET /api/users/me/sessions/me
+  "/api/users/me/sessions/me",
   async (
     req,
     res: Response<
@@ -97,10 +97,10 @@ app.get(
   ) => {
     if (!req.session) return res.status(401).send(new Errors.InvalidSession());
     logger.debug(
-      `User ${req.user.username} (${req.user.id}) requested session information.`
+      `User ${req.user.username} (${req.user.id}) requested their current session information.`
     );
     return res.status(200).send({
-      iat: req.session.payload.iat,
+      id: req.session.payload.iat,
       exp: req.session.payload.exp,
       name: req.session.payload.name,
       sub: req.session.payload.sub,
@@ -127,8 +127,11 @@ app.get(
       req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
     let user = req.user.toJSON();
     let sessions = user.sessions
-      .map((session: Cumulonimbus.Structures.Session) => {
-        return { ...session, sub: user.id };
+      .map((session: { iat: number; name: string; exp: number }) => {
+        return {
+          id: session.iat,
+          name: session.name,
+        };
       })
       .reverse()
       .slice(offset, offset + limit);
@@ -140,42 +143,47 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/me/sessions/:iat
-  "/api/users/me/session/:iat([0-9]+)",
+  // GET /api/users/me/sessions/:id
+  "/api/users/me/sessions/:id([0-9]+)",
   async (
-    req: Request<{ iat: string }>,
+    req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     let session = req.user.sessions.find(
-      (session) => session.iat === Number(req.params.iat)
+      (session) => session.iat === Number(req.params.id)
     );
     if (!session) return res.status(404).send(new Errors.InvalidSession());
     logger.debug(
       `User ${req.user.username} (${req.user.id}) requested session ${session.name} (${session.iat}).`
     );
-    return res.status(200).send({ ...session, sub: req.user.id });
+    return res.status(200).send({
+      id: session.iat,
+      exp: session.exp,
+      name: session.name,
+      sub: req.user.id,
+    });
   }
 );
 
 app.delete(
-  // DELETE /api/users/me/sessions/:iat
-  "/api/users/me/session/:iat([0-9]+)",
+  // DELETE /api/users/me/sessions/:id
+  "/api/users/me/session/:id([0-9]+)",
   async (
-    req: Request<{ iat: string }>,
+    req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
   ) => {
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     let session = req.user.sessions.find(
-      (session) => session.iat === Number(req.params.iat)
+      (session) => session.iat === Number(req.params.id)
     );
     if (!session) return res.status(404).send(new Errors.InvalidSession());
     let newSessions = req.user.sessions.filter(
-      (session) => session.iat !== Number(req.params.iat)
+      (session) => session.iat !== Number(req.params.id)
     );
     logger.debug(
       `User ${req.user.username} (${req.user.id}) deleted session ${session.name} (${session.iat}).`
@@ -189,7 +197,7 @@ app.delete(
   // DELETE /api/users/me/sessions
   "/api/users/me/sessions",
   async (
-    req: Request<null, null, { iats: string[] }>,
+    req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
@@ -203,11 +211,11 @@ app.delete(
     if (invalidFields.length > 0)
       return res.status(400).send(new Errors.MissingFields(invalidFields));
 
-    if (req.body.iats.length < 1 || req.body.iats.length > 50)
-      return res.status(400).send(new Errors.MissingFields(["iats"]));
+    if (req.body.ids.length < 1 || req.body.ids.length > 50)
+      return res.status(400).send(new Errors.MissingFields(["ids"]));
 
     let newSessions = req.user.sessions.filter(
-      (session) => !req.body.iats.includes(session.iat.toString())
+      (session) => !req.body.ids.includes(session.iat.toString())
     );
     let count = req.user.sessions.length - newSessions.length;
     logger.debug(

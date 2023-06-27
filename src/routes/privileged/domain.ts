@@ -18,7 +18,7 @@ app.post(
   "/api/domains",
   AutoTrim(),
   async (
-    req: Request<null, null, { domain: string; allowSubdomains?: boolean }>,
+    req: Request<null, null, { id: string; allowSubdomains?: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >
@@ -35,15 +35,15 @@ app.post(
     if (invalidFields.length > 0)
       return res.status(400).send(new Errors.MissingFields(invalidFields));
 
-    if (await Domain.findByPk(req.body.domain))
+    if (await Domain.findByPk(req.body.id))
       return res.status(409).send(new Errors.DomainExists());
 
     logger.debug(
-      `User ${req.user.username} (${req.user.id}) is creating domain ${req.body.domain}...`
+      `User ${req.user.username} (${req.user.id}) is creating domain ${req.body.id}...`
     );
 
     let domain = await Domain.create({
-      domain: req.body.domain,
+      id: req.body.id,
       allowsSubdomains: req.body.allowSubdomains ?? false,
     });
 
@@ -51,12 +51,12 @@ app.post(
   }
 );
 
-app.patch(
-  // PATCH /api/domain/:domain
-  "/api/domains/:domain",
+app.put(
+  // PUT /api/domain/:id
+  "/api/domains/:id",
   AutoTrim(),
   async (
-    req: Request<{ domain: string }, null, { allowSubdomains: boolean }>,
+    req: Request<{ id: string }, null, { allowsSubdomains: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >
@@ -66,22 +66,22 @@ app.patch(
       return res.status(403).send(new Errors.InsufficientPermissions());
 
     let invalidFields = getInvalidFields(req.body, {
-      allowSubdomains: "boolean",
+      allowsSubdomains: "boolean",
     });
 
     if (invalidFields.length > 0)
       return res.status(400).send(new Errors.MissingFields(invalidFields));
 
-    let domain = await Domain.findByPk(req.params.domain);
+    let domain = await Domain.findByPk(req.params.id);
 
     if (!domain) return res.status(404).send(new Errors.InvalidDomain());
 
     await domain.update({
-      allowsSubdomains: req.body.allowSubdomains ?? domain.allowsSubdomains,
+      allowsSubdomains: req.body.allowsSubdomains ?? domain.allowsSubdomains,
     });
 
     logger.debug(
-      `User ${req.user.username} (${req.user.id}) is updating domain ${req.params.domain}...`
+      `User ${req.user.username} (${req.user.id}) is updating domain ${req.params.id}...`
     );
 
     return res.status(200).send(domain.toJSON());
@@ -89,10 +89,10 @@ app.patch(
 );
 
 app.delete(
-  // DELETE /api/domain/:domain
-  "/api/domains/:domain",
+  // DELETE /api/domain/:id
+  "/api/domains/:id",
   async (
-    req: Request<{ domain: string }>,
+    req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
@@ -101,13 +101,13 @@ app.delete(
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
 
-    let domain = await Domain.findByPk(req.params.domain);
+    let domain = await Domain.findByPk(req.params.id);
 
     if (!domain) return res.status(404).send(new Errors.InvalidDomain());
 
     let usersUsingDomain = await User.findAll({
       where: {
-        domains: req.params.domain,
+        domains: req.params.id,
       },
     });
 
@@ -116,7 +116,7 @@ app.delete(
       await user.update({ domain: process.env.DEFAULT_DOMAIN });
 
     logger.debug(
-      `User ${req.user.username} (${req.user.id}) is deleting domain ${req.params.domain}...`
+      `User ${req.user.username} (${req.user.id}) is deleting domain ${domain.id}...`
     );
 
     await domain.destroy();
@@ -129,7 +129,7 @@ app.delete(
   // DELETE /api/domains
   "/api/domains",
   async (
-    req: Request<null, null, { domains: string[] }>,
+    req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
@@ -147,8 +147,8 @@ app.delete(
 
     let domains = await Domain.findAll({
       where: {
-        domain: {
-          [Op.in]: req.body.domains,
+        id: {
+          [Op.in]: req.body.ids,
         },
       },
     });
@@ -158,19 +158,24 @@ app.delete(
 
     let usersUsingDomains = await User.findAll({
       where: {
-        domains: req.body.domains,
+        domain: {
+          [Op.in]: req.body.ids,
+        },
       },
     });
 
     // Reset domains for users using the domains
-    for (let user of usersUsingDomains)
-      await user.update({ domain: process.env.DEFAULT_DOMAIN });
+    await Promise.all(
+      usersUsingDomains.map((user) =>
+        user.update({ domain: process.env.DEFAULT_DOMAIN })
+      )
+    );
 
     logger.debug(
       `User ${req.user.username} (${req.user.id}) is deleting ${domains.length} domains...`
     );
 
-    for (let domain of domains) await domain.destroy();
+    await Promise.all(domains.map((domain) => domain.destroy()));
 
     return res.status(200).send(new Success.DeleteDomains(domains.length));
   }

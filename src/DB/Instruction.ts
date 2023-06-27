@@ -2,12 +2,12 @@ import { sequelize, init as initDB } from "./index.js";
 import { Model, DataTypes } from "sequelize";
 
 export default class Instruction extends Model {
-  name: string;
+  id: string;
   steps: string[];
   filename: string | null;
   fileContent: string;
   description: string;
-  displayName: string;
+  name: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,12 +16,12 @@ export default class Instruction extends Model {
   await initDB();
   Instruction.init(
     {
-      name: {
+      id: {
         type: DataTypes.STRING,
         primaryKey: true,
       },
       steps: DataTypes.ARRAY(DataTypes.STRING(2000)),
-      displayName: DataTypes.STRING,
+      name: DataTypes.STRING,
       filename: DataTypes.STRING(500),
       fileContent: DataTypes.STRING(5000),
       description: DataTypes.STRING(300),

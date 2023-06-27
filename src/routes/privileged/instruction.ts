@@ -26,8 +26,8 @@ app.post(
         filename?: string;
         fileContent: string;
         description: string;
-        displayName: string;
         name: string;
+        id: string;
       }
     >,
     res: Response<
@@ -43,18 +43,18 @@ app.post(
       filename: new FieldTypeOptions("string", true),
       fileContent: "string",
       description: "string",
-      displayName: "string",
       name: "string",
+      id: "string",
     });
 
     if (invalidFields.length > 0)
       return res.status(400).send(new Errors.MissingFields(invalidFields));
 
-    if (!req.body.name.match(INSTRUCTION_REGEX))
+    if (!req.body.id.match(INSTRUCTION_REGEX))
       return res.status(400).send(new Errors.MissingFields(["name"]));
 
     try {
-      if (await Instruction.findByPk(req.body.name))
+      if (await Instruction.findByPk(req.body.id))
         return res.status(409).send(new Errors.InstructionExists());
 
       let instruction = await Instruction.create({
@@ -62,8 +62,8 @@ app.post(
         fileContent: req.body.fileContent,
         filename: req.body.filename,
         description: req.body.description,
-        displayName: req.body.displayName,
         name: req.body.name,
+        id: req.body.id,
       });
 
       return res.status(201).send(instruction.toJSON());
@@ -74,8 +74,8 @@ app.post(
   }
 );
 
-app.patch(
-  // PATCH /api/instruction/:name/steps
+app.put(
+  // PUT /api/instruction/:name/steps
   "/api/instruction/:name/steps",
   AutoTrim(),
   async (
@@ -112,8 +112,8 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/instruction/:name/file
+app.put(
+  // PUT /api/instruction/:name/file
   "/api/instruction/:name/file",
   AutoTrim(),
   async (
@@ -156,8 +156,8 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/instruction/:name/description
+app.put(
+  // PUT /api/instruction/:name/description
   "/api/instruction/:name/description",
   AutoTrim(),
   async (
@@ -194,8 +194,8 @@ app.patch(
   }
 );
 
-app.patch(
-  // PATCH /api/instruction/:name/display-name
+app.put(
+  // PUT /api/instruction/:name/display-name
   "/api/instruction/:name(a-z0-9-)/display-name",
   AutoTrim(),
   async (

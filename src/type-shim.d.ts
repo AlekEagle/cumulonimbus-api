@@ -45,10 +45,11 @@ declare global {
         bannedAt?: string;
         createdAt: string;
         updatedAt: string;
+        verified: boolean;
       }
 
       export interface Session {
-        iat: number;
+        id: number;
         exp: number;
         sub: string;
         name: string;
@@ -65,26 +66,21 @@ declare global {
       }
 
       export interface Instruction {
-        name: string;
+        id: string;
         steps: string[];
         filename: string;
         fileContent: string;
         description: string;
-        displayName: string;
+        name: string;
         createdAt: string;
         updatedAt: string;
       }
 
       export interface Domain {
-        domain: string;
+        id: string;
         allowsSubdomains: boolean;
         createdAt: string;
         updatedAt: string;
-      }
-
-      export interface DomainSlim {
-        domain: string;
-        allowsSubdomains: boolean;
       }
 
       export interface Error {
@@ -98,7 +94,7 @@ declare global {
       }
 
       export interface File {
-        filename: string;
+        id: string;
         createdAt: string;
         updatedAt: string;
         userID: string;
