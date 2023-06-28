@@ -5,7 +5,9 @@ export default class File extends Model {
   id: string;
   userID: string;
   size: number;
-  displayName: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 (async function () {
@@ -15,10 +17,21 @@ export default class File extends Model {
       id: {
         type: DataTypes.STRING,
         primaryKey: true,
+        allowNull: false,
+        unique: true,
       },
-      userID: DataTypes.STRING(60),
-      size: DataTypes.INTEGER,
-      displayName: DataTypes.STRING(500),
+      userID: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      size: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      name: {
+        type: DataTypes.STRING(256),
+        allowNull: true,
+      },
     },
     {
       sequelize,

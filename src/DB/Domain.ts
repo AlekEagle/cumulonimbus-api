@@ -3,7 +3,7 @@ import { Model, DataTypes } from "sequelize";
 
 export default class Domain extends Model {
   id: string;
-  allowsSubdomains: boolean;
+  subdomains: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,8 +15,13 @@ export default class Domain extends Model {
       id: {
         type: DataTypes.STRING,
         primaryKey: true,
+        allowNull: false,
       },
-      allowsSubdomains: DataTypes.BOOLEAN,
+      subdomains: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+      },
     },
     {
       sequelize,

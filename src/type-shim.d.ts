@@ -39,19 +39,18 @@ declare global {
         id: string;
         username: string;
         email: string;
+        verified: boolean;
         staff: boolean;
         domain: string;
-        subdomain?: string;
-        bannedAt?: string;
+        subdomain: string | null;
+        bannedAt: string | null;
         createdAt: string;
         updatedAt: string;
-        verified: boolean;
       }
 
       export interface Session {
         id: number;
         exp: number;
-        sub: string;
         name: string;
       }
 
@@ -67,18 +66,18 @@ declare global {
 
       export interface Instruction {
         id: string;
+        name: string;
+        description: string;
         steps: string[];
         filename: string;
-        fileContent: string;
-        description: string;
-        name: string;
+        content: string;
         createdAt: string;
         updatedAt: string;
       }
 
       export interface Domain {
         id: string;
-        allowsSubdomains: boolean;
+        subdomains: boolean;
         createdAt: string;
         updatedAt: string;
       }
@@ -95,10 +94,10 @@ declare global {
 
       export interface File {
         id: string;
-        createdAt: string;
-        updatedAt: string;
         userID: string;
         size: number;
+        createdAt: string;
+        updatedAt: string;
       }
 
       export interface SuccessfulUpload {

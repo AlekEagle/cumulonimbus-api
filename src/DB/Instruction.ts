@@ -3,11 +3,11 @@ import { Model, DataTypes } from "sequelize";
 
 export default class Instruction extends Model {
   id: string;
+  name: string;
   steps: string[];
   filename: string | null;
   fileContent: string;
   description: string;
-  name: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,14 +17,31 @@ export default class Instruction extends Model {
   Instruction.init(
     {
       id: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(64),
         primaryKey: true,
+        allowNull: false,
+        unique: true,
       },
-      steps: DataTypes.ARRAY(DataTypes.STRING(2000)),
-      name: DataTypes.STRING,
-      filename: DataTypes.STRING(500),
-      fileContent: DataTypes.STRING(5000),
-      description: DataTypes.STRING(300),
+      name: {
+        type: DataTypes.STRING(64),
+        allowNull: false,
+      },
+      steps: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: false,
+      },
+      filename: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      fileContent: {
+        type: DataTypes.STRING(65536),
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
     },
     {
       sequelize,

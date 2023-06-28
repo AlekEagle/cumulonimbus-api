@@ -5,17 +5,19 @@ export default class User extends Model {
   id: string;
   username: string;
   email: string;
-  staff: boolean;
+  verified: boolean;
   password: string;
-  domain: string;
-  subdomain: string;
-  bannedAt: string;
   sessions: {
     iat: number;
     exp: number;
     name: string;
   }[];
-  verified: boolean;
+  staff: boolean;
+  domain: string;
+  subdomain: string | null;
+  bannedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 (async function () {
@@ -25,23 +27,49 @@ export default class User extends Model {
       id: {
         type: DataTypes.STRING,
         primaryKey: true,
+        allowNull: false,
+        unique: true,
       },
-      username: DataTypes.STRING(60),
-      email: DataTypes.STRING,
+      username: {
+        type: DataTypes.STRING(64),
+        allowNull: false,
+        unique: true,
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      verified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
+      },
+      password: {
+        type: DataTypes.STRING(60),
+        allowNull: false,
+      },
+      sessions: {
+        type: DataTypes.JSONB,
+        defaultValue: [],
+        allowNull: false,
+      },
       staff: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false,
       },
-      password: DataTypes.STRING(2000),
-      domain: DataTypes.STRING,
-      subdomain: DataTypes.STRING,
-      bannedAt: DataTypes.DATE,
-      sessions: DataTypes.ARRAY(DataTypes.JSONB),
-      verified: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
+      domain: {
+        type: DataTypes.STRING,
         allowNull: false,
+      },
+      subdomain: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+      },
+      bannedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
       },
     },
     {

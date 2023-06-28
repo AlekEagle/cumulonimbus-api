@@ -1,6 +1,6 @@
-import { logger, app } from "../../index.js";
-import { Errors, Success } from "../../utils/TemplateResponses.js";
-import File from "../../DB/File.js";
+import { logger, app } from "../index.js";
+import { Errors, Success } from "../utils/TemplateResponses.js";
+import File from "../DB/File.js";
 
 import Multer from "multer";
 import { Response } from "express";
@@ -9,12 +9,12 @@ import { createWriteStream } from "node:fs";
 import {
   FILENAME_LENGTH,
   TROUBLESOME_FILE_EXTENSIONS,
-} from "../../utils/Constants.js";
+} from "../utils/Constants.js";
 import { join } from "node:path";
 import { randomInt } from "node:crypto";
 import { ReadableStreamWithFileType, fileTypeStream } from "file-type";
 
-logger.debug("Loading unprivileged/upload.ts...");
+logger.debug("Loading: Upload Route...");
 
 function filenameGen(): string {
   let alphabet =
@@ -93,16 +93,21 @@ app.post(
 
       // Create a new file in the database
       await File.create({
-        filename: `${filename}.${fileExtension}`,
+        id: `${filename}.${fileExtension}`,
+        name: req.file.originalname ? req.file.originalname : null,
         userID: req.user.id,
         size: req.file.size || req.body.file.length,
       });
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) uploaded ${filename}.${fileExtension}`
+      );
 
       return res.status(201).json({
         url: `https://${req.user.subdomain ? `${req.user.subdomain}.` : ""}${
           req.user.domain
         }/${filename}.${fileExtension}`,
-        manage: `${process.env.FRONTEND_BASE_URL}/dashboard/file?filename=${filename}.${fileExtension}`,
+        manage: `${process.env.FRONTEND_BASE_URL}/dashboard/file?id=${filename}.${fileExtension}`,
         thumbnail: `${process.env.THUMBNAIL_BASE_URL}/${filename}.${fileExtension}`,
       });
     } catch (err) {
