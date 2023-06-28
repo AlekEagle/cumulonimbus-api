@@ -588,7 +588,7 @@ app.put(
   // PUT /api/users/:id/ban
   "/api/users/:id([0-9]{13})/ban",
   async (
-    req: Request<{ id: string }, null, { banned: boolean }>,
+    req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     // If there is no user logged in, return an InvalidSession error.
@@ -604,21 +604,50 @@ app.put(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        banned: "boolean",
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s banned status to ${req.body.banned}.`
+        `User ${req.user.username} (${req.user.id}) banned user ${user.username} (${user.id}).`
       );
 
       // Update the banned status.
-      await user.update({ banned: req.body.banned ? new Date() : null });
+      await user.update({ banned: new Date() });
+
+      // Send the user object.
+      return res
+        .status(200)
+        .send(FieldExtractor(user, ["password", "sessions"], true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).send(new Errors.Internal());
+    }
+  }
+);
+
+app.delete(
+  // DELETE /api/users/:id/unban
+  "/api/users/:id([0-9]{13})/ban",
+  async (
+    req: Request<{ id: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+  ) => {
+    // If there is no user logged in, return an InvalidSession error.
+    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
+    // If the user is not staff, return a InsufficientPermissions error.
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
+
+    try {
+      // Get the user.
+      const user = await User.findByPk(req.params.id);
+
+      // If the user does not exist, return a InvalidUser error.
+      if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) unbanned user ${user.username} (${user.id}).`
+      );
+
+      // Update the banned status.
+      await user.update({ banned: null });
 
       // Send the user object.
       return res
