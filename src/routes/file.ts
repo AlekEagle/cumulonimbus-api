@@ -64,6 +64,14 @@ app.get(
       if (req.query.user !== "me" && req.query.user !== req.user.id) {
         if (!req.user.staff)
           return res.status(403).send(new Errors.InsufficientPermissions());
+
+        // Check if the user exists.
+        let user = await User.findByPk(req.query.user);
+
+        // If the user does not exist, return an InvalidUser error.
+        if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+        // Get the user's files.
         let { count, rows: files } = await File.findAndCountAll({
           limit,
           offset,
@@ -380,7 +388,7 @@ app.delete(
   // DELETE /api/files/all
   "/api/files/all",
   async (
-    req: Request<null, null, { password: string }, { user?: string }>,
+    req: Request<null, null, { password: string }, { user: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >
@@ -388,28 +396,26 @@ app.delete(
     // If there is no session present, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
-    // Check if the user provided a user to delete all files from.
-    if (req.query.user) {
-      // If the user is not staff, return an InsufficientPermissions error.
-      if (!req.user.staff)
-        return res.status(403).send(new Errors.InsufficientPermissions());
+    // If the query does not contain the user parameter, return a MissingFields error.
+    if (!req.query.user)
+      return res.status(400).send(new Errors.MissingFields(["user"]));
 
+    // Check if the user is trying delete their own files.
+    if (req.query.user === req.user.id || req.query.user === "me") {
+      // Check if the request body contains the password field.
+      if (!req.body.password)
+        return res.status(400).send(new Errors.MissingFields(["password"]));
       try {
-        // Check if the user exists.
-        let user = await User.findByPk(req.query.user);
+        // Check if the password is correct.
+        if (!(await Bcrypt.compare(req.body.password, req.user.password)))
+          return res.status(401).send(new Errors.InvalidPassword());
 
-        // If the user does not exist, return an InvalidUser error.
-        if (!user) return res.status(404).send(new Errors.InvalidUser());
-
-        // Get all files belonging to the user specified.
+        // Fetch all files belonging to the user.
         let { count, rows: files } = await File.findAndCountAll({
           where: {
-            userID: user.id,
+            userID: req.user.id,
           },
         });
-
-        // If the count is 0, return an InvalidFile error.
-        if (count === 0) return res.status(404).send(new Errors.InvalidFile());
 
         // Delete all files.
         await Promise.all(
@@ -439,24 +445,23 @@ app.delete(
       }
     }
 
-    // Check if the request body contains the password field.
-    if (!req.body.password)
-      return res.status(400).send(new Errors.MissingFields(["password"]));
-
-    // Check if the password is correct.
-    if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-      return res.status(401).send(new Errors.InvalidPassword());
+    // If the user is not staff, return an InsufficientPermissions error.
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
-      // Get all files belonging to the user.
+      // Check if the user exists.
+      let user = await User.findByPk(req.query.user);
+
+      // If the user does not exist, return an InvalidUser error.
+      if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+      // Fetch all files belonging to the user.
       let { count, rows: files } = await File.findAndCountAll({
         where: {
-          userID: req.user.id,
+          userID: user.id,
         },
       });
-
-      // If the count is 0, return an InvalidFile error.
-      if (count === 0) return res.status(404).send(new Errors.InvalidFile());
 
       // Delete all files.
       await Promise.all(

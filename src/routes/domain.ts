@@ -139,8 +139,8 @@ app.post(
 );
 
 app.put(
-  // PUT /api/domains/:id
-  "/api/domains/:id",
+  // PUT /api/domains/:id/subdomains
+  "/api/domains/:id/subdomains",
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { subdomains: boolean }>,
