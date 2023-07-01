@@ -19,7 +19,6 @@ export declare interface TokenStructure {
   };
   payload: {
     sub: string;
-    name: string;
     iat: number;
     exp: number;
   };
@@ -43,13 +42,12 @@ export async function importCertificates() {
 
 export async function generateToken(
   subject: string,
-  tokenSessionName: string,
   longLived: boolean = false
 ): Promise<{ token: string; data: TokenStructure }> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   let token: string, data: TokenStructure;
-  token = await new SignJWT({ name: tokenSessionName })
+  token = await new SignJWT({})
     .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
     .setIssuedAt()
     .setSubject(subject)

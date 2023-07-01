@@ -1,7 +1,6 @@
 import { logger, app } from "../index.js";
 import { Errors, Success } from "../utils/TemplateResponses.js";
 import User from "../DB/User.js";
-import FieldExtractor from "../utils/FieldExtractor.js";
 import { getInvalidFields, FieldTypeOptions } from "../utils/FieldValidator.js";
 import AutoTrim from "../middleware/AutoTrim.js";
 import defaultRateLimitConfig from "../utils/RateLimitUtils.js";
@@ -75,11 +74,7 @@ app.post(
         (req.headers["x-token-name"] as string) || nameSession(req);
 
       // Generate a new token for the user.
-      let token = await generateToken(
-        user.id,
-        sessionName,
-        req.body.rememberMe
-      );
+      let token = await generateToken(user.id, req.body.rememberMe);
 
       // Add the new session to the user's sessions.
       let sessions = [
@@ -93,6 +88,8 @@ app.post(
 
       // Update the user's sessions.
       await user.update({ sessions });
+
+      logger.debug(`User ${user.username} (${user.id}) logged in.`);
 
       // Return a SuccessfulAuth response.
       return res.status(201).json({
@@ -108,7 +105,7 @@ app.post(
 
 app.get(
   // GET /api/users/:uid/sessions/:sid
-  "/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{13}|me)",
+  "/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)",
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -119,14 +116,24 @@ app.get(
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === "me" && req.params.uid === req.user.id) {
+    if (req.params.uid === "me" || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
-      if (req.params.sid === "me")
+      if (req.params.sid === "me") {
+        logger.debug(
+          `User ${req.user.username} (${req.user.id}) requested their current session.`
+        );
+
+        // Get the current session.
+        let session = req.user.sessions.find(
+          (session) => session.iat === req.session.payload.iat
+        );
+
         return res.status(200).send({
-          id: req.session.payload.iat,
-          exp: req.session.payload.exp,
-          name: req.session.payload.name,
+          id: session.iat,
+          exp: session.exp,
+          name: session.name,
         });
+      }
 
       // Find the session with the given ID.
       let session = req.user.sessions.find(
@@ -135,6 +142,10 @@ app.get(
 
       // If no session was found, return an InvalidSession error.
       if (!session) return res.status(404).json(new Errors.InvalidSession());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested their session ${session.name} (${session.iat}).`
+      );
 
       // Return the session.
       return res.status(200).send({
@@ -163,6 +174,10 @@ app.get(
       // If no session was found, return an InvalidSession error.
       if (!session) return res.status(404).json(new Errors.InvalidSession());
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`
+      );
+
       // Return the session.
       return res.status(200).send({
         id: session.iat,
@@ -187,7 +202,7 @@ app.get(
       { limit: number; offset: number }
     >,
     res: Response<
-      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Session>
+      | Cumulonimbus.Structures.List<{ id: number; name: string }>
       | Cumulonimbus.Structures.Error
     >
   ) => {
@@ -202,7 +217,11 @@ app.get(
       offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === "me" && req.params.uid === req.user.id) {
+    if (req.params.uid === "me" || req.params.uid === req.user.id) {
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested their sessions.`
+      );
+
       // Return the user's sessions.
       return res.status(200).send({
         count: req.user.sessions.length,
@@ -210,7 +229,6 @@ app.get(
           .slice(offset, offset + limit)
           .map((session) => ({
             id: session.iat,
-            exp: session.exp,
             name: session.name,
           })),
       });
@@ -232,7 +250,6 @@ app.get(
         count: user.sessions.length,
         items: user.sessions.slice(offset, offset + limit).map((session) => ({
           id: session.iat,
-          exp: session.exp,
           name: session.name,
         })),
       });
@@ -245,7 +262,7 @@ app.get(
 
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
-  "/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{13}|me)",
+  "/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)",
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -256,7 +273,7 @@ app.delete(
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === "me" && req.params.uid === req.user.id) {
+    if (req.params.uid === "me" || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
       if (req.params.sid === "me") {
         // Remove the current session.
@@ -340,7 +357,7 @@ app.delete(
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === "me" && req.params.uid === req.user.id) {
+    if (req.params.uid === "me" || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
       if (req.body.sids.includes("me"))
         // Replace `me` with the current session ID.
@@ -406,7 +423,7 @@ app.delete(
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === "me" && req.params.uid === req.user.id) {
+    if (req.params.uid === "me" || req.params.uid === req.user.id) {
       // Remove the sessions.
       let sessions = req.user.sessions.filter(
         (session) =>

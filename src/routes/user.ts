@@ -40,9 +40,9 @@ app.post(
       null,
       {
         username: string;
+        email: string;
         password: string;
         confirmPassword: string;
-        email: string;
         rememberMe?: boolean;
       }
     >,
@@ -55,9 +55,9 @@ app.post(
     // If the request body is missing the username, password, confirmPassword, or email fields, return a MissingFields error.
     const invalidFields = getInvalidFields(req.body, {
       username: "string",
+      email: "string",
       password: "string",
       confirmPassword: "string",
-      email: "string",
       rememberMe: new FieldTypeOptions("boolean", true),
     });
     if (invalidFields.length > 0)
@@ -94,12 +94,10 @@ app.post(
       // Hash the password.
       const hashedPassword = await Bcrypt.hash(req.body.password, 15);
 
+      const tokenName = nameSession(req);
+
       // Generate a session token.
-      const token = await generateToken(
-        now,
-        nameSession(req),
-        req.body.rememberMe
-      );
+      const token = await generateToken(now, req.body.rememberMe);
 
       // Create the user and send the user object.
       const user = await User.create({
@@ -113,7 +111,7 @@ app.post(
           {
             iat: token.data.payload.iat,
             exp: token.data.payload.exp,
-            name: token.data.payload.name,
+            name: tokenName,
           },
         ],
       });
@@ -541,7 +539,7 @@ app.put(
   // PUT /api/users/:id/staff
   "/api/users/:id([0-9]{13})/staff",
   async (
-    req: Request<{ id: string }, null, { staff: boolean }>,
+    req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
   ) => {
     // If there is no user logged in, return an InvalidSession error.
@@ -557,21 +555,50 @@ app.put(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        staff: "boolean",
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s staff status to ${req.body.staff}.`
+        `User ${req.user.username} (${req.user.id}) granted user ${user.username} (${user.id}) staff privileges.`
       );
 
       // Update the staff status.
-      await user.update({ staff: req.body.staff });
+      await user.update({ staff: true });
+
+      // Send the user object.
+      return res
+        .status(200)
+        .send(FieldExtractor(user, ["password", "sessions"], true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).send(new Errors.Internal());
+    }
+  }
+);
+
+app.delete(
+  // DELETE /api/users/:id/staff
+  "/api/users/:id([0-9]{13})/staff",
+  async (
+    req: Request<{ id: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+  ) => {
+    // If there is no user logged in, return an InvalidSession error.
+    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
+    // If the user is not staff, return a InsufficientPermissions error.
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
+
+    try {
+      // Get the user.
+      const user = await User.findByPk(req.params.id);
+
+      // If the user does not exist, return a InvalidUser error.
+      if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) revoked user ${user.username} (${user.id})'s staff privileges.`
+      );
+
+      // Update the staff status.
+      await user.update({ staff: false });
 
       // Send the user object.
       return res
@@ -623,7 +650,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/:id/unban
+  // DELETE /api/users/:id/ban
   "/api/users/:id([0-9]{13})/ban",
   async (
     req: Request<{ id: string }>,

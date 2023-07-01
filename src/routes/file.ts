@@ -314,6 +314,10 @@ app.delete(
       // Delete the file from the database.
       await file.destroy();
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted file ${file.id}.`
+      );
+
       return res.status(200).send(new Success.DeleteFile());
     } catch (error) {
       logger.error(error);
@@ -374,6 +378,10 @@ app.delete(
           // Delete the file from the database.
           await file.destroy();
         })
+      );
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted ${count} files.`
       );
 
       return res.status(200).send(new Success.DeleteFiles(count));
@@ -438,6 +446,10 @@ app.delete(
           })
         );
 
+        logger.debug(
+          `User ${req.user.username} (${req.user.id}) deleted all of their files.`
+        );
+
         return res.status(200).send(new Success.DeleteFiles(count));
       } catch (error) {
         logger.error(error);
@@ -480,6 +492,10 @@ app.delete(
           // Delete the file from the database.
           await file.destroy();
         })
+      );
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted ${count} files belonging to user ${user.username} (${user.id}).`
       );
 
       return res.status(200).send(new Success.DeleteFiles(count));

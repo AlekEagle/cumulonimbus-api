@@ -265,11 +265,11 @@ app.put(
 );
 
 app.put(
-  // PUT /api/instructions/:id/filename
-  "/api/instructions/:id/filename",
+  // PUT /api/instructions/:id/file
+  "/api/instructions/:id/file",
   AutoTrim(),
   async (
-    req: Request<{ id: string }, null, { filename: string }>,
+    req: Request<{ id: string }, null, { filename?: string; content: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >
@@ -284,6 +284,7 @@ app.put(
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
         filename: new FieldTypeOptions("string", true),
+        content: new FieldTypeOptions("string", false),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -298,59 +299,13 @@ app.put(
         return res.status(404).send(new Errors.InvalidInstruction());
 
       // Update the instruction.
-      await instruction.update({ filename: req.body.filename });
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) filename.`
-      );
-
-      // Return the instruction.
-      return res.status(200).send(instruction.toJSON());
-    } catch (e) {
-      logger.error(e);
-      return res.status(500).send(new Errors.Internal());
-    }
-  }
-);
-
-app.put(
-  // PUT /api/instructions/:id/content
-  "/api/instructions/:id/content",
-  AutoTrim(),
-  async (
-    req: Request<{ id: string }, null, { content: string }>,
-    res: Response<
-      Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
-  ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
-    try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        content: "string",
+      await instruction.update({
+        filename: req.body.filename ? req.body.filename : null,
+        content: req.body.content,
       });
 
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
-      // Get the instruction.
-      const instruction = await Instruction.findByPk(req.params.id);
-
-      // If the instruction doesn't exist, return an InvalidInstruction error.
-      if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
-
-      // Update the instruction.
-      await instruction.update({ content: req.body.content });
-
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) content.`
+        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) file.`
       );
 
       // Return the instruction.

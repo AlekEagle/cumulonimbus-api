@@ -40,7 +40,7 @@ app.get(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched domains.)`
+        `User ${req.user.username} (${req.user.id}) fetched domains.`
       );
 
       // Return the domains.
@@ -75,7 +75,7 @@ app.get(
       if (!domain) return res.status(404).send(new Errors.InvalidDomain());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched domain ${domain.id}.)`
+        `User ${req.user.username} (${req.user.id}) fetched domain ${domain.id}.`
       );
 
       // Return the domain.
@@ -126,7 +126,7 @@ app.post(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) created domain ${domain.id}.)`
+        `User ${req.user.username} (${req.user.id}) created domain ${domain.id}.`
       );
 
       // Return the domain.
@@ -177,7 +177,7 @@ app.put(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated domain ${domain.id}.)`
+        `User ${req.user.username} (${req.user.id}) updated domain ${domain.id}.`
       );
 
       // Return the domain.
@@ -230,7 +230,7 @@ app.delete(
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted domain ${domain.id}.)`
+        `User ${req.user.username} (${req.user.id}) deleted domain ${domain.id}.`
       );
 
       // Delete the domain.
@@ -303,7 +303,7 @@ app.delete(
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted ${count} domains.)`
+        `User ${req.user.username} (${req.user.id}) deleted ${count} domains.`
       );
 
       // Delete the domains.
