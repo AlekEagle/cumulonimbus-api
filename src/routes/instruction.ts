@@ -47,7 +47,7 @@ app.get(
       return res.status(200).send({
         count,
         items: instructions.map((d) =>
-          FieldExtractor(d, ["id", "name", "description"])
+          FieldExtractor(d.toJSON(), ["id", "name", "description"])
         ),
       });
     } catch (e) {

@@ -23,7 +23,7 @@ import { join } from "node:path";
 import { unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
-logger.debug("Loading: User Routes...");
+logger.debug("Loading: Account Routes...");
 
 app.post(
   // POST /api/register
@@ -171,7 +171,9 @@ app.get(
       // Send the users.
       return res.status(200).send({
         count,
-        items: users.map((user) => FieldExtractor(user, ["id", "username"])),
+        items: users.map((user) =>
+          FieldExtractor(user.toJSON(), ["id", "username"])
+        ),
       });
     } catch (error) {
       logger.error(error);
@@ -198,7 +200,9 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(req.user, ["password", "sessions"], true));
+        .send(
+          FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+        );
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
@@ -219,7 +223,7 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -275,7 +279,9 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(FieldExtractor(req.user, ["password", "sessions"], true));
+          .send(
+            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -323,7 +329,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -379,7 +385,9 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(FieldExtractor(req.user, ["password", "sessions"], true));
+          .send(
+            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -424,7 +432,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -483,7 +491,9 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(FieldExtractor(req.user, ["password", "sessions"], true));
+          .send(
+            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -527,7 +537,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -565,7 +575,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -603,7 +613,7 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -641,7 +651,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -679,7 +689,7 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -733,7 +743,9 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(FieldExtractor(req.user, ["password", "sessions"], true));
+          .send(
+            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -784,7 +796,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user, ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());

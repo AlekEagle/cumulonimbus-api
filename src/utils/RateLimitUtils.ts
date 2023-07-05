@@ -18,7 +18,7 @@ const defaultRateLimitConfig = {
   max: 100,
   keyGenerator,
   handler,
-  skipFailedRequests: true,
+  skipFailedRequests: false,
   standardHeaders: true,
   legacyHeaders: false,
 };

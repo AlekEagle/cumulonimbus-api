@@ -46,7 +46,9 @@ app.get(
       // Return the domains.
       return res.status(200).send({
         count,
-        items: domains.map((d) => FieldExtractor(d, ["id", "subdomains"])),
+        items: domains.map((d) =>
+          FieldExtractor(d.toJSON(), ["id", "subdomains"])
+        ),
       });
     } catch (e) {
       logger.error(e);
@@ -143,7 +145,7 @@ app.put(
   "/api/domains/:id/subdomains",
   AutoTrim(),
   async (
-    req: Request<{ id: string }, null, { subdomains: boolean }>,
+    req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >
@@ -162,22 +164,54 @@ app.put(
       // If the domain doesn't exist, return a InvalidDomain error.
       if (!domain) return res.status(404).send(new Errors.InvalidDomain());
 
-      // Get the invalid fields.
-      const invalidFields = getInvalidFields(req.body, {
-        subdomains: "boolean",
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length > 0)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Update the domain.
       await domain.update({
-        allowsSubdomains: req.body.subdomains,
+        subdomains: true,
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated domain ${domain.id}.`
+        `User ${req.user.username} (${req.user.id}) allowed subdomains on domain ${domain.id}.`
+      );
+
+      // Return the domain.
+      return res.status(200).send(domain.toJSON());
+    } catch (e) {
+      logger.error(e);
+      return res.status(500).send(new Errors.Internal());
+    }
+  }
+);
+
+app.delete(
+  // DELETE /api/domains/:id/subdomains
+  "/api/domains/:id/subdomains",
+  async (
+    req: Request<{ id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
+    >
+  ) => {
+    // If there is no user logged in, return an InvalidSession error.
+    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
+
+    // If the user isn't staff, return an InsufficientPermissions error.
+    if (!req.user.staff)
+      return res.status(403).send(new Errors.InsufficientPermissions());
+
+    try {
+      // Get the domain.
+      const domain = await Domain.findByPk(req.params.id);
+
+      // If the domain doesn't exist, return a InvalidDomain error.
+      if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+
+      // Update the domain.
+      await domain.update({
+        subdomains: false,
+      });
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) disallowed subdomains on domain ${domain.id}.`
       );
 
       // Return the domain.

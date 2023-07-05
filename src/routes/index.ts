@@ -4,7 +4,7 @@ import { Errors } from "../utils/TemplateResponses.js";
 logger.debug("Route importer invoked! Routes are being imported...");
 
 // Import routes
-await import("./user.js");
+await import("./account.js");
 await import("./domain.js");
 await import("./file.js");
 await import("./instruction.js");
