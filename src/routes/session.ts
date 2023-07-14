@@ -230,7 +230,8 @@ app.get(
           .map((session) => ({
             id: session.iat,
             name: session.name,
-          })),
+          }))
+          .reverse(),
       });
     }
 
@@ -244,6 +245,10 @@ app.get(
 
       // If no user was found, return an InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s sessions.`
+      );
 
       // Return the user's sessions.
       return res.status(200).send({
@@ -281,6 +286,10 @@ app.delete(
           (session) => session.iat !== req.session.payload.iat
         );
 
+        logger.debug(
+          `User ${req.user.username} (${req.user.id}) requested to remove their current session.`
+        );
+
         // Update the user's sessions.
         await req.user.update({ sessions });
 
@@ -299,6 +308,10 @@ app.delete(
       // Remove the session.
       let sessions = req.user.sessions.filter(
         (session) => session.iat !== parseInt(req.params.sid)
+      );
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove their session ${session.name} (${session.iat}).`
       );
 
       // Update the user's sessions.
@@ -330,6 +343,10 @@ app.delete(
       // Remove the session.
       let sessions = user.sessions.filter(
         (session) => session.iat !== parseInt(req.params.sid)
+      );
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`
       );
 
       // Update the user's sessions.
@@ -372,6 +389,10 @@ app.delete(
       // Count the number of sessions removed.
       let count = req.user.sessions.length - sessions.length;
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of their sessions.`
+      );
+
       // Update the user's sessions.
       await req.user.update({ sessions });
 
@@ -397,6 +418,10 @@ app.delete(
 
       // Count the number of sessions removed.
       let count = user.sessions.length - sessions.length;
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of user ${user.username} (${user.id})'s sessions.`
+      );
 
       // Update the user's sessions.
       await user.update({ sessions });
@@ -425,13 +450,22 @@ app.delete(
     // Check if the user is requesting sessions that belong to them.
     if (req.params.uid === "me" || req.params.uid === req.user.id) {
       // Remove the sessions.
-      let sessions = req.user.sessions.filter(
-        (session) =>
-          req.query["include-self"] || session.iat !== req.session.payload.iat
-      );
+      let sessions = req.query["include-self"]
+        ? []
+        : req.user.sessions.filter(
+            (session) => session.iat === req.session.payload.iat
+          );
 
       // Count the number of sessions removed.
       let count = req.user.sessions.length - sessions.length;
+
+      logger.debug(
+        `User ${req.user.username} (${
+          req.user.id
+        }) requested to remove all of their sessions. (they did${
+          req.query["include-self"] ? "" : " not"
+        } include the current session)`
+      );
 
       // Update the user's sessions.
       await req.user.update({ sessions });
@@ -453,6 +487,10 @@ app.delete(
 
       // Count the number of sessions removed.
       let count = user.sessions.length;
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove all of user ${user.username} (${user.id})'s sessions.`
+      );
 
       // Update the user's sessions.
       await user.update({ sessions: [] });

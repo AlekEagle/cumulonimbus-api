@@ -100,7 +100,13 @@ app.post(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) uploaded ${filename}.${fileExtension}`
+        `User ${req.user.username} (${
+          req.user.id
+        }) uploaded ${filename}.${fileExtension} (${req.file.size} bytes)${
+          req.file.originalname
+            ? ` originally named ${req.file.originalname}`
+            : ""
+        }`
       );
 
       return res.status(201).json({

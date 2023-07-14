@@ -6,7 +6,7 @@ export default class Instruction extends Model {
   name: string;
   steps: string[];
   filename: string | null;
-  fileContent: string;
+  content: string;
   description: string;
   createdAt: Date;
   updatedAt: Date;
@@ -34,7 +34,7 @@ export default class Instruction extends Model {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      fileContent: {
+      content: {
         type: DataTypes.STRING(65536),
         allowNull: false,
       },

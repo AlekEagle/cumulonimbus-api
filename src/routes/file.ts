@@ -23,7 +23,7 @@ app.get(
       null,
       null,
       null,
-      { limit: number; offset: number; user: string }
+      { limit: number; offset: number; uid: string }
     >,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
@@ -41,7 +41,7 @@ app.get(
           req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
 
       // If the user did not provide a user, check if they are staff.
-      if (!req.query.user) {
+      if (!req.query.uid) {
         if (!req.user.staff)
           return res.status(403).send(new Errors.InsufficientPermissions());
         let { count, rows: files } = await File.findAndCountAll({
@@ -61,12 +61,12 @@ app.get(
       }
 
       // If the user provided a user that isn't their own id or "me", check if they are staff.
-      if (req.query.user !== "me" && req.query.user !== req.user.id) {
+      if (req.query.uid !== "me" && req.query.uid !== req.user.id) {
         if (!req.user.staff)
           return res.status(403).send(new Errors.InsufficientPermissions());
 
         // Check if the user exists.
-        let user = await User.findByPk(req.query.user);
+        let user = await User.findByPk(req.query.uid);
 
         // If the user does not exist, return an InvalidUser error.
         if (!user) return res.status(404).send(new Errors.InvalidUser());
@@ -77,7 +77,7 @@ app.get(
           offset,
           order: [["createdAt", "DESC"]],
           where: {
-            userID: req.query.user,
+            userID: req.query.uid,
           },
         });
         let items = files.map((file) =>
@@ -85,7 +85,7 @@ app.get(
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.user}. (limit: ${limit}, offset: ${offset})`
+          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.uid}. (limit: ${limit}, offset: ${offset})`
         );
 
         return res.status(200).send({ count, items });
@@ -140,6 +140,10 @@ app.get(
           return res.status(404).send(new Errors.InvalidFile());
       }
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested file ${file.id}.`
+      );
+
       // Return the file.
       return res.status(200).send(file.toJSON());
     } catch (error) {
@@ -183,8 +187,12 @@ app.put(
           return res.status(404).send(new Errors.InvalidFile());
       }
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) updated the name of file ${file.id}.`
+      );
+
       // Update the file's name.
-      await file.update({ name: req.body.name });
+      await file.update({ name: req.body.name === "" ? null : req.body.name });
 
       // Return the file.
       return res.status(200).send(file.toJSON());

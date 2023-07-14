@@ -40,7 +40,7 @@ app.get(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched instructions.)`
+        `User ${req.user.username} (${req.user.id}) fetched instructions.`
       );
 
       // Return the instructions.

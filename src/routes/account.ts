@@ -253,7 +253,7 @@ app.put(
         // Check if the username is valid.
         if (
           !invalidFields.includes("username") &&
-          USERNAME_REGEX.test(req.body.username)
+          !USERNAME_REGEX.test(req.body.username)
         )
           invalidFields.push("username");
 
@@ -307,7 +307,7 @@ app.put(
       // Check if the username is valid.
       if (
         !invalidFields.includes("username") &&
-        USERNAME_REGEX.test(req.body.username)
+        !USERNAME_REGEX.test(req.body.username)
       )
         invalidFields.push("username");
 
@@ -359,7 +359,7 @@ app.put(
         // Check if the email is valid.
         if (
           !invalidFields.includes("email") &&
-          EMAIL_REGEX.test(req.body.email)
+          !EMAIL_REGEX.test(req.body.email)
         )
           invalidFields.push("email");
 
@@ -411,7 +411,7 @@ app.put(
       });
 
       // Check if the email is valid.
-      if (!invalidFields.includes("email") && EMAIL_REGEX.test(req.body.email))
+      if (!invalidFields.includes("email") && !EMAIL_REGEX.test(req.body.email))
         invalidFields.push("email");
 
       // If there are invalid fields, return a MissingFields error.

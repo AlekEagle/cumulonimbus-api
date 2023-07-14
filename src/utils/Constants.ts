@@ -33,6 +33,8 @@ export const TROUBLESOME_FILE_EXTENSIONS = [
   "tar.z",
   "tar.Z",
   "tar.sz",
+  "apk",
+  "jar",
 ];
 
 // ========= TOKEN RELATED CONSTANTS =========
