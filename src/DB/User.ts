@@ -50,7 +50,7 @@ export default class User extends Model {
         allowNull: false,
       },
       sessions: {
-        type: DataTypes.JSONB,
+        type: DataTypes.ARRAY(DataTypes.JSONB),
         defaultValue: [],
         allowNull: false,
       },
