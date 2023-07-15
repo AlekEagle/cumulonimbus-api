@@ -23,7 +23,7 @@ app.get(
       null,
       null,
       null,
-      { limit: number; offset: number; uid: string }
+      { limit: number; offset: number; uid: number | string }
     >,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
@@ -66,7 +66,7 @@ app.get(
           return res.status(403).send(new Errors.InsufficientPermissions());
 
         // Check if the user exists.
-        let user = await User.findByPk(req.query.uid);
+        let user = await User.findByPk(req.query.uid + "");
 
         // If the user does not exist, return an InvalidUser error.
         if (!user) return res.status(404).send(new Errors.InvalidUser());
@@ -77,7 +77,7 @@ app.get(
           offset,
           order: [["createdAt", "DESC"]],
           where: {
-            userID: req.query.uid,
+            userID: req.query.uid + "",
           },
         });
         let items = files.map((file) =>
