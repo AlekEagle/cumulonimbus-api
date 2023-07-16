@@ -73,7 +73,7 @@ app.post(
         else if (file.fileType) fileExtension = file.fileType.ext; // Use the extension from file-type
         // In case file-type can't determine the proper file extension, attempt to use the extension from the original file name and log a warning.
         else {
-          fileExtension = [ , ...req.file.originalname.split(".")].join(".");
+          fileExtension = req.file.originalname.split(".").slice(1).join(".");
           logger.warn(`User ${req.user.username} (${req.user.id}) uploaded a file that did not end with a troublesome extension, but file-type failed to determine a suitable extension.\nOriginal filename: ${req.file.originalname}\nExtension used: ${fileExtension}`)
         }
       } else {
