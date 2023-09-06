@@ -67,21 +67,32 @@ app.post(
       // If we have access to the original filename:
       if (req.file && req.file.originalname) {
         // Check if it ends with an extension that file-type fails to properly detect
-        if (TROUBLESOME_FILE_EXTENSIONS.some((ext) => req.file.originalname.endsWith(ext))) 
-          fileExtension = TROUBLESOME_FILE_EXTENSIONS.find((ext) => req.file.originalname.endsWith(ext));
+        if (
+          TROUBLESOME_FILE_EXTENSIONS.some((ext) =>
+            req.file.originalname.endsWith(ext)
+          )
+        )
+          fileExtension = TROUBLESOME_FILE_EXTENSIONS.find((ext) =>
+            req.file.originalname.endsWith(ext)
+          );
         // If it doesn't have a troublesome file extension, go ahead and check if file-type has one for us
-        else if (file.fileType) fileExtension = file.fileType.ext; // Use the extension from file-type
+        else if (file.fileType)
+          fileExtension = file.fileType.ext; // Use the extension from file-type
         // In case file-type can't determine the proper file extension, attempt to use the extension from the original file name and log a warning.
         else {
-          fileExtension = req.file.originalname.split(".").slice(1).join(".");
-          logger.warn(`User ${req.user.username} (${req.user.id}) uploaded a file that did not end with a troublesome extension, but file-type failed to determine a suitable extension.\nOriginal filename: ${req.file.originalname}\nExtension used: ${fileExtension}`)
+          fileExtension =
+            req.file.originalname.split(".").slice(1).join(".") || "bin";
+          logger.warn(
+            `User ${req.user.username} (${req.user.id}) uploaded a file that did not end with a troublesome extension, but file-type failed to determine a suitable extension.\nOriginal filename: ${req.file.originalname}\nExtension used: ${fileExtension}`
+          );
         }
       } else {
         // If we don't have access to the original file name, use the extension that file-type provides or fallback to "bin"
-        if (file.fileType) 
-          fileExtension = file.fileType.ext;
+        if (file.fileType) fileExtension = file.fileType.ext;
         else
-          logger.warn(`User ${req.user.username} (${req.user.id}) uploaded a file that file-type failed to determine a suitable file extension. Unfortunately, we don't have the original filename, so it will default to "bin".`)
+          logger.warn(
+            `User ${req.user.username} (${req.user.id}) uploaded a file that file-type failed to determine a suitable file extension. Unfortunately, we don't have the original filename, so it will default to "bin".`
+          );
       }
 
       // Open a write stream to save the file
