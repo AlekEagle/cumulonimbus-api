@@ -1,5 +1,6 @@
 import { sequelize, init as initDB } from "./index.js";
 import { Model, DataTypes } from "sequelize";
+import { logger } from "../index.js";
 
 export default class File extends Model {
   id: string;
@@ -40,8 +41,8 @@ export default class File extends Model {
   );
   try {
     await File.sync();
-    console.log("Upload table synced with DB.");
+    logger.log("Upload table synced with DB.");
   } catch (error) {
-    console.error("Unable to sync Upload table. Error: ", error);
+    logger.error("Unable to sync Upload table. Error: ", error);
   }
 })();

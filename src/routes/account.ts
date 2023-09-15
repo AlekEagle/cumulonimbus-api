@@ -646,7 +646,7 @@ app.put(
       );
 
       // Update the banned status.
-      await user.update({ banned: new Date() });
+      await user.update({ bannedAt: new Date() });
 
       // Send the user object.
       return res
@@ -684,7 +684,7 @@ app.delete(
       );
 
       // Update the banned status.
-      await user.update({ banned: null });
+      await user.update({ bannedAt: null });
 
       // Send the user object.
       return res

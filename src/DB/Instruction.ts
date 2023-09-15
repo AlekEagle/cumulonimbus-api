@@ -1,5 +1,6 @@
 import { sequelize, init as initDB } from "./index.js";
 import { Model, DataTypes } from "sequelize";
+import { logger } from "../index.js";
 
 export default class Instruction extends Model {
   id: string;
@@ -50,8 +51,8 @@ export default class Instruction extends Model {
   );
   try {
     await Instruction.sync();
-    console.log("Instruction table synced with DB.");
+    logger.log("Instruction table synced with DB.");
   } catch (error) {
-    console.error("Unable to sync Instruction table. Error: ", error);
+    logger.error("Unable to sync Instruction table. Error: ", error);
   }
 })();
