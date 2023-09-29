@@ -71,7 +71,7 @@ app.post(
 
       // Generate a session name for the new session.
       let sessionName =
-        (req.headers["x-token-name"] as string) || nameSession(req);
+        (req.headers["x-session-name"] as string) || nameSession(req);
 
       // Generate a new token for the user.
       let token = await generateToken(user.id, req.body.rememberMe);
