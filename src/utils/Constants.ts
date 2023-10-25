@@ -1,9 +1,9 @@
 // All of those constants that are used throughout everywhere.
-import { readFileSync } from "fs";
+import { readFileSync } from 'fs';
 
 // ========= GENERAL CONSTANTS =========
 export const API_VERSION = JSON.parse(
-  readFileSync("./package.json", "utf-8")
+  readFileSync('./package.json', 'utf-8'),
 ).version;
 
 // ========= SERVER RELATED CONSTANTS =========
@@ -24,21 +24,21 @@ export const FILENAME_LENGTH = 10;
 // If we encounter one of these, we'll just use the file extension
 // from the original file name instead of whatever FileType gives us.
 export const TROUBLESOME_FILE_EXTENSIONS = [
-  "tar.gz",
-  "tar.xz",
-  "tar.bz2",
-  "tar.lz",
-  "tar.lzma",
-  "tar.lzo",
-  "tar.z",
-  "tar.Z",
-  "tar.sz",
-  "apk",
-  "jar",
+  'tar.gz',
+  'tar.xz',
+  'tar.bz2',
+  'tar.lz',
+  'tar.lzma',
+  'tar.lzo',
+  'tar.z',
+  'tar.Z',
+  'tar.sz',
+  'apk',
+  'jar',
 ];
 
 // ========= TOKEN RELATED CONSTANTS =========
-export const SHORT_LIVED_TOKEN_EXPIRY = "24h";
-export const LONG_LIVED_TOKEN_EXPIRY = "10y";
-export const TOKEN_ALGORITHM = "ES256";
-export const TOKEN_TYPE = "JWT";
+export const SHORT_LIVED_TOKEN_EXPIRY = '24h';
+export const LONG_LIVED_TOKEN_EXPIRY = '10y';
+export const TOKEN_ALGORITHM = 'ES256';
+export const TOKEN_TYPE = 'JWT';

@@ -1,4 +1,4 @@
-import { Sequelize } from "sequelize";
+import { Sequelize } from 'sequelize';
 
 export let sequelize: Sequelize = null;
 
@@ -10,18 +10,18 @@ export async function init(): Promise<boolean> {
       password: process.env.DATABASE_PASS,
       host: process.env.DATABASE_HOST,
       port: Number(process.env.DATABASE_PORT),
-      dialect: "postgres",
+      dialect: 'postgres',
       logging: false,
     });
     if (!(await testConnection()))
-      throw new DBConnectionError("DB refused to connect.");
+      throw new DBConnectionError('DB refused to connect.');
     return true;
   }
   return false;
 }
 
 export async function testConnection(): Promise<boolean> {
-  if (!sequelize) throw new DBConnectionError("DB connection not initialized.");
+  if (!sequelize) throw new DBConnectionError('DB connection not initialized.');
   try {
     await sequelize.authenticate();
     return true;

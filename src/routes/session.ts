@@ -1,21 +1,21 @@
-import { logger, app } from "../index.js";
-import { Errors, Success } from "../utils/TemplateResponses.js";
-import User from "../DB/User.js";
-import { getInvalidFields, FieldTypeOptions } from "../utils/FieldValidator.js";
-import AutoTrim from "../middleware/AutoTrim.js";
-import defaultRateLimitConfig from "../utils/RateLimitUtils.js";
-import { generateToken, nameSession } from "../utils/Token.js";
+import { logger, app } from '../index.js';
+import { Errors, Success } from '../utils/TemplateResponses.js';
+import User from '../DB/User.js';
+import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
+import AutoTrim from '../middleware/AutoTrim.js';
+import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
+import { generateToken, nameSession } from '../utils/Token.js';
 
-import { Request, Response } from "express";
-import Bcrypt from "bcrypt";
-import { fn, col, where } from "sequelize";
-import ExpressRateLimit from "express-rate-limit";
+import { Request, Response } from 'express';
+import Bcrypt from 'bcrypt';
+import { fn, col, where } from 'sequelize';
+import ExpressRateLimit from 'express-rate-limit';
 
-logger.debug("Loading: Session Routes...");
+logger.debug('Loading: Session Routes...');
 
 app.post(
   // POST /api/login
-  "/api/login",
+  '/api/login',
   AutoTrim(),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
@@ -34,7 +34,7 @@ app.post(
     >,
     res: Response<
       Cumulonimbus.Structures.SuccessfulAuth | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If the user is already logged in, return an InvalidSession error.
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -42,9 +42,9 @@ app.post(
     try {
       // Check for missing fields
       const missingFields = getInvalidFields(req.body, {
-        username: "string",
-        password: "string",
-        rememberMe: new FieldTypeOptions("boolean", true),
+        username: 'string',
+        password: 'string',
+        rememberMe: new FieldTypeOptions('boolean', true),
       });
 
       // If there are missing fields, return a MissingFields error.
@@ -54,8 +54,8 @@ app.post(
       // Find a user with the given username.
       let user = await User.findOne({
         where: where(
-          fn("lower", col("username")),
-          req.body.username.toLowerCase()
+          fn('lower', col('username')),
+          req.body.username.toLowerCase(),
         ),
       });
 
@@ -71,7 +71,7 @@ app.post(
 
       // Generate a session name for the new session.
       let sessionName =
-        (req.headers["x-session-name"] as string) || nameSession(req);
+        (req.headers['x-session-name'] as string) || nameSession(req);
 
       // Generate a new token for the user.
       let token = await generateToken(user.id, req.body.rememberMe);
@@ -100,32 +100,32 @@ app.post(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.get(
   // GET /api/users/:uid/sessions/:sid
-  "/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)",
+  '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If the user is not logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === "me" || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
-      if (req.params.sid === "me") {
+      if (req.params.sid === 'me') {
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested their current session.`
+          `User ${req.user.username} (${req.user.id}) requested their current session.`,
         );
 
         // Get the current session.
         let session = req.user.sessions.find(
-          (session) => session.iat === req.session.payload.iat
+          session => session.iat === req.session.payload.iat,
         );
 
         return res.status(200).send({
@@ -137,14 +137,14 @@ app.get(
 
       // Find the session with the given ID.
       let session = req.user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid)
+        session => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
       if (!session) return res.status(404).json(new Errors.InvalidSession());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested their session ${session.name} (${session.iat}).`
+        `User ${req.user.username} (${req.user.id}) requested their session ${session.name} (${session.iat}).`,
       );
 
       // Return the session.
@@ -168,14 +168,14 @@ app.get(
 
       // Find the session with the given ID.
       let session = user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid)
+        session => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
       if (!session) return res.status(404).json(new Errors.InvalidSession());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`
+        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`,
       );
 
       // Return the session.
@@ -188,12 +188,12 @@ app.get(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.get(
   // GET /api/users/:uid/sessions
-  "/api/users/:uid([0-9]{13}|me)/sessions",
+  '/api/users/:uid([0-9]{13}|me)/sessions',
   async (
     req: Request<
       { uid: string },
@@ -204,7 +204,7 @@ app.get(
     res: Response<
       | Cumulonimbus.Structures.List<{ id: number; name: string }>
       | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If the user is not logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -217,9 +217,9 @@ app.get(
       offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === "me" || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested their sessions.`
+        `User ${req.user.username} (${req.user.id}) requested their sessions.`,
       );
 
       // Return the user's sessions.
@@ -227,7 +227,7 @@ app.get(
         count: req.user.sessions.length,
         items: req.user.sessions
           .slice(offset, offset + limit)
-          .map((session) => ({
+          .map(session => ({
             id: session.iat,
             name: session.name,
           }))
@@ -247,13 +247,13 @@ app.get(
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s sessions.`
+        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s sessions.`,
       );
 
       // Return the user's sessions.
       return res.status(200).send({
         count: user.sessions.length,
-        items: user.sessions.slice(offset, offset + limit).map((session) => ({
+        items: user.sessions.slice(offset, offset + limit).map(session => ({
           id: session.iat,
           name: session.name,
         })),
@@ -262,32 +262,32 @@ app.get(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
-  "/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)",
+  '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If the user is not logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === "me" || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
-      if (req.params.sid === "me") {
+      if (req.params.sid === 'me') {
         // Remove the current session.
         let sessions = req.user.sessions.filter(
-          (session) => session.iat !== req.session.payload.iat
+          session => session.iat !== req.session.payload.iat,
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested to remove their current session.`
+          `User ${req.user.username} (${req.user.id}) requested to remove their current session.`,
         );
 
         // Update the user's sessions.
@@ -299,7 +299,7 @@ app.delete(
 
       // Find the session with the given ID.
       let session = req.user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid)
+        session => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
@@ -307,11 +307,11 @@ app.delete(
 
       // Remove the session.
       let sessions = req.user.sessions.filter(
-        (session) => session.iat !== parseInt(req.params.sid)
+        session => session.iat !== parseInt(req.params.sid),
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove their session ${session.name} (${session.iat}).`
+        `User ${req.user.username} (${req.user.id}) requested to remove their session ${session.name} (${session.iat}).`,
       );
 
       // Update the user's sessions.
@@ -334,7 +334,7 @@ app.delete(
 
       // Find the session with the given ID.
       let session = user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid)
+        session => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
@@ -342,11 +342,11 @@ app.delete(
 
       // Remove the session.
       let sessions = user.sessions.filter(
-        (session) => session.iat !== parseInt(req.params.sid)
+        session => session.iat !== parseInt(req.params.sid),
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`
+        `User ${req.user.username} (${req.user.id}) requested to remove user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`,
       );
 
       // Update the user's sessions.
@@ -358,39 +358,39 @@ app.delete(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users/:uid/sessions
-  "/api/users/:uid([0-9]{13}|me)/sessions",
+  '/api/users/:uid([0-9]{13}|me)/sessions',
   async (
     req: Request<{ uid: string }, null, { sids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If the user is not logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === "me" || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
-      if (req.body.sids.includes("me"))
+      if (req.body.sids.includes('me'))
         // Replace `me` with the current session ID.
-        req.body.sids[req.body.sids.indexOf("me")] =
+        req.body.sids[req.body.sids.indexOf('me')] =
           req.session.payload.iat.toString();
 
       // Remove the sessions.
       let sessions = req.user.sessions.filter(
-        (session) => !req.body.sids.includes(session.iat.toString())
+        session => !req.body.sids.includes(session.iat.toString()),
       );
 
       // Count the number of sessions removed.
       let count = req.user.sessions.length - sessions.length;
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of their sessions.`
+        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of their sessions.`,
       );
 
       // Update the user's sessions.
@@ -413,14 +413,14 @@ app.delete(
 
       // Remove the sessions.
       let sessions = user.sessions.filter(
-        (session) => !req.body.sids.includes(session.iat.toString())
+        session => !req.body.sids.includes(session.iat.toString()),
       );
 
       // Count the number of sessions removed.
       let count = user.sessions.length - sessions.length;
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of user ${user.username} (${user.id})'s sessions.`
+        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of user ${user.username} (${user.id})'s sessions.`,
       );
 
       // Update the user's sessions.
@@ -432,28 +432,28 @@ app.delete(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users/:uid/sessions/all
-  "/api/users/:uid([0-9]{13}|me)/sessions/all",
+  '/api/users/:uid([0-9]{13}|me)/sessions/all',
   async (
-    req: Request<{ uid: string }, null, null, { "include-self"?: boolean }>,
+    req: Request<{ uid: string }, null, null, { 'include-self'?: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If the user is not logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === "me" || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Remove the sessions.
-      let sessions = req.query["include-self"]
+      let sessions = req.query['include-self']
         ? []
         : req.user.sessions.filter(
-            (session) => session.iat === req.session.payload.iat
+            session => session.iat === req.session.payload.iat,
           );
 
       // Count the number of sessions removed.
@@ -463,8 +463,8 @@ app.delete(
         `User ${req.user.username} (${
           req.user.id
         }) requested to remove all of their sessions. (they did${
-          req.query["include-self"] ? "" : " not"
-        } include the current session)`
+          req.query['include-self'] ? '' : ' not'
+        } include the current session)`,
       );
 
       // Update the user's sessions.
@@ -489,7 +489,7 @@ app.delete(
       let count = user.sessions.length;
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove all of user ${user.username} (${user.id})'s sessions.`
+        `User ${req.user.username} (${req.user.id}) requested to remove all of user ${user.username} (${user.id})'s sessions.`,
       );
 
       // Update the user's sessions.
@@ -501,5 +501,5 @@ app.delete(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
-  }
+  },
 );

@@ -1,14 +1,14 @@
 // Woah! type definitions for global modules!
-import { DetectResult } from "node-device-detector";
-import User from "./DB/User.ts";
-import { TokenStructure } from "./utils/Token.ts";
+import { DetectResult } from 'node-device-detector';
+import User from './DB/User.ts';
+import { TokenStructure } from './utils/Token.ts';
 
 export {};
 declare global {
   // Environment variables
   namespace NodeJS {
     interface ProcessEnv {
-      ENV: "development" | "production";
+      ENV: 'development' | 'production';
       DATABASE_HOST: string;
       DATABASE_PORT: string;
       DATABASE_USER: string;

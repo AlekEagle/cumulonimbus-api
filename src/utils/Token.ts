@@ -1,21 +1,21 @@
 // All of the cool JWT stuffs
-import { importX509, importPKCS8, KeyLike, SignJWT, jwtVerify } from "jose";
+import { importX509, importPKCS8, KeyLike, SignJWT, jwtVerify } from 'jose';
 // We need this to read the JWT public and private keypair
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 // Those Constants that are constant that we need
 import {
   TOKEN_ALGORITHM,
   LONG_LIVED_TOKEN_EXPIRY,
   SHORT_LIVED_TOKEN_EXPIRY,
   TOKEN_TYPE,
-} from "./Constants.js";
-import { Request } from "express";
+} from './Constants.js';
+import { Request } from 'express';
 
 // This is the structure of the token
 export declare interface TokenStructure {
   header: {
     alg: typeof TOKEN_ALGORITHM;
-    typ: "JWT";
+    typ: 'JWT';
   };
   payload: {
     sub: string;
@@ -31,18 +31,18 @@ let pubKey: KeyLike, privKey: KeyLike;
 export async function importCertificates() {
   // Do not re-import certificates if we already have them
   if (pubKey && privKey) return;
-  pubKey = await importX509(await readFile("./certs/jwt.crt", "utf8"), "ES256");
+  pubKey = await importX509(await readFile('./certs/jwt.crt', 'utf8'), 'ES256');
 
   privKey = await importPKCS8(
-    await readFile("./certs/jwt.pem", "utf8"),
-    "ES256"
+    await readFile('./certs/jwt.pem', 'utf8'),
+    'ES256',
   );
   return;
 }
 
 export async function generateToken(
   subject: string,
-  longLived: boolean = false
+  longLived: boolean = false,
 ): Promise<{ token: string; data: TokenStructure }> {
   // Import certificates if they aren't already imported.
   await importCertificates();
@@ -52,7 +52,7 @@ export async function generateToken(
     .setIssuedAt()
     .setSubject(subject)
     .setExpirationTime(
-      longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY
+      longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY,
     )
     .sign(privKey);
   data = extractToken(token);
@@ -60,7 +60,7 @@ export async function generateToken(
 }
 
 export async function validateToken(
-  token: string
+  token: string,
 ): Promise<TokenStructure | Error> {
   await importCertificates();
   try {
@@ -73,9 +73,9 @@ export async function validateToken(
 
 export function extractToken(token: string): TokenStructure {
   let t = token
-    .split(".")
+    .split('.')
     .filter((a, i) => i !== 2)
-    .map((p) => JSON.parse(Buffer.from(p, "base64").toString("utf8")));
+    .map(p => JSON.parse(Buffer.from(p, 'base64').toString('utf8')));
   return { header: t[0], payload: t[1] };
 }
 
@@ -88,28 +88,28 @@ export function nameSession(req: Request): string {
     Object.keys(req.useragent.os).length === 0 &&
     req.useragent.device === undefined
   )
-    return req.headers["user-agent"];
-  let name = "";
+    return req.headers['user-agent'];
+  let name = '';
   // If only req.useragent.client is empty, call it an "Unknown Browser"
-  if (Object.keys(req.useragent.client).length === 0) name += "Unknown Browser";
+  if (Object.keys(req.useragent.client).length === 0) name += 'Unknown Browser';
   else {
     // Use the name of the browser
     name += req.useragent.client.name;
     // If the browser version is available, use the major version
-    if (req.useragent.client.version !== "")
-      name += " v" + req.useragent.client.version.split(".")[0];
+    if (req.useragent.client.version !== '')
+      name += ' v' + req.useragent.client.version.split('.')[0];
   }
 
-  name += " on ";
+  name += ' on ';
 
   // If only req.useragent.os is empty, call it "an Unknown OS"
-  if (Object.keys(req.useragent.os).length === 0) name += "an Unknown OS";
+  if (Object.keys(req.useragent.os).length === 0) name += 'an Unknown OS';
   else {
     // Use the name of the OS
     name += req.useragent.os.name;
     // If the OS version is available, use the major version
-    if (req.useragent.os.version !== "")
-      name += " v" + req.useragent.os.version.split(".")[0];
+    if (req.useragent.os.version !== '')
+      name += ' v' + req.useragent.os.version.split('.')[0];
   }
 
   return name;

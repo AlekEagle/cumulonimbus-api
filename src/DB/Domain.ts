@@ -1,6 +1,6 @@
-import { sequelize, init as initDB } from "./index.js";
-import { Model, DataTypes } from "sequelize";
-import { logger } from "../index.js";
+import { sequelize, init as initDB } from './index.js';
+import { Model, DataTypes } from 'sequelize';
+import { logger } from '../index.js';
 
 export default class Domain extends Model {
   id: string;
@@ -26,13 +26,13 @@ export default class Domain extends Model {
     },
     {
       sequelize,
-      tableName: "Domains",
-    }
+      tableName: 'Domains',
+    },
   );
   try {
     await Domain.sync();
-    logger.log("Domain table synced with DB.");
+    logger.log('Domain table synced with DB.');
   } catch (error) {
-    logger.error("Unable to sync Domain table. Error: ", error);
+    logger.error('Unable to sync Domain table. Error: ', error);
   }
 })();

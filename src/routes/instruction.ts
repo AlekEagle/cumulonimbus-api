@@ -1,25 +1,25 @@
-import { logger, app } from "../index.js";
-import { Errors, Success } from "../utils/TemplateResponses.js";
-import { getInvalidFields, FieldTypeOptions } from "../utils/FieldValidator.js";
-import AutoTrim from "../middleware/AutoTrim.js";
-import Instruction from "../DB/Instruction.js";
-import { INSTRUCTION_REGEX } from "../utils/Constants.js";
-import FieldExtractor from "../utils/FieldExtractor.js";
+import { logger, app } from '../index.js';
+import { Errors, Success } from '../utils/TemplateResponses.js';
+import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
+import AutoTrim from '../middleware/AutoTrim.js';
+import Instruction from '../DB/Instruction.js';
+import { INSTRUCTION_REGEX } from '../utils/Constants.js';
+import FieldExtractor from '../utils/FieldExtractor.js';
 
-import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Request, Response } from 'express';
+import { Op } from 'sequelize';
 
-logger.debug("Loading: Instruction Routes...");
+logger.debug('Loading: Instruction Routes...');
 
 app.get(
   // GET /api/instructions
-  "/api/instructions",
+  '/api/instructions',
   async (
     req: Request<null, null, null, { limit: number; offset: number }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Instruction>
       | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -36,35 +36,35 @@ app.get(
       const { count, rows: instructions } = await Instruction.findAndCountAll({
         limit,
         offset,
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']],
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched instructions.`
+        `User ${req.user.username} (${req.user.id}) fetched instructions.`,
       );
 
       // Return the instructions.
       return res.status(200).send({
         count,
-        items: instructions.map((d) =>
-          FieldExtractor(d.toJSON(), ["id", "name", "description"])
+        items: instructions.map(d =>
+          FieldExtractor(d.toJSON(), ['id', 'name', 'description']),
         ),
       });
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.get(
   // GET /api/instructions/:id
-  "/api/instructions/:id",
+  '/api/instructions/:id',
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -78,7 +78,7 @@ app.get(
         return res.status(404).send(new Errors.InvalidInstruction());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched instruction ${instruction.name} (${instruction.id}).`
+        `User ${req.user.username} (${req.user.id}) fetched instruction ${instruction.name} (${instruction.id}).`,
       );
 
       // Return the instruction.
@@ -87,12 +87,12 @@ app.get(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.post(
   // POST /api/instructions
-  "/api/instructions",
+  '/api/instructions',
   AutoTrim(),
   async (
     req: Request<
@@ -109,7 +109,7 @@ app.post(
     >,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -120,12 +120,12 @@ app.post(
     try {
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
-        id: "string",
-        name: "string",
-        description: "string",
-        filename: new FieldTypeOptions("string", true),
-        content: "string",
-        steps: new FieldTypeOptions("array", false, "string"),
+        id: 'string',
+        name: 'string',
+        description: 'string',
+        filename: new FieldTypeOptions('string', true),
+        content: 'string',
+        steps: new FieldTypeOptions('array', false, 'string'),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -154,7 +154,7 @@ app.post(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) created instruction ${newInstruction.name} (${newInstruction.id}).`
+        `User ${req.user.username} (${req.user.id}) created instruction ${newInstruction.name} (${newInstruction.id}).`,
       );
 
       // Return the instruction.
@@ -163,18 +163,18 @@ app.post(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/instructions/:id/name
-  "/api/instructions/:id/name",
+  '/api/instructions/:id/name',
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { name: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -185,7 +185,7 @@ app.put(
     try {
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
-        name: "string",
+        name: 'string',
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -203,7 +203,7 @@ app.put(
       await instruction.update({ name: req.body.name });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}).`
+        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}).`,
       );
 
       // Return the instruction.
@@ -212,18 +212,18 @@ app.put(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/instructions/:id/description
-  "/api/instructions/:id/description",
+  '/api/instructions/:id/description',
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { description: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -234,7 +234,7 @@ app.put(
     try {
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
-        description: "string",
+        description: 'string',
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -252,7 +252,7 @@ app.put(
       await instruction.update({ description: req.body.description });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) description.`
+        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) description.`,
       );
 
       // Return the instruction.
@@ -261,18 +261,18 @@ app.put(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/instructions/:id/file
-  "/api/instructions/:id/file",
+  '/api/instructions/:id/file',
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { filename?: string; content: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -283,8 +283,8 @@ app.put(
     try {
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
-        filename: new FieldTypeOptions("string", true),
-        content: new FieldTypeOptions("string", false),
+        filename: new FieldTypeOptions('string', true),
+        content: new FieldTypeOptions('string', false),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -305,7 +305,7 @@ app.put(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) file.`
+        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) file.`,
       );
 
       // Return the instruction.
@@ -314,18 +314,18 @@ app.put(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/instructions/:id/steps
-  "/api/instructions/:id/steps",
+  '/api/instructions/:id/steps',
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { steps: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -336,7 +336,7 @@ app.put(
     try {
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
-        steps: new FieldTypeOptions("array", false, "string"),
+        steps: new FieldTypeOptions('array', false, 'string'),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -354,7 +354,7 @@ app.put(
       await instruction.update({ steps: req.body.steps });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) steps.`
+        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) steps.`,
       );
 
       // Return the instruction.
@@ -363,17 +363,17 @@ app.put(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/instructions/:id
-  "/api/instructions/:id",
+  '/api/instructions/:id',
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -393,7 +393,7 @@ app.delete(
       await instruction.destroy();
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted instruction ${instruction.name} (${instruction.id}).`
+        `User ${req.user.username} (${req.user.id}) deleted instruction ${instruction.name} (${instruction.id}).`,
       );
 
       // Return a success.
@@ -402,17 +402,17 @@ app.delete(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/instructions
-  "/api/instructions",
+  '/api/instructions',
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -423,7 +423,7 @@ app.delete(
     try {
       // Validate the fields.
       const invalidFields = getInvalidFields(req.body, {
-        ids: new FieldTypeOptions("array", false, "string"),
+        ids: new FieldTypeOptions('array', false, 'string'),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -443,12 +443,10 @@ app.delete(
       if (!count) return res.status(404).send(new Errors.InvalidInstruction());
 
       // Delete the instructions.
-      await Promise.all(
-        instructions.map((instruction) => instruction.destroy())
-      );
+      await Promise.all(instructions.map(instruction => instruction.destroy()));
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted ${count} instructions.`
+        `User ${req.user.username} (${req.user.id}) deleted ${count} instructions.`,
       );
 
       // Return a success.
@@ -457,5 +455,5 @@ app.delete(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );

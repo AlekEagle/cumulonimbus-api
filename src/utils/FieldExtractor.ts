@@ -1,7 +1,7 @@
 export default function FieldExtractor(
   obj: any,
   fields: string[],
-  reverse: boolean = false
+  reverse: boolean = false,
 ): any {
   const newObj: { [key: string]: any } = {};
   for (const key in obj) {

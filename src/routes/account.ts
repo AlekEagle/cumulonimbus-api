@@ -1,34 +1,34 @@
-import { logger, app } from "../index.js";
-import { Errors, Success } from "../utils/TemplateResponses.js";
+import { logger, app } from '../index.js';
+import { Errors, Success } from '../utils/TemplateResponses.js';
 import {
   USERNAME_REGEX,
   EMAIL_REGEX,
   PASSWORD_HASH_ROUNDS,
-} from "../utils/Constants.js";
-import { getInvalidFields, FieldTypeOptions } from "../utils/FieldValidator.js";
-import SubdomainFormatter from "../utils/SubdomainFormatter.js";
-import AutoTrim from "../middleware/AutoTrim.js";
-import Domain from "../DB/Domain.js";
-import User from "../DB/User.js";
-import File from "../DB/File.js";
-import { generateToken, nameSession } from "../utils/Token.js";
-import defaultRateLimitConfig from "../utils/RateLimitUtils.js";
-import FieldExtractor from "../utils/FieldExtractor.js";
+} from '../utils/Constants.js';
+import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
+import SubdomainFormatter from '../utils/SubdomainFormatter.js';
+import AutoTrim from '../middleware/AutoTrim.js';
+import Domain from '../DB/Domain.js';
+import User from '../DB/User.js';
+import File from '../DB/File.js';
+import { generateToken, nameSession } from '../utils/Token.js';
+import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
+import FieldExtractor from '../utils/FieldExtractor.js';
 
-import { Request, Response } from "express";
-import Bcrypt from "bcrypt";
-import { Op } from "sequelize";
-import ExpressRateLimit from "express-rate-limit";
-import { join } from "node:path";
-import { unlink } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { Request, Response } from 'express';
+import Bcrypt from 'bcrypt';
+import { Op } from 'sequelize';
+import ExpressRateLimit from 'express-rate-limit';
+import { join } from 'node:path';
+import { unlink } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
-logger.debug("Loading: Account Routes...");
+logger.debug('Loading: Account Routes...');
 
 app.post(
   // POST /api/register
-  "/api/register",
-  AutoTrim(["password", "confirmPassword"]),
+  '/api/register',
+  AutoTrim(['password', 'confirmPassword']),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
     windowMs: 60 * 60 * 1000, // 1 hour
@@ -48,17 +48,17 @@ app.post(
     >,
     res: Response<
       Cumulonimbus.Structures.SuccessfulAuth | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If someone attempts to register while logged in, return an InvalidSession error.
     if (req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the request body is missing the username, password, confirmPassword, or email fields, return a MissingFields error.
     const invalidFields = getInvalidFields(req.body, {
-      username: "string",
-      email: "string",
-      password: "string",
-      confirmPassword: "string",
-      rememberMe: new FieldTypeOptions("boolean", true),
+      username: 'string',
+      email: 'string',
+      password: 'string',
+      confirmPassword: 'string',
+      rememberMe: new FieldTypeOptions('boolean', true),
     });
     if (invalidFields.length > 0)
       return res.status(400).send(new Errors.MissingFields(invalidFields));
@@ -123,12 +123,12 @@ app.post(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.get(
   // GET /api/users
-  "/api/users",
+  '/api/users',
   async (
     req: Request<
       null,
@@ -142,7 +142,7 @@ app.get(
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.User>
       | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -161,47 +161,47 @@ app.get(
       const { count, rows: users } = await User.findAndCountAll({
         limit,
         offset,
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']],
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched users. (offset: ${offset}, limit: ${limit})`
+        `User ${req.user.username} (${req.user.id}) fetched users. (offset: ${offset}, limit: ${limit})`,
       );
 
       // Send the users.
       return res.status(200).send({
         count,
-        items: users.map((user) =>
-          FieldExtractor(user.toJSON(), ["id", "username"])
+        items: users.map(user =>
+          FieldExtractor(user.toJSON(), ['id', 'username']),
         ),
       });
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.get(
   // GET /api/users/:id
-  "/api/users/:id([0-9]{13}|me)",
+  '/api/users/:id([0-9]{13}|me)',
   async (
     req: Request<{ id: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
     // Check if the user is requesting their own user object.
-    if (req.params.id === "me" || req.params.id === req.user.id) {
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched their own user object.`
+        `User ${req.user.username} (${req.user.id}) fetched their own user object.`,
       );
       // Send the user object.
       return res
         .status(200)
         .send(
-          FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+          FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
         );
     }
 
@@ -217,45 +217,45 @@ app.get(
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched user ${user.username} (${user.id}).`
+        `User ${req.user.username} (${req.user.id}) fetched user ${user.username} (${user.id}).`,
       );
 
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/users/:id/username
-  "/api/users/:id([0-9]{13}|me)/username",
+  '/api/users/:id([0-9]{13}|me)/username',
   async (
     req: Request<{ id: string }, null, { username: string; password?: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
     // Check if the user wants to modify their own username.
-    if (req.params.id === "me" || req.params.id === req.user.id) {
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
         // Check for required fields.
         const invalidFields = getInvalidFields(req.body, {
-          username: "string",
-          password: "string",
+          username: 'string',
+          password: 'string',
         });
 
         // Check if the username is valid.
         if (
-          !invalidFields.includes("username") &&
+          !invalidFields.includes('username') &&
           !USERNAME_REGEX.test(req.body.username)
         )
-          invalidFields.push("username");
+          invalidFields.push('username');
 
         // If there are invalid fields, return a MissingFields error.
         if (invalidFields.length)
@@ -270,7 +270,7 @@ app.put(
           return res.status(409).send(new Errors.UserExists());
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their username to ${req.body.username}.`
+          `User ${req.user.username} (${req.user.id}) changed their username to ${req.body.username}.`,
         );
 
         // Update the username.
@@ -280,7 +280,7 @@ app.put(
         return res
           .status(200)
           .send(
-            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
           );
       } catch (error) {
         logger.error(error);
@@ -301,15 +301,15 @@ app.put(
 
       // Check for required fields.
       const invalidFields = getInvalidFields(req.body, {
-        username: "string",
+        username: 'string',
       });
 
       // Check if the username is valid.
       if (
-        !invalidFields.includes("username") &&
+        !invalidFields.includes('username') &&
         !USERNAME_REGEX.test(req.body.username)
       )
-        invalidFields.push("username");
+        invalidFields.push('username');
 
       // If there are invalid fields, return a MissingFields error.
       if (invalidFields.length)
@@ -320,7 +320,7 @@ app.put(
         return res.status(409).send(new Errors.UserExists());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s username to ${req.body.username}.`
+        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s username to ${req.body.username}.`,
       );
 
       // Update the username.
@@ -329,39 +329,39 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/users/:id/email
-  "/api/users/:id([0-9]{13}|me)/email",
+  '/api/users/:id([0-9]{13}|me)/email',
   async (
     req: Request<{ id: string }, null, { email: string; password?: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
     // Check if the user wants to modify their own email.
-    if (req.params.id === "me" || req.params.id === req.user.id) {
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
         // Check for required fields.
         const invalidFields = getInvalidFields(req.body, {
-          email: "string",
-          password: "string",
+          email: 'string',
+          password: 'string',
         });
 
         // Check if the email is valid.
         if (
-          !invalidFields.includes("email") &&
+          !invalidFields.includes('email') &&
           !EMAIL_REGEX.test(req.body.email)
         )
-          invalidFields.push("email");
+          invalidFields.push('email');
 
         // If there are invalid fields, return a MissingFields error.
         if (invalidFields.length)
@@ -376,7 +376,7 @@ app.put(
           return res.status(409).send(new Errors.UserExists());
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}.`
+          `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}.`,
         );
 
         // Update the email.
@@ -386,7 +386,7 @@ app.put(
         return res
           .status(200)
           .send(
-            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
           );
       } catch (error) {
         logger.error(error);
@@ -407,12 +407,12 @@ app.put(
 
       // Check for required fields.
       const invalidFields = getInvalidFields(req.body, {
-        email: "string",
+        email: 'string',
       });
 
       // Check if the email is valid.
-      if (!invalidFields.includes("email") && !EMAIL_REGEX.test(req.body.email))
-        invalidFields.push("email");
+      if (!invalidFields.includes('email') && !EMAIL_REGEX.test(req.body.email))
+        invalidFields.push('email');
 
       // If there are invalid fields, return a MissingFields error.
       if (invalidFields.length)
@@ -423,7 +423,7 @@ app.put(
         return res.status(409).send(new Errors.UserExists());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s email to ${req.body.email}.`
+        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s email to ${req.body.email}.`,
       );
 
       // Update the email.
@@ -432,36 +432,36 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/users/:id/password
-  "/api/users/:id([0-9]{13}|me)/password",
+  '/api/users/:id([0-9]{13}|me)/password',
   async (
     req: Request<
       { id: string },
       null,
       { password?: string; newPassword: string; confirmNewPassword: string }
     >,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
     // Check if the user wants to modify their own password.
-    if (req.params.id === "me" || req.params.id === req.user.id) {
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
         // Check for required fields.
         const invalidFields = getInvalidFields(req.body, {
-          password: "string",
-          newPassword: "string",
-          confirmNewPassword: "string",
+          password: 'string',
+          newPassword: 'string',
+          confirmNewPassword: 'string',
         });
 
         // If there are invalid fields, return a MissingFields error.
@@ -477,14 +477,14 @@ app.put(
           return res.status(400).send(new Errors.PasswordsDoNotMatch());
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their password.`
+          `User ${req.user.username} (${req.user.id}) changed their password.`,
         );
 
         // Update the password.
         await req.user.update({
           password: await Bcrypt.hash(
             req.body.newPassword,
-            PASSWORD_HASH_ROUNDS
+            PASSWORD_HASH_ROUNDS,
           ),
         });
 
@@ -492,7 +492,7 @@ app.put(
         return res
           .status(200)
           .send(
-            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
           );
       } catch (error) {
         logger.error(error);
@@ -513,8 +513,8 @@ app.put(
 
       // Check for required fields.
       const invalidFields = getInvalidFields(req.body, {
-        newPassword: "string",
-        confirmNewPassword: "string",
+        newPassword: 'string',
+        confirmNewPassword: 'string',
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -526,7 +526,7 @@ app.put(
         return res.status(400).send(new Errors.PasswordsDoNotMatch());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s password.`
+        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s password.`,
       );
 
       // Update the password.
@@ -537,20 +537,20 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/users/:id/staff
-  "/api/users/:id([0-9]{13})/staff",
+  '/api/users/:id([0-9]{13})/staff',
   async (
     req: Request<{ id: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -566,7 +566,7 @@ app.put(
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) granted user ${user.username} (${user.id}) staff privileges.`
+        `User ${req.user.username} (${req.user.id}) granted user ${user.username} (${user.id}) staff privileges.`,
       );
 
       // Update the staff status.
@@ -575,20 +575,20 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users/:id/staff
-  "/api/users/:id([0-9]{13})/staff",
+  '/api/users/:id([0-9]{13})/staff',
   async (
     req: Request<{ id: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -604,7 +604,7 @@ app.delete(
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) revoked user ${user.username} (${user.id})'s staff privileges.`
+        `User ${req.user.username} (${req.user.id}) revoked user ${user.username} (${user.id})'s staff privileges.`,
       );
 
       // Update the staff status.
@@ -613,20 +613,20 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/users/:id/ban
-  "/api/users/:id([0-9]{13})/ban",
+  '/api/users/:id([0-9]{13})/ban',
   async (
     req: Request<{ id: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -642,7 +642,7 @@ app.put(
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) banned user ${user.username} (${user.id}).`
+        `User ${req.user.username} (${req.user.id}) banned user ${user.username} (${user.id}).`,
       );
 
       // Update the banned status.
@@ -651,20 +651,20 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users/:id/ban
-  "/api/users/:id([0-9]{13})/ban",
+  '/api/users/:id([0-9]{13})/ban',
   async (
     req: Request<{ id: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -680,7 +680,7 @@ app.delete(
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) unbanned user ${user.username} (${user.id}).`
+        `User ${req.user.username} (${req.user.id}) unbanned user ${user.username} (${user.id}).`,
       );
 
       // Update the banned status.
@@ -689,31 +689,31 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/users/:id/domain
-  "/api/users/:id([0-9]{13}|me)/domain",
+  '/api/users/:id([0-9]{13}|me)/domain',
   async (
     req: Request<{ id: string }, null, { domain: string; subdomain?: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
     // Check if the user is trying to change their own domain.
-    if (req.params.id === "me" || req.params.id === req.user.id) {
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
         // Check for required fields.
         const invalidFields = getInvalidFields(req.body, {
-          domain: "string",
-          subdomain: new FieldTypeOptions("string", true),
+          domain: 'string',
+          subdomain: new FieldTypeOptions('string', true),
         });
 
         // If there are invalid fields, return a MissingFields error.
@@ -744,7 +744,7 @@ app.put(
         return res
           .status(200)
           .send(
-            FieldExtractor(req.user.toJSON(), ["password", "sessions"], true)
+            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
           );
       } catch (error) {
         logger.error(error);
@@ -765,8 +765,8 @@ app.put(
 
       // Check for required fields.
       const invalidFields = getInvalidFields(req.body, {
-        domain: "string",
-        subdomain: new FieldTypeOptions("string", true),
+        domain: 'string',
+        subdomain: new FieldTypeOptions('string', true),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -796,17 +796,17 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ["password", "sessions"], true));
+        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users/:id
-  "/api/users/:id([0-9]{13}|me)",
+  '/api/users/:id([0-9]{13}|me)',
   async (
     req: Request<
       { id: string },
@@ -815,18 +815,18 @@ app.delete(
     >,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
 
     // Check if the user is trying to delete their own account.
-    if (req.params.id === "me" || req.params.id === req.user.id) {
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
         // Check for required fields.
         const invalidFields = getInvalidFields(req.body, {
-          username: "string",
-          password: "string",
+          username: 'string',
+          password: 'string',
         });
 
         // If there are invalid fields, return a MissingFields error.
@@ -845,15 +845,15 @@ app.delete(
         const files = await File.findAll({ where: { userID: req.user.id } });
 
         await Promise.all(
-          files.map(async (file) => {
+          files.map(async file => {
             // First, delete the thumbnail if it exists.
             if (
               existsSync(
-                join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
+                join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
               )
             )
               await unlink(
-                join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
+                join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
               );
 
             // Delete the file from the disk.
@@ -861,7 +861,7 @@ app.delete(
 
             // Delete the file from the database.
             await file.destroy();
-          })
+          }),
         );
 
         // Delete the user.
@@ -889,13 +889,13 @@ app.delete(
       const files = await File.findAll({ where: { userID: user.id } });
 
       await Promise.all(
-        files.map(async (file) => {
+        files.map(async file => {
           // First, delete the thumbnail if it exists.
           if (
             existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
           )
             await unlink(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
+              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
             );
 
           // Delete the file from the disk.
@@ -903,7 +903,7 @@ app.delete(
 
           // Delete the file from the database.
           await file.destroy();
-        })
+        }),
       );
 
       // Delete the user.
@@ -914,17 +914,17 @@ app.delete(
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/users
-  "/api/users",
+  '/api/users',
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -935,12 +935,12 @@ app.delete(
     try {
       // Check for required fields.
       const invalidFields = getInvalidFields(req.body, {
-        ids: new FieldTypeOptions("array", false, "string"),
+        ids: new FieldTypeOptions('array', false, 'string'),
       });
 
       // Check if the ids field exceeds the maximum length.
-      if (req.body.ids.length > 50 && !invalidFields.includes("ids"))
-        invalidFields.push("ids");
+      if (req.body.ids.length > 50 && !invalidFields.includes('ids'))
+        invalidFields.push('ids');
 
       // If there are invalid fields, return a MissingFields error.
       if (invalidFields.length)
@@ -956,20 +956,20 @@ app.delete(
 
       // Delete the users.
       await Promise.all(
-        users.map(async (user) => {
+        users.map(async user => {
           // Delete the user's files.
           const files = await File.findAll({ where: { userID: user.id } });
 
           await Promise.all(
-            files.map(async (file) => {
+            files.map(async file => {
               // First, delete the thumbnail if it exists.
               if (
                 existsSync(
-                  join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
+                  join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
                 )
               )
                 await unlink(
-                  join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)
+                  join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
                 );
 
               // Delete the file from the disk.
@@ -977,12 +977,12 @@ app.delete(
 
               // Delete the file from the database.
               await file.destroy();
-            })
+            }),
           );
 
           // Delete the user.
           await user.destroy();
-        })
+        }),
       );
 
       return res.status(200).send(new Success.DeleteUsers(count));
@@ -990,5 +990,5 @@ app.delete(
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );

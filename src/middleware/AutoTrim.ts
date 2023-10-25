@@ -28,7 +28,7 @@ class RecursiveTypeError extends Error {
 // If invertFilter is true, it will trim only the values specified in the filteredKeys array.
 export default function AutoTrim(
   filteredKeys: RecursiveFilter = [],
-  invertFilter: boolean = false
+  invertFilter: boolean = false,
 ): RequestHandler {
   return (req, res, next) => {
     try {
@@ -43,7 +43,7 @@ export default function AutoTrim(
 function recursivelyTrim(
   obj: any,
   filteredKeys: RecursiveFilter = [],
-  invertFilter: boolean = false
+  invertFilter: boolean = false,
 ) {
   // Turn all strings in filteredKeys into arrays
   const nestedKeys = filteredKeys.map(key => {

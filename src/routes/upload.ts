@@ -1,5 +1,5 @@
 import { logger, app } from "../index.js";
-import { Errors, Success } from "../utils/TemplateResponses.js";
+import { Errors } from "../utils/TemplateResponses.js";
 import File from "../DB/File.js";
 
 import Multer from "multer";
@@ -100,13 +100,9 @@ app.post(
         join(process.env.BASE_UPLOAD_PATH, `${filename}.${fileExtension}`)
       );
 
-      // Pipe the file into the write stream
+      // Pipe the file into the write stream and close it when done
       file.pipe(writeStream);
-
-      // Close the write stream when the file is done uploading
-      file.on("end", () => {
-        writeStream.end();
-      });
+      file.on("end", writeStream.close);
 
       // Create a new file in the database
       await File.create({

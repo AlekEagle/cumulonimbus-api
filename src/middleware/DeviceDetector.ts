@@ -1,7 +1,7 @@
-const DeviceDetector = (await import("node-device-detector")).default;
-const ClientHints = (await import("node-device-detector/client-hints.js"))
+const DeviceDetector = (await import('node-device-detector')).default;
+const ClientHints = (await import('node-device-detector/client-hints.js'))
   .default;
-import { Request, NextFunction, Response } from "express";
+import { Request, NextFunction, Response } from 'express';
 
 // @ts-ignore
 const detector = new DeviceDetector({
@@ -13,6 +13,6 @@ const clientHints = new ClientHints();
 
 export default function (req: Request, _: Response, next: NextFunction) {
   const hints = clientHints.parse(req.headers);
-  req.useragent = detector.detect(req.headers["user-agent"], hints);
+  req.useragent = detector.detect(req.headers['user-agent'], hints);
   next();
 }

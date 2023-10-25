@@ -40,7 +40,7 @@ function QueryStringParser(options: QueryStringParser.Options): RequestHandler {
           // Parse as BigInt
           if (parserOptions.parseBigInt && keyVal[1].match(/^[0-9]+?n$/)) {
             queryStrObj[keyVal[0]] = BigInt(
-              keyVal[1].slice(0, keyVal[1].length - 1)
+              keyVal[1].slice(0, keyVal[1].length - 1),
             );
             continue;
           }
@@ -79,7 +79,7 @@ namespace QueryStringParser {
     ignoreKeyWithNoValue: true,
     parseNumbers: true,
     parseBoolean: true,
-    parseBigInt: false
+    parseBigInt: false,
   };
 }
 

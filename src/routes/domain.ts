@@ -1,25 +1,25 @@
-import { logger, app } from "../index.js";
-import { Errors, Success } from "../utils/TemplateResponses.js";
-import Domain from "../DB/Domain.js";
-import User from "../DB/User.js";
-import { getInvalidFields, FieldTypeOptions } from "../utils/FieldValidator.js";
-import AutoTrim from "../middleware/AutoTrim.js";
-import FieldExtractor from "../utils/FieldExtractor.js";
+import { logger, app } from '../index.js';
+import { Errors, Success } from '../utils/TemplateResponses.js';
+import Domain from '../DB/Domain.js';
+import User from '../DB/User.js';
+import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
+import AutoTrim from '../middleware/AutoTrim.js';
+import FieldExtractor from '../utils/FieldExtractor.js';
 
-import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Request, Response } from 'express';
+import { Op } from 'sequelize';
 
-logger.debug("Loading: Domain Routes...");
+logger.debug('Loading: Domain Routes...');
 
 app.get(
   // GET /api/domains
-  "/api/domains",
+  '/api/domains',
   async (
     req: Request<null, null, null, { limit: number; offset: number }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Domain>
       | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -36,35 +36,35 @@ app.get(
       const { count, rows: domains } = await Domain.findAndCountAll({
         limit: limit === -1 ? undefined : limit,
         offset: limit === -1 ? undefined : offset,
-        order: [["createdAt", "DESC"]],
+        order: [['createdAt', 'DESC']],
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched domains.`
+        `User ${req.user.username} (${req.user.id}) fetched domains.`,
       );
 
       // Return the domains.
       return res.status(200).send({
         count,
-        items: domains.map((d) =>
-          FieldExtractor(d.toJSON(), ["id", "subdomains"])
+        items: domains.map(d =>
+          FieldExtractor(d.toJSON(), ['id', 'subdomains']),
         ),
       });
     } catch (e) {
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.get(
   // GET /api/domains/:id
-  "/api/domains/:id",
+  '/api/domains/:id',
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -77,7 +77,7 @@ app.get(
       if (!domain) return res.status(404).send(new Errors.InvalidDomain());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched domain ${domain.id}.`
+        `User ${req.user.username} (${req.user.id}) fetched domain ${domain.id}.`,
       );
 
       // Return the domain.
@@ -86,18 +86,18 @@ app.get(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.post(
   // POST /api/domains
-  "/api/domains",
+  '/api/domains',
   AutoTrim(),
   async (
     req: Request<null, null, { id: string; subdomains?: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -109,8 +109,8 @@ app.post(
     try {
       // Get the invalid fields.
       const invalidFields = getInvalidFields(req.body, {
-        id: "string",
-        subdomains: new FieldTypeOptions("boolean", true),
+        id: 'string',
+        subdomains: new FieldTypeOptions('boolean', true),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -128,7 +128,7 @@ app.post(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) created domain ${domain.id}.`
+        `User ${req.user.username} (${req.user.id}) created domain ${domain.id}.`,
       );
 
       // Return the domain.
@@ -137,18 +137,18 @@ app.post(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.put(
   // PUT /api/domains/:id/subdomains
-  "/api/domains/:id/subdomains",
+  '/api/domains/:id/subdomains',
   AutoTrim(),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -170,7 +170,7 @@ app.put(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) allowed subdomains on domain ${domain.id}.`
+        `User ${req.user.username} (${req.user.id}) allowed subdomains on domain ${domain.id}.`,
       );
 
       // Return the domain.
@@ -179,17 +179,17 @@ app.put(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/domains/:id/subdomains
-  "/api/domains/:id/subdomains",
+  '/api/domains/:id/subdomains',
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -211,7 +211,7 @@ app.delete(
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) disallowed subdomains on domain ${domain.id}.`
+        `User ${req.user.username} (${req.user.id}) disallowed subdomains on domain ${domain.id}.`,
       );
 
       // Return the domain.
@@ -220,17 +220,17 @@ app.delete(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/domains/:id
-  "/api/domains/:id",
+  '/api/domains/:id',
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -255,16 +255,16 @@ app.delete(
 
       // Set all users' domains to the default domain.
       await Promise.all(
-        users.map((user) =>
+        users.map(user =>
           user.update({
             domain: process.env.DEFAULT_DOMAIN,
             subdomain: null,
-          })
-        )
+          }),
+        ),
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted domain ${domain.id}.`
+        `User ${req.user.username} (${req.user.id}) deleted domain ${domain.id}.`,
       );
 
       // Delete the domain.
@@ -276,17 +276,17 @@ app.delete(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
 
 app.delete(
   // DELETE /api/domains
-  "/api/domains",
+  '/api/domains',
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >
+    >,
   ) => {
     // If there is no user logged in, return an InvalidSession error.
     if (!req.user) return res.status(401).send(new Errors.InvalidSession());
@@ -298,7 +298,7 @@ app.delete(
     try {
       // Get the invalid fields.
       const invalidFields = getInvalidFields(req.body, {
-        ids: new FieldTypeOptions("array", false, "string"),
+        ids: new FieldTypeOptions('array', false, 'string'),
       });
 
       // If there are invalid fields, return a MissingFields error.
@@ -321,27 +321,27 @@ app.delete(
       const users = await User.findAll({
         where: {
           domain: {
-            [Op.in]: domains.map((domain) => domain.id),
+            [Op.in]: domains.map(domain => domain.id),
           },
         },
       });
 
       // Set all users' domains to the default domain.
       await Promise.all(
-        users.map((user) =>
+        users.map(user =>
           user.update({
             domain: process.env.DEFAULT_DOMAIN,
             subdomain: null,
-          })
-        )
+          }),
+        ),
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted ${count} domains.`
+        `User ${req.user.username} (${req.user.id}) deleted ${count} domains.`,
       );
 
       // Delete the domains.
-      await Promise.all(domains.map((domain) => domain.destroy()));
+      await Promise.all(domains.map(domain => domain.destroy()));
 
       // Return a success.
       return res.status(200).send(new Success.DeleteDomains(count));
@@ -349,5 +349,5 @@ app.delete(
       logger.error(e);
       return res.status(500).send(new Errors.Internal());
     }
-  }
+  },
 );
