@@ -5,6 +5,7 @@ import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
 import { generateToken, nameSession } from '../utils/Token.js';
+import SessionChecker from '../middleware/SessionChecker.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -106,15 +107,13 @@ app.post(
 app.get(
   // GET /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
+  SessionChecker,
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the user is not logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-
     // Check if the user is requesting a session that belongs to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
@@ -194,6 +193,7 @@ app.get(
 app.get(
   // GET /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13}|me)/sessions',
+  SessionChecker,
   async (
     req: Request<
       { uid: string },
@@ -206,9 +206,6 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the user is not logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-
     // Normalize the limit and offset.
     const limit =
         req.query.limit && req.query.limit >= 0 && req.query.limit <= 50
@@ -268,15 +265,13 @@ app.get(
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
+  SessionChecker,
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the user is not logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-
     // Check if the user is requesting a session that belongs to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
@@ -364,15 +359,13 @@ app.delete(
 app.delete(
   // DELETE /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13}|me)/sessions',
+  SessionChecker,
   async (
     req: Request<{ uid: string }, null, { sids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the user is not logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-
     // Check if the user is requesting sessions that belong to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
@@ -438,15 +431,13 @@ app.delete(
 app.delete(
   // DELETE /api/users/:uid/sessions/all
   '/api/users/:uid([0-9]{13}|me)/sessions/all',
+  SessionChecker,
   async (
     req: Request<{ uid: string }, null, null, { 'include-self'?: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the user is not logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-
     // Check if the user is requesting sessions that belong to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Remove the sessions.

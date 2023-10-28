@@ -14,6 +14,7 @@ import File from '../DB/File.js';
 import { generateToken, nameSession } from '../utils/Token.js';
 import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
 import FieldExtractor from '../utils/FieldExtractor.js';
+import SessionChecker from '../middleware/SessionChecker.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -129,6 +130,7 @@ app.post(
 app.get(
   // GET /api/users
   '/api/users',
+  SessionChecker,
   async (
     req: Request<
       null,
@@ -144,8 +146,6 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -185,13 +185,11 @@ app.get(
 app.get(
   // GET /api/users/:id
   '/api/users/:id([0-9]{13}|me)',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user is requesting their own user object.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       logger.debug(
@@ -234,13 +232,11 @@ app.get(
 app.put(
   // PUT /api/users/:id/username
   '/api/users/:id([0-9]{13}|me)/username',
+  SessionChecker,
   async (
     req: Request<{ id: string }, null, { username: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user wants to modify their own username.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
@@ -340,13 +336,11 @@ app.put(
 app.put(
   // PUT /api/users/:id/email
   '/api/users/:id([0-9]{13}|me)/email',
+  SessionChecker,
   async (
     req: Request<{ id: string }, null, { email: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user wants to modify their own email.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
@@ -443,6 +437,7 @@ app.put(
 app.put(
   // PUT /api/users/:id/password
   '/api/users/:id([0-9]{13}|me)/password',
+  SessionChecker,
   async (
     req: Request<
       { id: string },
@@ -451,9 +446,6 @@ app.put(
     >,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user wants to modify their own password.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
@@ -548,12 +540,11 @@ app.put(
 app.put(
   // PUT /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -586,12 +577,11 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -624,12 +614,11 @@ app.delete(
 app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -662,12 +651,11 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -700,13 +688,11 @@ app.delete(
 app.put(
   // PUT /api/users/:id/domain
   '/api/users/:id([0-9]{13}|me)/domain',
+  SessionChecker,
   async (
     req: Request<{ id: string }, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user is trying to change their own domain.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
@@ -807,6 +793,7 @@ app.put(
 app.delete(
   // DELETE /api/users/:id
   '/api/users/:id([0-9]{13}|me)',
+  SessionChecker,
   async (
     req: Request<
       { id: string },
@@ -817,9 +804,6 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user is trying to delete their own account.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
@@ -920,14 +904,13 @@ app.delete(
 app.delete(
   // DELETE /api/users
   '/api/users',
+  SessionChecker,
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());

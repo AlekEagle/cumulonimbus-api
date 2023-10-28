@@ -5,6 +5,7 @@ import AutoTrim from '../middleware/AutoTrim.js';
 import Instruction from '../DB/Instruction.js';
 import { INSTRUCTION_REGEX } from '../utils/Constants.js';
 import FieldExtractor from '../utils/FieldExtractor.js';
+import SessionChecker from '../middleware/SessionChecker.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -14,6 +15,7 @@ logger.debug('Loading: Instruction Routes...');
 app.get(
   // GET /api/instructions
   '/api/instructions',
+  SessionChecker,
   async (
     req: Request<null, null, null, { limit: number; offset: number }>,
     res: Response<
@@ -21,9 +23,6 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Normalize the limit and offset.
     const limit =
         req.query.limit && req.query.limit >= 0 && req.query.limit <= 50
@@ -60,15 +59,13 @@ app.get(
 app.get(
   // GET /api/instructions/:id
   '/api/instructions/:id',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -94,6 +91,7 @@ app.post(
   // POST /api/instructions
   '/api/instructions',
   AutoTrim(),
+  SessionChecker,
   async (
     req: Request<
       null,
@@ -111,8 +109,6 @@ app.post(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -169,6 +165,7 @@ app.post(
 app.put(
   // PUT /api/instructions/:id/name
   '/api/instructions/:id/name',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { name: string }>,
@@ -176,8 +173,6 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -219,14 +214,13 @@ app.put(
   // PUT /api/instructions/:id/description
   '/api/instructions/:id/description',
   AutoTrim(),
+  SessionChecker,
   async (
     req: Request<{ id: string }, null, { description: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -267,6 +261,7 @@ app.put(
 app.put(
   // PUT /api/instructions/:id/file
   '/api/instructions/:id/file',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { filename?: string; content: string }>,
@@ -274,8 +269,6 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -320,6 +313,7 @@ app.put(
 app.put(
   // PUT /api/instructions/:id/steps
   '/api/instructions/:id/steps',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { steps: string[] }>,
@@ -327,8 +321,6 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -369,14 +361,13 @@ app.put(
 app.delete(
   // DELETE /api/instructions/:id
   '/api/instructions/:id',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -408,14 +399,13 @@ app.delete(
 app.delete(
   // DELETE /api/instructions
   '/api/instructions',
+  SessionChecker,
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());

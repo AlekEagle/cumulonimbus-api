@@ -5,6 +5,7 @@ import FieldExtractor from '../utils/FieldExtractor.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import User from '../DB/User.js';
+import SessionChecker from '../middleware/SessionChecker.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
@@ -18,6 +19,7 @@ logger.debug('Loading: File Routes...');
 app.get(
   // GET /api/files
   '/api/files',
+  SessionChecker,
   async (
     req: Request<
       null,
@@ -31,8 +33,6 @@ app.get(
     >,
   ) => {
     try {
-      if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
       const limit =
           req.query.limit && req.query.limit <= 50 && req.query.limit > 0
             ? req.query.limit
@@ -119,13 +119,11 @@ app.get(
 app.get(
   // GET /api/files/:id
   '/api/files/:id',
+  SessionChecker,
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no session present, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     try {
       // Find the file.
       let file = await File.findByPk(req.params.id);
@@ -156,14 +154,12 @@ app.get(
 app.put(
   // PUT /api/files/:id/name
   '/api/files/:id/name',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { name: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no session present, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if they provided a name and if its a string.
     const invalidFields = getInvalidFields(req.body, {
       name: new FieldTypeOptions('string', true),
@@ -206,14 +202,12 @@ app.put(
 app.put(
   // PUT /api/files/:id/extension
   '/api/files/:id/extension',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<{ id: string }, null, { extension: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no session present, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if they provided an extension and if its a string.
     const invalidFields = getInvalidFields(req.body, {
       extension: 'string',
@@ -289,15 +283,13 @@ app.put(
 app.delete(
   // DELETE /api/files/all
   '/api/files/all',
+  SessionChecker,
   async (
     req: Request<null, null, { password: string }, { user: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no session present, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // If the query does not contain the user parameter, return a MissingFields error.
     if (!req.query.user)
       return res.status(400).send(new Errors.MissingFields(['user']));
@@ -403,15 +395,13 @@ app.delete(
 app.delete(
   // DELETE /api/files/:id
   '/api/files/:id',
+  SessionChecker,
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no session present, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     try {
       // Find the file.
       let file = await File.findByPk(req.params.id);
@@ -451,15 +441,13 @@ app.delete(
 app.delete(
   // DELETE /api/files
   '/api/files',
+  SessionChecker,
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no session present, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the request body contains the files array.
     if (!req.body.ids || req.body.ids.length < 1 || req.body.ids.length > 50)
       return res.status(400).send(new Errors.MissingFields(['ids']));

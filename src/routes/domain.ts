@@ -5,6 +5,7 @@ import User from '../DB/User.js';
 import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import FieldExtractor from '../utils/FieldExtractor.js';
+import SessionChecker from '../middleware/SessionChecker.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -14,6 +15,7 @@ logger.debug('Loading: Domain Routes...');
 app.get(
   // GET /api/domains
   '/api/domains',
+  SessionChecker,
   async (
     req: Request<null, null, null, { limit: number; offset: number }>,
     res: Response<
@@ -21,9 +23,6 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Normalize the limit and offset.
     const limit =
         req.query.limit && req.query.limit >= -1 && req.query.limit <= 50
@@ -60,15 +59,13 @@ app.get(
 app.get(
   // GET /api/domains/:id
   '/api/domains/:id',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -92,6 +89,7 @@ app.get(
 app.post(
   // POST /api/domains
   '/api/domains',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<null, null, { id: string; subdomains?: boolean }>,
@@ -143,6 +141,7 @@ app.post(
 app.put(
   // PUT /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
+  SessionChecker,
   AutoTrim(),
   async (
     req: Request<{ id: string }>,
@@ -185,6 +184,7 @@ app.put(
 app.delete(
   // DELETE /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -226,6 +226,7 @@ app.delete(
 app.delete(
   // DELETE /api/domains/:id
   '/api/domains/:id',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -282,6 +283,7 @@ app.delete(
 app.delete(
   // DELETE /api/domains
   '/api/domains',
+  SessionChecker,
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
