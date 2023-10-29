@@ -1,8 +1,10 @@
 import { RequestHandler } from 'express';
 
-function QueryStringParser(options: QueryStringParser.Options): RequestHandler {
+function QueryStringParser(
+  options: QueryStringParser.Options = QueryStringParser.DefaultOptions,
+): RequestHandler {
   const parserOptions = { ...QueryStringParser.DefaultOptions, ...options };
-  return (req, res, next) => {
+  return (req, _, next) => {
     const queryStr = req.originalUrl.split('?')[1];
     if (queryStr === undefined) {
       next();

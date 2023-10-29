@@ -1,11 +1,11 @@
 import { logger, app } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import File from '../DB/File.js';
-import FieldExtractor from '../utils/FieldExtractor.js';
+import KVExtractor from '../utils/KVExtractor.js';
 import AutoTrim from '../middleware/AutoTrim.js';
-import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import User from '../DB/User.js';
 import SessionChecker from '../middleware/SessionChecker.js';
+import BodyValidator from '../middleware/BodyValidator.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
@@ -13,48 +13,38 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
+import LimitOffset from '../middleware/LimitOffset.js';
 
 logger.debug('Loading: File Routes...');
 
 app.get(
   // GET /api/files
   '/api/files',
-  SessionChecker,
+  SessionChecker(),
+  LimitOffset(0, 50),
   async (
-    req: Request<
-      null,
-      null,
-      null,
-      { limit: number; offset: number; uid: number | string }
-    >,
+    req: Request<null, null, null, { uid: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
       | Cumulonimbus.Structures.Error
     >,
   ) => {
     try {
-      const limit =
-          req.query.limit && req.query.limit <= 50 && req.query.limit > 0
-            ? req.query.limit
-            : 50,
-        offset =
-          req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
-
       // If the user did not provide a user, check if they are staff.
       if (!req.query.uid) {
         if (!req.user.staff)
           return res.status(403).send(new Errors.InsufficientPermissions());
         let { count, rows: files } = await File.findAndCountAll({
-          limit,
-          offset,
+          limit: req.limit,
+          offset: req.offset,
           order: [['createdAt', 'DESC']],
         });
-        let items = files.map(file =>
-          FieldExtractor(file.toJSON(), ['id', 'name']),
+        let items = files.map((file) =>
+          KVExtractor(file.toJSON(), ['id', 'name']),
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested all user files. (limit: ${limit}, offset: ${offset})`,
+          `User ${req.user.username} (${req.user.id}) requested all user files. (limit: ${req.limit}, offset: ${req.offset})`,
         );
 
         return res.status(200).send({ count, items });
@@ -73,19 +63,19 @@ app.get(
 
         // Get the user's files.
         let { count, rows: files } = await File.findAndCountAll({
-          limit,
-          offset,
+          limit: req.limit,
+          offset: req.offset,
           order: [['createdAt', 'DESC']],
           where: {
             userID: req.query.uid + '',
           },
         });
-        let items = files.map(file =>
-          FieldExtractor(file.toJSON(), ['id', 'name']),
+        let items = files.map((file) =>
+          KVExtractor(file.toJSON(), ['id', 'name']),
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.uid}. (limit: ${limit}, offset: ${offset})`,
+          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.uid}. (limit: ${req.limit}, offset: ${req.offset})`,
         );
 
         return res.status(200).send({ count, items });
@@ -93,19 +83,19 @@ app.get(
 
       // If the user provided their own id or "me", return their files.
       let { count, rows: files } = await File.findAndCountAll({
-        limit,
-        offset,
+        limit: req.limit,
+        offset: req.offset,
         order: [['createdAt', 'DESC']],
         where: {
           userID: req.user.id,
         },
       });
-      let items = files.map(file =>
-        FieldExtractor(file.toJSON(), ['id', 'name']),
+      let items = files.map((file) =>
+        KVExtractor(file.toJSON(), ['id', 'name']),
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested their files. (limit: ${limit}, offset: ${offset})`,
+        `User ${req.user.username} (${req.user.id}) requested their files. (limit: ${req.limit}, offset: ${req.offset})`,
       );
 
       return res.status(200).send({ count, items });
@@ -119,7 +109,7 @@ app.get(
 app.get(
   // GET /api/files/:id
   '/api/files/:id',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -154,21 +144,15 @@ app.get(
 app.put(
   // PUT /api/files/:id/name
   '/api/files/:id/name',
-  SessionChecker,
+  SessionChecker(),
   AutoTrim(),
+  BodyValidator({
+    name: 'string',
+  }),
   async (
     req: Request<{ id: string }, null, { name: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if they provided a name and if its a string.
-    const invalidFields = getInvalidFields(req.body, {
-      name: new FieldTypeOptions('string', true),
-    });
-
-    // If there are invalid fields, return an InvalidFields error.
-    if (invalidFields.length > 0)
-      return res.status(400).send(new Errors.MissingFields(invalidFields));
-
     try {
       // Find the file
       let file = await File.findByPk(req.params.id);
@@ -202,21 +186,15 @@ app.put(
 app.put(
   // PUT /api/files/:id/extension
   '/api/files/:id/extension',
-  SessionChecker,
+  SessionChecker(),
   AutoTrim(),
+  BodyValidator({
+    extension: 'string',
+  }),
   async (
     req: Request<{ id: string }, null, { extension: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if they provided an extension and if its a string.
-    const invalidFields = getInvalidFields(req.body, {
-      extension: 'string',
-    });
-
-    // If there are invalid fields, return an InvalidFields error.
-    if (invalidFields.length > 0)
-      return res.status(400).send(new Errors.MissingFields(invalidFields));
-
     // If the extension the user provided has a leading dot, remove it.
     if (req.body.extension.startsWith('.'))
       req.body.extension = req.body.extension.slice(1);
@@ -283,7 +261,7 @@ app.put(
 app.delete(
   // DELETE /api/files/all
   '/api/files/all',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<null, null, { password: string }, { user: string }>,
     res: Response<
@@ -313,7 +291,7 @@ app.delete(
 
         // Delete all files.
         await Promise.all(
-          files.map(async file => {
+          files.map(async (file) => {
             // First, delete the thumbnail if it exists.
             if (
               existsSync(
@@ -363,7 +341,7 @@ app.delete(
 
       // Delete all files.
       await Promise.all(
-        files.map(async file => {
+        files.map(async (file) => {
           // First, delete the thumbnail if it exists.
           if (
             existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
@@ -395,7 +373,7 @@ app.delete(
 app.delete(
   // DELETE /api/files/:id
   '/api/files/:id',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<
@@ -441,7 +419,7 @@ app.delete(
 app.delete(
   // DELETE /api/files
   '/api/files',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
@@ -464,7 +442,7 @@ app.delete(
 
       // If the user is not staff, remove any files that do not belong to them and change the count accordingly.
       if (!req.user.staff) {
-        files = files.filter(file => file.userID === req.user.id);
+        files = files.filter((file) => file.userID === req.user.id);
         count = files.length;
       }
 
@@ -473,7 +451,7 @@ app.delete(
 
       // Delete all files.
       await Promise.all(
-        files.map(async file => {
+        files.map(async (file) => {
           // First, delete the thumbnail if it exists.
           if (
             existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))

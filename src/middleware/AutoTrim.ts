@@ -21,11 +21,7 @@ class RecursiveTypeError extends Error {
   }
 }
 
-// Create a middleware that modifies the request body in place to trim all string values.
-// The function can recurse into objects and arrays.
-// You can use periods to specify nested keys, e.g. 'user.name' will trim the 'name' key of the 'user' object.
-// By default it will trim all values, except for those specified in the filteredKeys array.
-// If invertFilter is true, it will trim only the values specified in the filteredKeys array.
+// A middleware that will recursively trim values of whitespace, while avoiding specified keys.
 export default function AutoTrim(
   filteredKeys: RecursiveFilter = [],
   invertFilter: boolean = false,

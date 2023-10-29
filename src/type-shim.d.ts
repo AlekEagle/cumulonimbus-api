@@ -29,6 +29,8 @@ declare global {
       useragent: DetectResult;
       user?: User;
       session?: TokenStructure;
+      limit?: number;
+      offset?: number;
     }
   }
 

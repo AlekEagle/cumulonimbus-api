@@ -1,11 +1,13 @@
 import { logger, app } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import User from '../DB/User.js';
-import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
 import { generateToken, nameSession } from '../utils/Token.js';
 import SessionChecker from '../middleware/SessionChecker.js';
+import BodyValidator, {
+  ExtendedValidBodyTypes,
+} from '../middleware/BodyValidator.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -18,6 +20,11 @@ app.post(
   // POST /api/login
   '/api/login',
   AutoTrim(),
+  BodyValidator({
+    username: 'string',
+    password: 'string',
+    rememberMe: new ExtendedValidBodyTypes('boolean', true),
+  }),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
     windowMs: 60 * 1000, // 1 minute
@@ -41,17 +48,6 @@ app.post(
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
 
     try {
-      // Check for missing fields
-      const missingFields = getInvalidFields(req.body, {
-        username: 'string',
-        password: 'string',
-        rememberMe: new FieldTypeOptions('boolean', true),
-      });
-
-      // If there are missing fields, return a MissingFields error.
-      if (missingFields.length)
-        return res.status(400).json(new Errors.MissingFields(missingFields));
-
       // Find a user with the given username.
       let user = await User.findOne({
         where: where(
@@ -124,7 +120,7 @@ app.get(
 
         // Get the current session.
         let session = req.user.sessions.find(
-          session => session.iat === req.session.payload.iat,
+          (session) => session.iat === req.session.payload.iat,
         );
 
         return res.status(200).send({
@@ -136,7 +132,7 @@ app.get(
 
       // Find the session with the given ID.
       let session = req.user.sessions.find(
-        session => session.iat === parseInt(req.params.sid),
+        (session) => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
@@ -167,7 +163,7 @@ app.get(
 
       // Find the session with the given ID.
       let session = user.sessions.find(
-        session => session.iat === parseInt(req.params.sid),
+        (session) => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
@@ -224,7 +220,7 @@ app.get(
         count: req.user.sessions.length,
         items: req.user.sessions
           .slice(offset, offset + limit)
-          .map(session => ({
+          .map((session) => ({
             id: session.iat,
             name: session.name,
           }))
@@ -250,7 +246,7 @@ app.get(
       // Return the user's sessions.
       return res.status(200).send({
         count: user.sessions.length,
-        items: user.sessions.slice(offset, offset + limit).map(session => ({
+        items: user.sessions.slice(offset, offset + limit).map((session) => ({
           id: session.iat,
           name: session.name,
         })),
@@ -278,7 +274,7 @@ app.delete(
       if (req.params.sid === 'me') {
         // Remove the current session.
         let sessions = req.user.sessions.filter(
-          session => session.iat !== req.session.payload.iat,
+          (session) => session.iat !== req.session.payload.iat,
         );
 
         logger.debug(
@@ -294,7 +290,7 @@ app.delete(
 
       // Find the session with the given ID.
       let session = req.user.sessions.find(
-        session => session.iat === parseInt(req.params.sid),
+        (session) => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
@@ -302,7 +298,7 @@ app.delete(
 
       // Remove the session.
       let sessions = req.user.sessions.filter(
-        session => session.iat !== parseInt(req.params.sid),
+        (session) => session.iat !== parseInt(req.params.sid),
       );
 
       logger.debug(
@@ -329,7 +325,7 @@ app.delete(
 
       // Find the session with the given ID.
       let session = user.sessions.find(
-        session => session.iat === parseInt(req.params.sid),
+        (session) => session.iat === parseInt(req.params.sid),
       );
 
       // If no session was found, return an InvalidSession error.
@@ -337,7 +333,7 @@ app.delete(
 
       // Remove the session.
       let sessions = user.sessions.filter(
-        session => session.iat !== parseInt(req.params.sid),
+        (session) => session.iat !== parseInt(req.params.sid),
       );
 
       logger.debug(
@@ -376,7 +372,7 @@ app.delete(
 
       // Remove the sessions.
       let sessions = req.user.sessions.filter(
-        session => !req.body.sids.includes(session.iat.toString()),
+        (session) => !req.body.sids.includes(session.iat.toString()),
       );
 
       // Count the number of sessions removed.
@@ -406,7 +402,7 @@ app.delete(
 
       // Remove the sessions.
       let sessions = user.sessions.filter(
-        session => !req.body.sids.includes(session.iat.toString()),
+        (session) => !req.body.sids.includes(session.iat.toString()),
       );
 
       // Count the number of sessions removed.
@@ -444,7 +440,7 @@ app.delete(
       let sessions = req.query['include-self']
         ? []
         : req.user.sessions.filter(
-            session => session.iat === req.session.payload.iat,
+            (session) => session.iat === req.session.payload.iat,
           );
 
       // Count the number of sessions removed.

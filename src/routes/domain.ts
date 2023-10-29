@@ -2,10 +2,13 @@ import { logger, app } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import Domain from '../DB/Domain.js';
 import User from '../DB/User.js';
-import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import AutoTrim from '../middleware/AutoTrim.js';
-import FieldExtractor from '../utils/FieldExtractor.js';
+import KVExtractor from '../utils/KVExtractor.js';
 import SessionChecker from '../middleware/SessionChecker.js';
+import BodyValidator, {
+  ExtendedValidBodyTypes,
+} from '../middleware/BodyValidator.js';
+import LimitOffset from '../middleware/LimitOffset.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -15,26 +18,20 @@ logger.debug('Loading: Domain Routes...');
 app.get(
   // GET /api/domains
   '/api/domains',
-  SessionChecker,
+  LimitOffset(-1, 50),
+  SessionChecker(),
   async (
-    req: Request<null, null, null, { limit: number; offset: number }>,
+    req: Request<null, null, null, { limit: string; offset: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Domain>
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Normalize the limit and offset.
-    const limit =
-        req.query.limit && req.query.limit >= -1 && req.query.limit <= 50
-          ? req.query.limit
-          : 50,
-      offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
-
     try {
       // Get the domains.
       const { count, rows: domains } = await Domain.findAndCountAll({
-        limit: limit === -1 ? undefined : limit,
-        offset: limit === -1 ? undefined : offset,
+        limit: req.limit === -1 ? undefined : req.limit,
+        offset: req.limit === -1 ? undefined : req.offset,
         order: [['createdAt', 'DESC']],
       });
 
@@ -45,8 +42,8 @@ app.get(
       // Return the domains.
       return res.status(200).send({
         count,
-        items: domains.map(d =>
-          FieldExtractor(d.toJSON(), ['id', 'subdomains']),
+        items: domains.map((d) =>
+          KVExtractor(d.toJSON(), ['id', 'subdomains']),
         ),
       });
     } catch (e) {
@@ -59,7 +56,7 @@ app.get(
 app.get(
   // GET /api/domains/:id
   '/api/domains/:id',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -89,32 +86,19 @@ app.get(
 app.post(
   // POST /api/domains
   '/api/domains',
-  SessionChecker,
+  SessionChecker(true),
   AutoTrim(),
+  BodyValidator({
+    id: 'string',
+    subdomains: new ExtendedValidBodyTypes('boolean', true),
+  }),
   async (
     req: Request<null, null, { id: string; subdomains?: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
-    // If the user isn't staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Get the invalid fields.
-      const invalidFields = getInvalidFields(req.body, {
-        id: 'string',
-        subdomains: new FieldTypeOptions('boolean', true),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length > 0)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // If the domain already exists, return a DomainExists error.
       if (await Domain.findByPk(req.body.id))
         return res.status(409).send(new Errors.DomainExists());
@@ -141,21 +125,13 @@ app.post(
 app.put(
   // PUT /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
-  SessionChecker,
-  AutoTrim(),
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
-    // If the user isn't staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -184,20 +160,13 @@ app.put(
 app.delete(
   // DELETE /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
-  SessionChecker,
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
-    // If the user isn't staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -226,20 +195,13 @@ app.delete(
 app.delete(
   // DELETE /api/domains/:id
   '/api/domains/:id',
-  SessionChecker,
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
-    // If the user isn't staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -256,7 +218,7 @@ app.delete(
 
       // Set all users' domains to the default domain.
       await Promise.all(
-        users.map(user =>
+        users.map((user) =>
           user.update({
             domain: process.env.DEFAULT_DOMAIN,
             subdomain: null,
@@ -283,30 +245,17 @@ app.delete(
 app.delete(
   // DELETE /api/domains
   '/api/domains',
-  SessionChecker,
+  SessionChecker(true),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
-    // If the user isn't staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Get the invalid fields.
-      const invalidFields = getInvalidFields(req.body, {
-        ids: new FieldTypeOptions('array', false, 'string'),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length > 0)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Get the domains.
       const { count, rows: domains } = await Domain.findAndCountAll({
         where: {
@@ -323,14 +272,14 @@ app.delete(
       const users = await User.findAll({
         where: {
           domain: {
-            [Op.in]: domains.map(domain => domain.id),
+            [Op.in]: domains.map((domain) => domain.id),
           },
         },
       });
 
       // Set all users' domains to the default domain.
       await Promise.all(
-        users.map(user =>
+        users.map((user) =>
           user.update({
             domain: process.env.DEFAULT_DOMAIN,
             subdomain: null,
@@ -343,7 +292,7 @@ app.delete(
       );
 
       // Delete the domains.
-      await Promise.all(domains.map(domain => domain.destroy()));
+      await Promise.all(domains.map((domain) => domain.destroy()));
 
       // Return a success.
       return res.status(200).send(new Success.DeleteDomains(count));

@@ -39,7 +39,7 @@ function createReadableStream(buf: Buffer): Readable {
 app.post(
   // POST /api/upload
   '/api/upload',
-  SessionChecker,
+  SessionChecker(),
   Multer().single('file'),
   async (
     req,
@@ -67,11 +67,11 @@ app.post(
       if (req.file && req.file.originalname) {
         // Check if it ends with an extension that file-type fails to properly detect
         if (
-          TROUBLESOME_FILE_EXTENSIONS.some(ext =>
+          TROUBLESOME_FILE_EXTENSIONS.some((ext) =>
             req.file.originalname.endsWith(ext),
           )
         )
-          fileExtension = TROUBLESOME_FILE_EXTENSIONS.find(ext =>
+          fileExtension = TROUBLESOME_FILE_EXTENSIONS.find((ext) =>
             req.file.originalname.endsWith(ext),
           );
         // If it doesn't have a troublesome file extension, go ahead and check if file-type has one for us
