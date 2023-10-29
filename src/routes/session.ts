@@ -8,6 +8,7 @@ import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
+import LimitOffset from '../middleware/LimitOffset.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -103,7 +104,7 @@ app.post(
 app.get(
   // GET /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -189,26 +190,15 @@ app.get(
 app.get(
   // GET /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13}|me)/sessions',
-  SessionChecker,
+  SessionChecker(),
+  LimitOffset(0, 50),
   async (
-    req: Request<
-      { uid: string },
-      null,
-      null,
-      { limit: number; offset: number }
-    >,
+    req: Request<{ uid: string }, null, null>,
     res: Response<
       | Cumulonimbus.Structures.List<{ id: number; name: string }>
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Normalize the limit and offset.
-    const limit =
-        req.query.limit && req.query.limit >= 0 && req.query.limit <= 50
-          ? req.query.limit
-          : 50,
-      offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
-
     // Check if the user is requesting sessions that belong to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       logger.debug(
@@ -219,7 +209,7 @@ app.get(
       return res.status(200).send({
         count: req.user.sessions.length,
         items: req.user.sessions
-          .slice(offset, offset + limit)
+          .slice(req.offset, req.offset + req.limit)
           .map((session) => ({
             id: session.iat,
             name: session.name,
@@ -246,10 +236,12 @@ app.get(
       // Return the user's sessions.
       return res.status(200).send({
         count: user.sessions.length,
-        items: user.sessions.slice(offset, offset + limit).map((session) => ({
-          id: session.iat,
-          name: session.name,
-        })),
+        items: user.sessions
+          .slice(req.offset, req.offset + req.limit)
+          .map((session) => ({
+            id: session.iat,
+            name: session.name,
+          })),
       });
     } catch (error) {
       logger.error(error);
@@ -261,7 +253,7 @@ app.get(
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -355,7 +347,7 @@ app.delete(
 app.delete(
   // DELETE /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13}|me)/sessions',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ uid: string }, null, { sids: string[] }>,
     res: Response<
@@ -427,9 +419,9 @@ app.delete(
 app.delete(
   // DELETE /api/users/:uid/sessions/all
   '/api/users/:uid([0-9]{13}|me)/sessions/all',
-  SessionChecker,
+  SessionChecker(),
   async (
-    req: Request<{ uid: string }, null, null, { 'include-self'?: boolean }>,
+    req: Request<{ uid: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
