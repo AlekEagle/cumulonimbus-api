@@ -1,10 +1,14 @@
 import { logger, app } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
-import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import Instruction from '../DB/Instruction.js';
 import { INSTRUCTION_REGEX } from '../utils/Constants.js';
-import FieldExtractor from '../utils/FieldExtractor.js';
+import KVExtractor from '../utils/KVExtractor.js';
+import SessionChecker from '../middleware/SessionChecker.js';
+import BodyValidator, {
+  ExtendedValidBodyTypes,
+} from '../middleware/BodyValidator.js';
+import LimitOffset from '../middleware/LimitOffset.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -14,40 +18,32 @@ logger.debug('Loading: Instruction Routes...');
 app.get(
   // GET /api/instructions
   '/api/instructions',
+  SessionChecker(),
+  LimitOffset(0, 50),
   async (
-    req: Request<null, null, null, { limit: number; offset: number }>,
+    req: Request<null, null, null, { limit?: string; offset?: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Instruction>
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
-    // Normalize the limit and offset.
-    const limit =
-        req.query.limit && req.query.limit >= 0 && req.query.limit <= 50
-          ? req.query.limit
-          : 50,
-      offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
-
     try {
       // Get the instructions.
       const { count, rows: instructions } = await Instruction.findAndCountAll({
-        limit,
-        offset,
+        limit: req.limit,
+        offset: req.offset,
         order: [['createdAt', 'DESC']],
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched instructions.`,
+        `User ${req.user.username} (${req.user.id}) fetched instructions. (limit: ${req.limit}, offset: ${req.offset})`,
       );
 
       // Return the instructions.
       return res.status(200).send({
         count,
-        items: instructions.map(d =>
-          FieldExtractor(d.toJSON(), ['id', 'name', 'description']),
+        items: instructions.map((d) =>
+          KVExtractor(d.toJSON(), ['id', 'name', 'description']),
         ),
       });
     } catch (e) {
@@ -60,15 +56,13 @@ app.get(
 app.get(
   // GET /api/instructions/:id
   '/api/instructions/:id',
+  SessionChecker(),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -94,6 +88,15 @@ app.post(
   // POST /api/instructions
   '/api/instructions',
   AutoTrim(),
+  SessionChecker(true),
+  BodyValidator({
+    id: 'string',
+    name: 'string',
+    description: 'string',
+    filename: new ExtendedValidBodyTypes('string', true),
+    content: 'string',
+    steps: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
   async (
     req: Request<
       null,
@@ -111,27 +114,7 @@ app.post(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        id: 'string',
-        name: 'string',
-        description: 'string',
-        filename: new FieldTypeOptions('string', true),
-        content: 'string',
-        steps: new FieldTypeOptions('array', false, 'string'),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // If the ID is invalid, return an InvalidInstruction error.
       if (!INSTRUCTION_REGEX.test(req.body.id))
         return res.status(400).send(new Errors.InvalidInstruction());
@@ -169,29 +152,18 @@ app.post(
 app.put(
   // PUT /api/instructions/:id/name
   '/api/instructions/:id/name',
+  SessionChecker(true),
   AutoTrim(),
+  BodyValidator({
+    name: 'string',
+  }),
   async (
     req: Request<{ id: string }, null, { name: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        name: 'string',
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
 
@@ -199,12 +171,12 @@ app.put(
       if (!instruction)
         return res.status(404).send(new Errors.InvalidInstruction());
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}). (name: ${req.body.name})`,
+      );
+
       // Update the instruction.
       await instruction.update({ name: req.body.name });
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}).`,
-      );
 
       // Return the instruction.
       return res.status(200).send(instruction.toJSON());
@@ -219,28 +191,17 @@ app.put(
   // PUT /api/instructions/:id/description
   '/api/instructions/:id/description',
   AutoTrim(),
+  SessionChecker(true),
+  BodyValidator({
+    description: 'string',
+  }),
   async (
     req: Request<{ id: string }, null, { description: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        description: 'string',
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
 
@@ -252,7 +213,7 @@ app.put(
       await instruction.update({ description: req.body.description });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) description.`,
+        `User ${req.user.username} (${req.user.id}) updated the description for instruction ${instruction.name} (${instruction.id}).`,
       );
 
       // Return the instruction.
@@ -267,30 +228,19 @@ app.put(
 app.put(
   // PUT /api/instructions/:id/file
   '/api/instructions/:id/file',
+  SessionChecker(true),
   AutoTrim(),
+  BodyValidator({
+    filename: new ExtendedValidBodyTypes('string', true),
+    content: 'string',
+  }),
   async (
     req: Request<{ id: string }, null, { filename?: string; content: string }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        filename: new FieldTypeOptions('string', true),
-        content: new FieldTypeOptions('string', false),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
 
@@ -320,29 +270,18 @@ app.put(
 app.put(
   // PUT /api/instructions/:id/steps
   '/api/instructions/:id/steps',
+  SessionChecker(true),
   AutoTrim(),
+  BodyValidator({
+    steps: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
   async (
     req: Request<{ id: string }, null, { steps: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        steps: new FieldTypeOptions('array', false, 'string'),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
 
@@ -369,18 +308,13 @@ app.put(
 app.delete(
   // DELETE /api/instructions/:id
   '/api/instructions/:id',
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -408,28 +342,17 @@ app.delete(
 app.delete(
   // DELETE /api/instructions
   '/api/instructions',
+  SessionChecker(),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
-      // Validate the fields.
-      const invalidFields = getInvalidFields(req.body, {
-        ids: new FieldTypeOptions('array', false, 'string'),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // fetch the instructions.
       const { count, rows: instructions } = await Instruction.findAndCountAll({
         where: {
@@ -443,7 +366,9 @@ app.delete(
       if (!count) return res.status(404).send(new Errors.InvalidInstruction());
 
       // Delete the instructions.
-      await Promise.all(instructions.map(instruction => instruction.destroy()));
+      await Promise.all(
+        instructions.map((instruction) => instruction.destroy()),
+      );
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) deleted ${count} instructions.`,

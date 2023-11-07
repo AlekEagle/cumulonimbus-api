@@ -5,7 +5,6 @@ import {
   EMAIL_REGEX,
   PASSWORD_HASH_ROUNDS,
 } from '../utils/Constants.js';
-import { getInvalidFields, FieldTypeOptions } from '../utils/FieldValidator.js';
 import SubdomainFormatter from '../utils/SubdomainFormatter.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import Domain from '../DB/Domain.js';
@@ -13,7 +12,12 @@ import User from '../DB/User.js';
 import File from '../DB/File.js';
 import { generateToken, nameSession } from '../utils/Token.js';
 import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
-import FieldExtractor from '../utils/FieldExtractor.js';
+import KVExtractor from '../utils/KVExtractor.js';
+import SessionChecker from '../middleware/SessionChecker.js';
+import BodyValidator, {
+  ExtendedValidBodyTypes,
+} from '../middleware/BodyValidator.js';
+import LimitOffset from '../middleware/LimitOffset.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -29,10 +33,21 @@ app.post(
   // POST /api/register
   '/api/register',
   AutoTrim(['password', 'confirmPassword']),
+  BodyValidator({
+    username: 'string',
+    email: 'string',
+    password: 'string',
+    confirmPassword: 'string',
+    rememberMe: new ExtendedValidBodyTypes('boolean', true),
+  }),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 1,
+    // Skip responses that result in 409 Conflict (UserExists)
+    skip(_, res) {
+      return res.statusCode === 409;
+    },
   }),
   async (
     req: Request<
@@ -52,16 +67,6 @@ app.post(
   ) => {
     // If someone attempts to register while logged in, return an InvalidSession error.
     if (req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the request body is missing the username, password, confirmPassword, or email fields, return a MissingFields error.
-    const invalidFields = getInvalidFields(req.body, {
-      username: 'string',
-      email: 'string',
-      password: 'string',
-      confirmPassword: 'string',
-      rememberMe: new FieldTypeOptions('boolean', true),
-    });
-    if (invalidFields.length > 0)
-      return res.status(400).send(new Errors.MissingFields(invalidFields));
 
     // If the password and confirmPassword fields do not match, return a PasswordsDoNotMatch error.
     if (req.body.password !== req.body.confirmPassword)
@@ -129,14 +134,16 @@ app.post(
 app.get(
   // GET /api/users
   '/api/users',
+  SessionChecker(true),
+  LimitOffset(0, 50),
   async (
     req: Request<
       null,
       null,
       null,
       {
-        limit?: number;
-        offset?: number;
+        limit?: string;
+        offset?: string;
       }
     >,
     res: Response<
@@ -144,35 +151,23 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-    // Normalize the limit and offset.
-    const limit =
-        req.query.limit && req.query.limit >= 0 && req.query.limit <= 50
-          ? req.query.limit
-          : 50,
-      offset = req.query.offset && req.query.offset >= 0 ? req.query.offset : 0;
-
     try {
       // Get the users.
       const { count, rows: users } = await User.findAndCountAll({
-        limit,
-        offset,
+        limit: req.limit,
+        offset: req.offset,
         order: [['createdAt', 'DESC']],
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched users. (offset: ${offset}, limit: ${limit})`,
+        `User ${req.user.username} (${req.user.id}) fetched users. (offset: ${req.offset}, limit: ${req.limit})`,
       );
 
       // Send the users.
       return res.status(200).send({
         count,
-        items: users.map(user =>
-          FieldExtractor(user.toJSON(), ['id', 'username']),
+        items: users.map((user) =>
+          KVExtractor(user.toJSON(), ['id', 'username']),
         ),
       });
     } catch (error) {
@@ -185,13 +180,11 @@ app.get(
 app.get(
   // GET /api/users/:id
   '/api/users/:id([0-9]{13}|me)',
+  SessionChecker(),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user is requesting their own user object.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       logger.debug(
@@ -200,9 +193,7 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(
-          FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
-        );
+        .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
@@ -223,7 +214,7 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -234,32 +225,26 @@ app.get(
 app.put(
   // PUT /api/users/:id/username
   '/api/users/:id([0-9]{13}|me)/username',
+  SessionChecker(),
+  AutoTrim(['password']),
+  BodyValidator({
+    username: 'string',
+    password: new ExtendedValidBodyTypes('string', true),
+  }),
   async (
     req: Request<{ id: string }, null, { username: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user wants to modify their own username.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
-        // Check for required fields.
-        const invalidFields = getInvalidFields(req.body, {
-          username: 'string',
-          password: 'string',
-        });
+        // This portion of the endpoint requires a password, if the password is not present, return an error 400
+        if (!req.body.password)
+          return res.status(400).json(new Errors.MissingFields(['password']));
 
-        // Check if the username is valid.
-        if (
-          !invalidFields.includes('username') &&
-          !USERNAME_REGEX.test(req.body.username)
-        )
-          invalidFields.push('username');
-
-        // If there are invalid fields, return a MissingFields error.
-        if (invalidFields.length)
-          return res.status(400).send(new Errors.MissingFields(invalidFields));
+        // Check if the username meets username character requirements
+        if (!USERNAME_REGEX.test(req.body.username))
+          return res.status(400).json(new Errors.InvalidUsername());
 
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
@@ -279,9 +264,7 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(
-            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
-          );
+          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -299,21 +282,9 @@ app.put(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        username: 'string',
-      });
-
-      // Check if the username is valid.
-      if (
-        !invalidFields.includes('username') &&
-        !USERNAME_REGEX.test(req.body.username)
-      )
-        invalidFields.push('username');
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
+      // Check if the username meets username character requirements
+      if (!USERNAME_REGEX.test(req.body.username))
+        return res.status(400).json(new Errors.InvalidUsername());
 
       // Check if the username is already taken.
       if (await User.findOne({ where: { username: req.body.username } }))
@@ -329,7 +300,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -340,32 +311,26 @@ app.put(
 app.put(
   // PUT /api/users/:id/email
   '/api/users/:id([0-9]{13}|me)/email',
+  SessionChecker,
+  AutoTrim(['password']),
+  BodyValidator({
+    email: 'string',
+    password: new ExtendedValidBodyTypes('string', true),
+  }),
   async (
     req: Request<{ id: string }, null, { email: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user wants to modify their own email.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
-        // Check for required fields.
-        const invalidFields = getInvalidFields(req.body, {
-          email: 'string',
-          password: 'string',
-        });
+        // This portion of the endpoint requires a password, if the password is not present, return an error 400
+        if (!req.body.password)
+          return res.status(400).json(new Errors.MissingFields(['password']));
 
-        // Check if the email is valid.
-        if (
-          !invalidFields.includes('email') &&
-          !EMAIL_REGEX.test(req.body.email)
-        )
-          invalidFields.push('email');
-
-        // If there are invalid fields, return a MissingFields error.
-        if (invalidFields.length)
-          return res.status(400).send(new Errors.MissingFields(invalidFields));
+        // Check if the email is a valid email
+        if (!EMAIL_REGEX.test(req.body.email))
+          return res.status(400).json(new Errors.InvalidEmail());
 
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
@@ -376,7 +341,7 @@ app.put(
           return res.status(409).send(new Errors.UserExists());
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}.`,
+          `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
         );
 
         // Update the email.
@@ -385,9 +350,7 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(
-            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
-          );
+          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -405,25 +368,16 @@ app.put(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        email: 'string',
-      });
-
-      // Check if the email is valid.
-      if (!invalidFields.includes('email') && !EMAIL_REGEX.test(req.body.email))
-        invalidFields.push('email');
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
+      // Check if the email is a valid email
+      if (!EMAIL_REGEX.test(req.body.email))
+        return res.status(400).json(new Errors.InvalidEmail());
 
       // Check if the email is already taken.
       if (await User.findOne({ where: { email: req.body.email } }))
         return res.status(409).send(new Errors.UserExists());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s email to ${req.body.email}.`,
+        `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s email to ${req.body.email}. (Previously: ${user.email})`,
       );
 
       // Update the email.
@@ -432,7 +386,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -443,6 +397,12 @@ app.put(
 app.put(
   // PUT /api/users/:id/password
   '/api/users/:id([0-9]{13}|me)/password',
+  SessionChecker,
+  BodyValidator({
+    password: new ExtendedValidBodyTypes('string', true),
+    newPassword: 'string',
+    confirmNewPassword: 'string',
+  }),
   async (
     req: Request<
       { id: string },
@@ -451,22 +411,12 @@ app.put(
     >,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user wants to modify their own password.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
-        // Check for required fields.
-        const invalidFields = getInvalidFields(req.body, {
-          password: 'string',
-          newPassword: 'string',
-          confirmNewPassword: 'string',
-        });
-
-        // If there are invalid fields, return a MissingFields error.
-        if (invalidFields.length)
-          return res.status(400).send(new Errors.MissingFields(invalidFields));
+        // This portion of the endpoint requires a password, if the password is not present, return an error 400
+        if (!req.body.password)
+          return res.status(400).json(new Errors.MissingFields(['password']));
 
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
@@ -491,9 +441,7 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(
-            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
-          );
+          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -511,16 +459,6 @@ app.put(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        newPassword: 'string',
-        confirmNewPassword: 'string',
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
-
       // Check if the new password matches the confirmation.
       if (req.body.newPassword !== req.body.confirmNewPassword)
         return res.status(400).send(new Errors.PasswordsDoNotMatch());
@@ -537,7 +475,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -548,12 +486,11 @@ app.put(
 app.put(
   // PUT /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -575,7 +512,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -586,12 +523,11 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -613,7 +549,7 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -624,12 +560,11 @@ app.delete(
 app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -651,7 +586,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -662,12 +597,11 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
+  SessionChecker,
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
@@ -689,7 +623,7 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -700,26 +634,19 @@ app.delete(
 app.put(
   // PUT /api/users/:id/domain
   '/api/users/:id([0-9]{13}|me)/domain',
+  SessionChecker,
+  AutoTrim(),
+  BodyValidator({
+    domain: 'string',
+    subdomain: new ExtendedValidBodyTypes('string', true),
+  }),
   async (
     req: Request<{ id: string }, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user is trying to change their own domain.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
-        // Check for required fields.
-        const invalidFields = getInvalidFields(req.body, {
-          domain: 'string',
-          subdomain: new FieldTypeOptions('string', true),
-        });
-
-        // If there are invalid fields, return a MissingFields error.
-        if (invalidFields.length)
-          return res.status(400).send(new Errors.MissingFields(invalidFields));
-
         // Check if the domain is valid.
         let domain = await Domain.findByPk(req.body.domain);
         if (!domain) return res.status(404).send(new Errors.InvalidDomain());
@@ -743,9 +670,7 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(
-            FieldExtractor(req.user.toJSON(), ['password', 'sessions'], true),
-          );
+          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -762,16 +687,6 @@ app.put(
 
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).send(new Errors.InvalidUser());
-
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        domain: 'string',
-        subdomain: new FieldTypeOptions('string', true),
-      });
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
 
       // Check if the domain is valid.
       let domain = await Domain.findByPk(req.body.domain);
@@ -796,7 +711,7 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(FieldExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -807,6 +722,12 @@ app.put(
 app.delete(
   // DELETE /api/users/:id
   '/api/users/:id([0-9]{13}|me)',
+  SessionChecker,
+  AutoTrim(['password']),
+  BodyValidator({
+    username: new ExtendedValidBodyTypes('string', true),
+    password: new ExtendedValidBodyTypes('string', true),
+  }),
   async (
     req: Request<
       { id: string },
@@ -817,21 +738,21 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
-
     // Check if the user is trying to delete their own account.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       try {
-        // Check for required fields.
-        const invalidFields = getInvalidFields(req.body, {
-          username: 'string',
-          password: 'string',
-        });
-
-        // If there are invalid fields, return a MissingFields error.
-        if (invalidFields.length)
-          return res.status(400).send(new Errors.MissingFields(invalidFields));
+        // This portion of the endpoint requires both the username and password, if not present, return an error 400
+        if (!req.body.username || !req.body.password)
+          return res
+            .status(400)
+            .json(
+              new Errors.MissingFields(
+                [
+                  !req.body.username ? 'username' : undefined,
+                  !req.body.password ? 'password' : undefined,
+                ].filter((v) => v !== undefined),
+              ),
+            );
 
         // Check if the username in the body matches the user's username.
         if (req.body.username !== req.user.username)
@@ -845,7 +766,7 @@ app.delete(
         const files = await File.findAll({ where: { userID: req.user.id } });
 
         await Promise.all(
-          files.map(async file => {
+          files.map(async (file) => {
             // First, delete the thumbnail if it exists.
             if (
               existsSync(
@@ -889,7 +810,7 @@ app.delete(
       const files = await File.findAll({ where: { userID: user.id } });
 
       await Promise.all(
-        files.map(async file => {
+        files.map(async (file) => {
           // First, delete the thumbnail if it exists.
           if (
             existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
@@ -920,31 +841,25 @@ app.delete(
 app.delete(
   // DELETE /api/users
   '/api/users',
+  SessionChecker,
+  AutoTrim(),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If there is no user logged in, return an InvalidSession error.
-    if (!req.user) return res.status(401).send(new Errors.InvalidSession());
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
       return res.status(403).send(new Errors.InsufficientPermissions());
 
     try {
-      // Check for required fields.
-      const invalidFields = getInvalidFields(req.body, {
-        ids: new FieldTypeOptions('array', false, 'string'),
-      });
-
-      // Check if the ids field exceeds the maximum length.
-      if (req.body.ids.length > 50 && !invalidFields.includes('ids'))
-        invalidFields.push('ids');
-
-      // If there are invalid fields, return a MissingFields error.
-      if (invalidFields.length)
-        return res.status(400).send(new Errors.MissingFields(invalidFields));
+      // Check if they're attempting to delete more than 50 users
+      if (req.body.ids.length > 50)
+        return res.status(400).json(new Errors.MissingFields(['ids'])); //TODO: Propose a "SelectionTooLarge" error
 
       // Get the users.
       const { count, rows: users } = await User.findAndCountAll({
@@ -956,12 +871,12 @@ app.delete(
 
       // Delete the users.
       await Promise.all(
-        users.map(async user => {
+        users.map(async (user) => {
           // Delete the user's files.
           const files = await File.findAll({ where: { userID: user.id } });
 
           await Promise.all(
-            files.map(async file => {
+            files.map(async (file) => {
               // First, delete the thumbnail if it exists.
               if (
                 existsSync(
