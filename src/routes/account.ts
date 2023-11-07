@@ -311,7 +311,7 @@ app.put(
 app.put(
   // PUT /api/users/:id/email
   '/api/users/:id([0-9]{13}|me)/email',
-  SessionChecker,
+  SessionChecker(),
   AutoTrim(['password']),
   BodyValidator({
     email: 'string',
@@ -397,7 +397,7 @@ app.put(
 app.put(
   // PUT /api/users/:id/password
   '/api/users/:id([0-9]{13}|me)/password',
-  SessionChecker,
+  SessionChecker(),
   BodyValidator({
     password: new ExtendedValidBodyTypes('string', true),
     newPassword: 'string',
@@ -486,15 +486,11 @@ app.put(
 app.put(
   // PUT /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
-  SessionChecker,
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -523,15 +519,11 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
-  SessionChecker,
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -560,15 +552,11 @@ app.delete(
 app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -597,15 +585,11 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
-  SessionChecker,
+  SessionChecker(),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -634,7 +618,7 @@ app.delete(
 app.put(
   // PUT /api/users/:id/domain
   '/api/users/:id([0-9]{13}|me)/domain',
-  SessionChecker,
+  SessionChecker(),
   AutoTrim(),
   BodyValidator({
     domain: 'string',
@@ -722,7 +706,7 @@ app.put(
 app.delete(
   // DELETE /api/users/:id
   '/api/users/:id([0-9]{13}|me)',
-  SessionChecker,
+  SessionChecker(),
   AutoTrim(['password']),
   BodyValidator({
     username: new ExtendedValidBodyTypes('string', true),
@@ -841,7 +825,7 @@ app.delete(
 app.delete(
   // DELETE /api/users
   '/api/users',
-  SessionChecker,
+  SessionChecker(),
   AutoTrim(),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
