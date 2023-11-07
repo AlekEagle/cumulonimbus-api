@@ -44,6 +44,10 @@ app.post(
     ...defaultRateLimitConfig,
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 1,
+    // Skip responses that result in 409 Conflict (UserExists)
+    skip(_, res) {
+      return res.statusCode === 409;
+    },
   }),
   async (
     req: Request<
