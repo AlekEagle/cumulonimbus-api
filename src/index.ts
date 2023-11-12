@@ -54,5 +54,5 @@ import('./routes/index.js');
 
 // listen to things from stuff and things
 app.listen(PORT, () => {
-  logger.info(`Listening on port ${PORT}`);
+  logger.info(`Listening on port ${PORT}.`);
 });

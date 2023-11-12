@@ -16,6 +16,9 @@ export default class User extends Model {
   staff: boolean;
   domain: string;
   subdomain: string | null;
+  emailVerificationToken: string | null;
+  verificationRequestedAt: Date | null;
+  verifiedAt: Date | null;
   bannedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -66,6 +69,18 @@ export default class User extends Model {
       },
       subdomain: {
         type: DataTypes.STRING(64),
+        allowNull: true,
+      },
+      emailVerificationToken: {
+        type: DataTypes.STRING(128),
+        allowNull: true,
+      },
+      verificationRequestedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      verifiedAt: {
+        type: DataTypes.DATE,
         allowNull: true,
       },
       bannedAt: {

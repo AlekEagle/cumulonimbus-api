@@ -18,6 +18,7 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
+import { sendVerificationEmail } from '../mail/Verification.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -104,6 +105,19 @@ app.post(
       // Generate a session token.
       const token = await generateToken(now, req.body.rememberMe);
 
+      // Send the verification email.
+      const {
+        success,
+        error,
+        token: verifyToken,
+      } = await sendVerificationEmail(req.body.email, req.body.username);
+
+      // If the email failed to send, return an error 500.
+      if (!success) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
+
       // Create the user and send the user object.
       const user = await User.create({
         id: now,
@@ -119,6 +133,8 @@ app.post(
             name: tokenName,
           },
         ],
+        emailVerificationToken: verifyToken,
+        verificationRequestedAt: new Date(),
       });
       logger.debug(`User ${user.username} (${user.id}) account created.`);
       return res
@@ -343,6 +359,8 @@ app.put(
         logger.debug(
           `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
         );
+
+        // TODO: Send verification email and set various fields accordingly.
 
         // Update the email.
         await req.user.update({ email: req.body.email });
