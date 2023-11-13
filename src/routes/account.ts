@@ -4,6 +4,7 @@ import {
   USERNAME_REGEX,
   EMAIL_REGEX,
   PASSWORD_HASH_ROUNDS,
+  EMAIL_VERIFICATION_TOKEN_EXPIRY,
 } from '../utils/Constants.js';
 import SubdomainFormatter from '../utils/SubdomainFormatter.js';
 import AutoTrim from '../middleware/AutoTrim.js';
@@ -18,7 +19,7 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
-import { sendVerificationEmail } from '../mail/Verification.js';
+import { sendSignupVerificationEmail } from '../mail/SignupVerification.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -27,6 +28,7 @@ import ExpressRateLimit from 'express-rate-limit';
 import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import ms from 'ms';
 
 logger.debug('Loading: Account Routes...');
 
@@ -110,7 +112,7 @@ app.post(
         success,
         error,
         token: verifyToken,
-      } = await sendVerificationEmail(req.body.email, req.body.username);
+      } = await sendSignupVerificationEmail(req.body.email, req.body.username);
 
       // If the email failed to send, return an error 500.
       if (!success) {
@@ -209,7 +211,18 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            req.user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
@@ -230,7 +243,18 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -280,7 +304,18 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -316,7 +351,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -332,9 +378,14 @@ app.put(
   BodyValidator({
     email: 'string',
     password: new ExtendedValidBodyTypes('string', true),
+    verified: new ExtendedValidBodyTypes('boolean', true),
   }),
   async (
-    req: Request<{ id: string }, null, { email: string; password?: string }>,
+    req: Request<
+      { id: string },
+      null,
+      { email: string; password?: string; verified?: boolean }
+    >,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user wants to modify their own email.
@@ -360,15 +411,44 @@ app.put(
           `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
         );
 
-        // TODO: Send verification email and set various fields accordingly.
+        const {
+          success,
+          error,
+          token: verifyToken,
+        } = await sendSignupVerificationEmail(
+          req.body.email,
+          req.user.username,
+        );
+
+        // If the email failed to send, return an error 500.
+        if (!success) {
+          logger.error(error);
+          return res.status(500).send(new Errors.Internal());
+        }
 
         // Update the email.
-        await req.user.update({ email: req.body.email });
+        await req.user.update({
+          email: req.body.email,
+          verified: false,
+          emailVerificationToken: verifyToken,
+          verificationRequestedAt: new Date(),
+        });
 
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -399,16 +479,84 @@ app.put(
       );
 
       // Update the email.
-      await user.update({ email: req.body.email });
+      await user.update({ email: req.body.email, verified: req.body.verified });
 
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
     }
+  },
+);
+
+app.put(
+  // PUT /api/users/me/verify
+  // This endpoint is ONLY for verifying the user's email and has no use for staff.
+  '/api/users/me/verify',
+  SessionChecker(),
+  BodyValidator({
+    token: 'string',
+  }),
+  async (req, res) => {
+    // Check if the user's email is already verified.
+    if (req.user.verified)
+      return res.status(400).send(new Errors.EmailAlreadyVerified());
+
+    // Check if the user has a verification token.
+    if (!req.user.emailVerificationToken)
+      return res.status(400).send(new Errors.InvalidVerificationToken());
+
+    // Check if the verification token has expired.
+    if (
+      Date.now() - req.user.verificationRequestedAt.getTime() >
+      ms(EMAIL_VERIFICATION_TOKEN_EXPIRY)
+    )
+      return res.status(400).send(new Errors.InvalidVerificationToken());
+
+    // Check if the token matches the user's verification token.
+    if (req.body.token !== req.user.emailVerificationToken)
+      return res.status(400).send(new Errors.InvalidVerificationToken());
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) verified their email.`,
+    );
+
+    // Update the user's email verification status.
+    await req.user.update({
+      verified: true,
+      emailVerificationToken: null,
+      verificationRequestedAt: null,
+    });
+
+    // Send the user object.
+    return res
+      .status(200)
+      .send(
+        KVExtractor(
+          req.user.toJSON(),
+          [
+            'password',
+            'sessions',
+            'emailVerificationToken',
+            'verificationRequestedAt',
+          ],
+          true,
+        ),
+      );
   },
 );
 
@@ -459,7 +607,18 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -493,7 +652,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -526,7 +696,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -559,7 +740,18 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -592,7 +784,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -625,7 +828,18 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -672,7 +886,18 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -713,7 +938,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
