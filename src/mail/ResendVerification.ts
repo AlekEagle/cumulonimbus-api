@@ -4,7 +4,7 @@ import { generateVerifyEmailToken } from '../utils/Token.js';
 
 await init();
 
-export async function sendSignupVerificationEmail(
+export async function sendResendVerificationEmail(
   to: string,
   username: string,
 ): Promise<{ success: boolean; error?: string; token: string }> {
@@ -18,11 +18,11 @@ export async function sendSignupVerificationEmail(
   try {
     await transport.sendMail({
       to,
-      subject: 'Verify your new Cumulonimbus account',
+      subject: 'Verify your Cumulonimbus account',
       html: `
-      <h1>Verify your new Cumulonimbus account</h1>
+      <h1>Verify your Cumulonimbus account</h1>
       <p>Hi ${username},</p>
-      <p>Thanks for signing up for Cumulonimbus! Please click the link below to verify your account.</p>
+      <p>Please click the link below to verify your account.</p>
       <a href="${url}">Verify Account</a>
       <p>If you cannot click the link, please copy and paste the following URL into your browser:</p>
       <p>${url}</p>

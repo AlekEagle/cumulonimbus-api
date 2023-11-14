@@ -209,4 +209,12 @@ export namespace Success {
     public readonly message: string = 'Instructions Successfully Deleted';
     constructor(public readonly count: number) {}
   }
+
+  export class SendVerificationEmail
+    implements Cumulonimbus.Structures.Success
+  {
+    public readonly code: string = 'SEND_VERIFICATION_EMAIL_SUCCESS';
+    public readonly message: string = 'Verification Email Successfully Sent';
+    constructor() {}
+  }
 }
