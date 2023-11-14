@@ -940,7 +940,7 @@ app.delete(
 app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
-  SessionChecker(),
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -984,7 +984,7 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
-  SessionChecker(),
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -1257,7 +1257,7 @@ app.delete(
 app.delete(
   // DELETE /api/users
   '/api/users',
-  SessionChecker(),
+  SessionChecker(true),
   AutoTrim(),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
@@ -1268,10 +1268,6 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
-
     try {
       // Check if they're attempting to delete more than 50 users
       if (req.body.ids.length > 50)
