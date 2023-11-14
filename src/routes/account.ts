@@ -22,6 +22,7 @@ import LimitOffset from '../middleware/LimitOffset.js';
 import { sendSignupVerificationEmail } from '../mail/SignupVerification.js';
 import { sendResendVerificationEmail } from '../mail/ResendVerification.js';
 import { sendUpdateVerificationEmail } from '../mail/UpdateVerification.js';
+import { sendBannedNotice } from '../mail/BannedNotice.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -669,7 +670,7 @@ app.get(
         success,
         error,
         token: verifyToken,
-      } = await sendResendVerificationEmail(req.user.email, req.user.username); // TODO: Create a separate email type for this
+      } = await sendResendVerificationEmail(req.user.email, req.user.username);
 
       // If the email failed to send, return an error 500.
       if (!success) {
@@ -710,7 +711,7 @@ app.get(
           success,
           error,
           token: verifyToken,
-        } = await sendResendVerificationEmail(user.email, user.username); // TODO: Create a separate email type for this
+        } = await sendResendVerificationEmail(user.email, user.username);
 
         // If the email failed to send, return an error 500.
         if (!success) {
@@ -941,8 +942,11 @@ app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
   SessionChecker(true),
+  BodyValidator({
+    reason: 'string',
+  }),
   async (
-    req: Request<{ id: string }>,
+    req: Request<{ id: string }, null, { reason: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     try {
@@ -955,6 +959,19 @@ app.put(
       logger.debug(
         `User ${req.user.username} (${req.user.id}) banned user ${user.username} (${user.id}).`,
       );
+
+      // Notify the user that they have been banned.
+      const { success, error } = await sendBannedNotice(
+        user.email,
+        user.username,
+        req.body.reason,
+      );
+
+      // If the email failed to send, return an error 500.
+      if (!success) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
 
       // Update the banned status.
       await user.update({ bannedAt: new Date() });

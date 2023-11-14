@@ -47,6 +47,11 @@ app.post(
       Cumulonimbus.Structures.SuccessfulUpload | Cumulonimbus.Structures.Error
     >,
   ) => {
+    // Check if the user is verified
+    // if (!req.user.verified)
+    //   return res.status(403).json(new Errors.EmailNotVerified());
+    // This is commented out because we will have a grace period for users to verify their email addresses.
+
     try {
       // Check if file is present
       if (!req.file && !req.body.file)
