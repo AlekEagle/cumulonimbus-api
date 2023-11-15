@@ -6,7 +6,6 @@ export default class User extends Model {
   id: string;
   username: string;
   email: string;
-  verified: boolean;
   password: string;
   sessions: {
     iat: number;
@@ -43,11 +42,6 @@ export default class User extends Model {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
-      },
-      verified: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false,
       },
       password: {
         type: DataTypes.STRING(60),

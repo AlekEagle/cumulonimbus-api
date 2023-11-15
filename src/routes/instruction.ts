@@ -342,7 +342,7 @@ app.delete(
 app.delete(
   // DELETE /api/instructions
   '/api/instructions',
-  SessionChecker(),
+  SessionChecker(true),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),
@@ -352,6 +352,10 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    // Check if they are trying to delete more than 50 instructions.
+    if (req.body.ids.length > 50)
+      return res.status(400).send(new Errors.BodyTooLarge());
+
     try {
       // fetch the instructions.
       const { count, rows: instructions } = await Instruction.findAndCountAll({

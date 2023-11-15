@@ -5,7 +5,9 @@ import KVExtractor from '../utils/KVExtractor.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import User from '../DB/User.js';
 import SessionChecker from '../middleware/SessionChecker.js';
-import BodyValidator from '../middleware/BodyValidator.js';
+import BodyValidator, {
+  ExtendedValidBodyTypes,
+} from '../middleware/BodyValidator.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
@@ -420,15 +422,18 @@ app.delete(
   // DELETE /api/files
   '/api/files',
   SessionChecker(),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the request body contains the files array.
-    if (!req.body.ids || req.body.ids.length < 1 || req.body.ids.length > 50)
-      return res.status(400).send(new Errors.MissingFields(['ids']));
+    // Check if the user is trying to delete more than 50 files.
+    if (req.body.ids.length > 50)
+      return res.status(400).send(new Errors.BodyTooLarge());
 
     try {
       // Find all files specified in the request body.

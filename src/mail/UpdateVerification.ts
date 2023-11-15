@@ -27,7 +27,7 @@ export async function sendUpdateVerificationEmail(
       <p>If you cannot click the link, please copy and paste the following URL into your browser:</p>
       <p>${url}</p>
       <p>This link will expire in 1 hour.</p>
-      `, // TODO: Add an undo email change button
+      `,
     });
     return { success: true, token };
   } catch (err) {

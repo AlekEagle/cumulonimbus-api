@@ -45,7 +45,6 @@ declare global {
         id: string;
         username: string;
         email: string;
-        verified: boolean;
         staff: boolean;
         domain: string;
         subdomain: string | null;

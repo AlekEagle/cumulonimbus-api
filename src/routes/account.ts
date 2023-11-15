@@ -35,6 +35,8 @@ import ms from 'ms';
 
 logger.debug('Loading: Account Routes...');
 
+// TODO: add a way for users to undo unauthorized account changes
+
 app.post(
   // POST /api/register
   '/api/register',
@@ -518,7 +520,7 @@ app.put(
     // Check if the user wants to verify their own email.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       // Check if the user's email is already verified.
-      if (req.user.verified)
+      if (req.user.verifiedAt)
         return res.status(400).send(new Errors.EmailAlreadyVerified());
 
       // Check if the user has a verification token.
@@ -542,9 +544,9 @@ app.put(
 
       // Update the user's email verification status.
       await req.user.update({
-        verified: true,
         emailVerificationToken: null,
         verificationRequestedAt: null,
+        verifiedAt: new Date(),
       });
 
       // Send the user object.
@@ -575,7 +577,7 @@ app.put(
         if (!user) return res.status(404).send(new Errors.InvalidUser());
 
         // Check if the user's email is already verified.
-        if (user.verified)
+        if (user.verifiedAt)
           return res.status(400).send(new Errors.EmailAlreadyVerified());
 
         // Verify the user's email.
@@ -628,7 +630,7 @@ app.delete(
       if (!user) return res.status(404).send(new Errors.InvalidUser());
 
       // Check if the user's email is already unverified.
-      if (!user.verified)
+      if (!user.verifiedAt)
         return res.status(400).send(new Errors.EmailNotVerified());
 
       logger.debug(
@@ -662,7 +664,7 @@ app.get(
     // Check if the user wants to request a new verification email for their own account.
     if (req.params.id === 'me' || req.params.id === req.user.id) {
       // Check if the user's email is already verified.
-      if (req.user.verified)
+      if (req.user.verifiedAt)
         return res.status(400).send(new Errors.EmailAlreadyVerified());
 
       // Send the verification email.
@@ -703,7 +705,7 @@ app.get(
         if (!user) return res.status(404).send(new Errors.InvalidUser());
 
         // Check if the user's email is already verified.
-        if (user.verified)
+        if (user.verifiedAt)
           return res.status(400).send(new Errors.EmailAlreadyVerified());
 
         // Send the verification email.
@@ -1288,7 +1290,7 @@ app.delete(
     try {
       // Check if they're attempting to delete more than 50 users
       if (req.body.ids.length > 50)
-        return res.status(400).json(new Errors.MissingFields(['ids'])); //TODO: Propose a "SelectionTooLarge" error
+        return res.status(400).json(new Errors.BodyTooLarge());
 
       // Get the users.
       const { count, rows: users } = await User.findAndCountAll({
