@@ -12,7 +12,7 @@ export async function sendSignupVerificationEmail(
     url = `${
       process.env.ENV === 'development'
         ? 'http://localhost:5173'
-        : 'https://alekeagle.me`'
+        : 'https://alekeagle.me'
     }/verify?token=${token}`;
 
   try {
