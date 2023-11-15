@@ -37,6 +37,26 @@ export namespace Errors {
     constructor() {}
   }
 
+  export class EmailNotVerified implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'EMAIL_NOT_VERIFIED_ERROR';
+    public readonly message: string = 'Email Not Verified';
+    constructor() {}
+  }
+
+  export class EmailAlreadyVerified implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'EMAIL_ALREADY_VERIFIED_ERROR';
+    public readonly message: string = 'Email Already Verified';
+    constructor() {}
+  }
+
+  export class InvalidVerificationToken
+    implements Cumulonimbus.Structures.Error
+  {
+    public readonly code: string = 'INVALID_VERIFICATION_TOKEN_ERROR';
+    public readonly message: string = 'Invalid Verification Token';
+    constructor() {}
+  }
+
   export class InvalidSession implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_SESSION_ERROR';
     public readonly message: string = 'Invalid Session';
@@ -188,5 +208,13 @@ export namespace Success {
     public readonly code: string = 'DELETE_INSTRUCTIONS_SUCCESS';
     public readonly message: string = 'Instructions Successfully Deleted';
     constructor(public readonly count: number) {}
+  }
+
+  export class SendVerificationEmail
+    implements Cumulonimbus.Structures.Success
+  {
+    public readonly code: string = 'SEND_VERIFICATION_EMAIL_SUCCESS';
+    public readonly message: string = 'Verification Email Successfully Sent';
+    constructor() {}
   }
 }

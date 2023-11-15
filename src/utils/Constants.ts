@@ -42,3 +42,7 @@ export const SHORT_LIVED_TOKEN_EXPIRY = '24h';
 export const LONG_LIVED_TOKEN_EXPIRY = '10y';
 export const TOKEN_ALGORITHM = 'ES256';
 export const TOKEN_TYPE = 'JWT';
+
+// ========= EMAIL RELATED CONSTANTS =========
+export const EMAIL_VERIFICATION_TOKEN_EXPIRY = '1h';
+export const EMAIL_VERIFICATION_TOKEN_LENGTH = 96; // 96 bytes = 128 base64 characters

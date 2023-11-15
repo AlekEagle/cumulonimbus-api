@@ -2,12 +2,15 @@
 import { importX509, importPKCS8, KeyLike, SignJWT, jwtVerify } from 'jose';
 // We need this to read the JWT public and private keypair
 import { readFile } from 'node:fs/promises';
+// We need this to generate secure random numbers
+import { randomInt } from 'node:crypto';
 // Those Constants that are constant that we need
 import {
   TOKEN_ALGORITHM,
   LONG_LIVED_TOKEN_EXPIRY,
   SHORT_LIVED_TOKEN_EXPIRY,
   TOKEN_TYPE,
+  EMAIL_VERIFICATION_TOKEN_LENGTH,
 } from './Constants.js';
 import { Request } from 'express';
 
@@ -75,7 +78,7 @@ export function extractToken(token: string): TokenStructure {
   let t = token
     .split('.')
     .filter((a, i) => i !== 2)
-    .map(p => JSON.parse(Buffer.from(p, 'base64').toString('utf8')));
+    .map((p) => JSON.parse(Buffer.from(p, 'base64').toString('utf8')));
   return { header: t[0], payload: t[1] };
 }
 
@@ -113,4 +116,12 @@ export function nameSession(req: Request): string {
   }
 
   return name;
+}
+
+export function generateVerifyEmailToken() {
+  return Buffer.from(
+    new Array(EMAIL_VERIFICATION_TOKEN_LENGTH)
+      .fill(0)
+      .map((_) => randomInt(0, 255)),
+  ).toString('base64');
 }

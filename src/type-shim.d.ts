@@ -20,6 +20,10 @@ declare global {
       DEFAULT_DOMAIN: string;
       FRONTEND_BASE_URL: string;
       THUMBNAIL_BASE_URL: string;
+      SMTP_HOST: string;
+      SMTP_PORT: string;
+      SMTP_USER: string;
+      SMTP_PASS: string;
     }
   }
 
@@ -41,10 +45,12 @@ declare global {
         id: string;
         username: string;
         email: string;
-        verified: boolean;
         staff: boolean;
         domain: string;
         subdomain: string | null;
+        emailVerificationToken: string | null;
+        verificationRequestedAt: Date | null;
+        verifiedAt: Date | null;
         bannedAt: string | null;
         createdAt: string;
         updatedAt: string;

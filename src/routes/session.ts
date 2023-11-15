@@ -354,6 +354,10 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    // Check if they are trying to remove more than 50 sessions.
+    if (req.body.sids.length > 50)
+      return res.status(400).json(new Errors.BodyTooLarge());
+
     // Check if the user is requesting sessions that belong to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.

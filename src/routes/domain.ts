@@ -255,6 +255,10 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    // Check if they're trying to delete more than 50 domains.
+    if (req.body.ids.length > 50)
+      return res.status(400).send(new Errors.BodyTooLarge());
+
     try {
       // Get the domains.
       const { count, rows: domains } = await Domain.findAndCountAll({

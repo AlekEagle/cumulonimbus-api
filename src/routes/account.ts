@@ -4,6 +4,7 @@ import {
   USERNAME_REGEX,
   EMAIL_REGEX,
   PASSWORD_HASH_ROUNDS,
+  EMAIL_VERIFICATION_TOKEN_EXPIRY,
 } from '../utils/Constants.js';
 import SubdomainFormatter from '../utils/SubdomainFormatter.js';
 import AutoTrim from '../middleware/AutoTrim.js';
@@ -18,6 +19,10 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
+import { sendSignupVerificationEmail } from '../mail/SignupVerification.js';
+import { sendResendVerificationEmail } from '../mail/ResendVerification.js';
+import { sendUpdateVerificationEmail } from '../mail/UpdateVerification.js';
+import { sendBannedNotice } from '../mail/BannedNotice.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -26,8 +31,11 @@ import ExpressRateLimit from 'express-rate-limit';
 import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import ms from 'ms';
 
 logger.debug('Loading: Account Routes...');
+
+// TODO: add a way for users to undo unauthorized account changes
 
 app.post(
   // POST /api/register
@@ -42,7 +50,7 @@ app.post(
   }),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
-    windowMs: 60 * 60 * 1000, // 1 hour
+    windowMs: ms('1h'), // 1 hour
     max: 1,
     // Skip responses that result in 409 Conflict (UserExists)
     skip(_, res) {
@@ -104,6 +112,19 @@ app.post(
       // Generate a session token.
       const token = await generateToken(now, req.body.rememberMe);
 
+      // Send the verification email.
+      const {
+        success,
+        error,
+        token: verifyToken,
+      } = await sendSignupVerificationEmail(req.body.email, req.body.username);
+
+      // If the email failed to send, return an error 500.
+      if (!success) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
+
       // Create the user and send the user object.
       const user = await User.create({
         id: now,
@@ -119,6 +140,8 @@ app.post(
             name: tokenName,
           },
         ],
+        emailVerificationToken: verifyToken,
+        verificationRequestedAt: new Date(),
       });
       logger.debug(`User ${user.username} (${user.id}) account created.`);
       return res
@@ -193,7 +216,18 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            req.user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
@@ -214,7 +248,18 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -264,7 +309,18 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -300,7 +356,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -344,13 +411,44 @@ app.put(
           `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
         );
 
+        const {
+          success,
+          error,
+          token: verifyToken,
+        } = await sendUpdateVerificationEmail(
+          req.body.email,
+          req.user.username,
+        );
+
+        // If the email failed to send, return an error 500.
+        if (!success) {
+          logger.error(error);
+          return res.status(500).send(new Errors.Internal());
+        }
+
         // Update the email.
-        await req.user.update({ email: req.body.email });
+        await req.user.update({
+          email: req.body.email,
+          verified: false,
+          emailVerificationToken: verifyToken,
+          verificationRequestedAt: new Date(),
+        });
 
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -380,16 +478,265 @@ app.put(
         `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s email to ${req.body.email}. (Previously: ${user.email})`,
       );
 
+      // Don't send a verification email, staff can verify emails without user interaction.
+      // And if the staff wants to send an email, they can use the /api/users/:id/verify endpoint.
+
       // Update the email.
       await user.update({ email: req.body.email });
 
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
+    }
+  },
+);
+
+app.put(
+  // PUT /api/users/:id/verify
+  '/api/users/:id([0-9]{13}|me)/verify',
+  SessionChecker(),
+  BodyValidator({
+    token: new ExtendedValidBodyTypes('string', true),
+  }),
+  async (
+    req: Request<{ id: string }, null, { token?: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
+    // Check if the user wants to verify their own email.
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
+      // Check if the user's email is already verified.
+      if (req.user.verifiedAt)
+        return res.status(400).send(new Errors.EmailAlreadyVerified());
+
+      // Check if the user has a verification token.
+      if (!req.user.emailVerificationToken)
+        return res.status(400).send(new Errors.InvalidVerificationToken());
+
+      // Check if the verification token has expired.
+      if (
+        Date.now() - req.user.verificationRequestedAt.getTime() >
+        ms(EMAIL_VERIFICATION_TOKEN_EXPIRY)
+      )
+        return res.status(400).send(new Errors.InvalidVerificationToken());
+
+      // Check if the token matches the user's verification token.
+      if (req.body.token !== req.user.emailVerificationToken)
+        return res.status(400).send(new Errors.InvalidVerificationToken());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) verified their email.`,
+      );
+
+      // Update the user's email verification status.
+      await req.user.update({
+        emailVerificationToken: null,
+        verificationRequestedAt: null,
+        verifiedAt: new Date(),
+      });
+
+      // Send the user object.
+      return res
+        .status(200)
+        .send(
+          KVExtractor(
+            req.user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
+    } else {
+      // If the user is not staff, return a InsufficientPermissions error.
+      if (!req.user.staff)
+        return res.status(403).send(new Errors.InsufficientPermissions());
+
+      try {
+        // Get the user.
+        const user = await User.findByPk(req.params.id);
+
+        // If the user does not exist, return a InvalidUser error.
+        if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+        // Check if the user's email is already verified.
+        if (user.verifiedAt)
+          return res.status(400).send(new Errors.EmailAlreadyVerified());
+
+        // Verify the user's email.
+        await user.update({
+          verified: true,
+          emailVerificationToken: null,
+          verificationRequestedAt: null,
+        });
+
+        logger.debug(
+          `User ${req.user.username} (${req.user.id}) verified user ${user.username} (${user.id})'s email.`,
+        );
+
+        // Send the user object.
+        return res
+          .status(200)
+          .send(
+            KVExtractor(
+              user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
+      } catch (error) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
+    }
+  },
+);
+
+app.delete(
+  // DELETE /api/users/:id/verify
+  '/api/users/:id([0-9]{13})/verify',
+  SessionChecker(true),
+  async (
+    req: Request<{ id: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
+    try {
+      // Get the user.
+      const user = await User.findByPk(req.params.id);
+
+      // If the user does not exist, return a InvalidUser error.
+      if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+      // Check if the user's email is already unverified.
+      if (!user.verifiedAt)
+        return res.status(400).send(new Errors.EmailNotVerified());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) unverified user ${user.username} (${user.id})'s email.`,
+      );
+
+      // Update the user's email verification status.
+      await user.update({ verified: false });
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).send(new Errors.Internal());
+    }
+  },
+);
+
+app.get(
+  // GET /api/users/:id/verify
+  '/api/users/:id([0-9]{13}|me)/verify',
+  SessionChecker(),
+  ExpressRateLimit({
+    ...defaultRateLimitConfig,
+    windowMs: ms('5m'),
+    max: 1,
+  }),
+  async (
+    req: Request<{ id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Check if the user wants to request a new verification email for their own account.
+    if (req.params.id === 'me' || req.params.id === req.user.id) {
+      // Check if the user's email is already verified.
+      if (req.user.verifiedAt)
+        return res.status(400).send(new Errors.EmailAlreadyVerified());
+
+      // Send the verification email.
+      const {
+        success,
+        error,
+        token: verifyToken,
+      } = await sendResendVerificationEmail(req.user.email, req.user.username);
+
+      // If the email failed to send, return an error 500.
+      if (!success) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
+
+      // Update the user's email verification status.
+      await req.user.update({
+        emailVerificationToken: verifyToken,
+        verificationRequestedAt: new Date(),
+      });
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested a new verification email.`,
+      );
+
+      // Send a success response.
+      return res.status(201).json(new Success.SendVerificationEmail());
+    } else {
+      // If the user is not staff, return a InsufficientPermissions error.
+      if (!req.user.staff)
+        return res.status(403).send(new Errors.InsufficientPermissions());
+
+      try {
+        // Get the user.
+        const user = await User.findByPk(req.params.id);
+
+        // If the user does not exist, return a InvalidUser error.
+        if (!user) return res.status(404).send(new Errors.InvalidUser());
+
+        // Check if the user's email is already verified.
+        if (user.verifiedAt)
+          return res.status(400).send(new Errors.EmailAlreadyVerified());
+
+        // Send the verification email.
+        const {
+          success,
+          error,
+          token: verifyToken,
+        } = await sendResendVerificationEmail(user.email, user.username);
+
+        // If the email failed to send, return an error 500.
+        if (!success) {
+          logger.error(error);
+          return res.status(500).send(new Errors.Internal());
+        }
+
+        // Update the user's email verification status.
+        await user.update({
+          emailVerificationToken: verifyToken,
+          verificationRequestedAt: new Date(),
+        });
+
+        logger.debug(
+          `User ${req.user.username} (${req.user.id}) requested a new verification email for user ${user.username} (${user.id}).`,
+        );
+
+        // Send a success response.
+        return res.status(201).json(new Success.SendVerificationEmail());
+      } catch (error) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
     }
   },
 );
@@ -441,7 +788,18 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -475,7 +833,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -508,7 +877,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -541,7 +921,18 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -553,8 +944,11 @@ app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
   SessionChecker(true),
+  BodyValidator({
+    reason: 'string',
+  }),
   async (
-    req: Request<{ id: string }>,
+    req: Request<{ id: string }, null, { reason: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     try {
@@ -568,13 +962,37 @@ app.put(
         `User ${req.user.username} (${req.user.id}) banned user ${user.username} (${user.id}).`,
       );
 
+      // Notify the user that they have been banned.
+      const { success, error } = await sendBannedNotice(
+        user.email,
+        user.username,
+        req.body.reason,
+      );
+
+      // If the email failed to send, return an error 500.
+      if (!success) {
+        logger.error(error);
+        return res.status(500).send(new Errors.Internal());
+      }
+
       // Update the banned status.
       await user.update({ bannedAt: new Date() });
 
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -607,7 +1025,18 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -654,7 +1083,18 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), ['password', 'sessions'], true));
+          .send(
+            KVExtractor(
+              req.user.toJSON(),
+              [
+                'password',
+                'sessions',
+                'emailVerificationToken',
+                'verificationRequestedAt',
+              ],
+              true,
+            ),
+          );
       } catch (error) {
         logger.error(error);
         return res.status(500).send(new Errors.Internal());
@@ -695,7 +1135,18 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), ['password', 'sessions'], true));
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
@@ -839,7 +1290,7 @@ app.delete(
     try {
       // Check if they're attempting to delete more than 50 users
       if (req.body.ids.length > 50)
-        return res.status(400).json(new Errors.MissingFields(['ids'])); //TODO: Propose a "SelectionTooLarge" error
+        return res.status(400).json(new Errors.BodyTooLarge());
 
       // Get the users.
       const { count, rows: users } = await User.findAndCountAll({
