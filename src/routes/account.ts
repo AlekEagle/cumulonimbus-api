@@ -582,7 +582,7 @@ app.put(
 
         // Verify the user's email.
         await user.update({
-          verified: true,
+          verifiedAt: new Date(),
           emailVerificationToken: null,
           verificationRequestedAt: null,
         });
