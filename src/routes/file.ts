@@ -174,7 +174,45 @@ app.put(
       );
 
       // Update the file's name.
-      await file.update({ name: req.body.name === '' ? null : req.body.name });
+      await file.update({ name: req.body.name });
+
+      // Return the file.
+      return res.status(200).send(file.toJSON());
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).send(new Errors.Internal());
+    }
+  },
+);
+
+app.delete(
+  // DELETE /api/files/:id/name
+  '/api/files/:id/name',
+  SessionChecker(),
+  async (
+    req: Request<{ id: string }, null, null, null>,
+    res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
+  ) => {
+    try {
+      // Find the file.
+      let file = await File.findByPk(req.params.id);
+
+      // If the file does not exist, return an InvalidFile error.
+      if (!file) return res.status(404).send(new Errors.InvalidFile());
+
+      // If the file does not belong to the user, check if they are staff.
+      if (file.userID !== req.user.id) {
+        // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
+        if (!req.user.staff)
+          return res.status(404).send(new Errors.InvalidFile());
+      }
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted the name of file ${file.id}.`,
+      );
+
+      // Update the file's name.
+      await file.update({ name: null });
 
       // Return the file.
       return res.status(200).send(file.toJSON());

@@ -349,26 +349,26 @@ app.delete(
   '/api/users/:uid([0-9]{13}|me)/sessions',
   SessionChecker(),
   async (
-    req: Request<{ uid: string }, null, { sids: string[] }>,
+    req: Request<{ uid: string }, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
     // Check if they are trying to remove more than 50 sessions.
-    if (req.body.sids.length > 50)
+    if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());
 
     // Check if the user is requesting sessions that belong to them.
     if (req.params.uid === 'me' || req.params.uid === req.user.id) {
       // Check if the user is requesting the current session.
-      if (req.body.sids.includes('me'))
+      if (req.body.ids.includes('me'))
         // Replace `me` with the current session ID.
-        req.body.sids[req.body.sids.indexOf('me')] =
+        req.body.ids[req.body.ids.indexOf('me')] =
           req.session.payload.iat.toString();
 
       // Remove the sessions.
       let sessions = req.user.sessions.filter(
-        (session) => !req.body.sids.includes(session.iat.toString()),
+        (session) => !req.body.ids.includes(session.iat.toString()),
       );
 
       // Count the number of sessions removed.
@@ -398,7 +398,7 @@ app.delete(
 
       // Remove the sessions.
       let sessions = user.sessions.filter(
-        (session) => !req.body.sids.includes(session.iat.toString()),
+        (session) => !req.body.ids.includes(session.iat.toString()),
       );
 
       // Count the number of sessions removed.
