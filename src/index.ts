@@ -10,12 +10,13 @@ import Compression from './middleware/Compression.js';
 import QueryStringParser from './middleware/QueryStringParser.js';
 import AuthProvider from './middleware/AuthProvider.js';
 import defaultRateLimitConfig from './utils/RateLimitUtils.js';
+import { pruneAllStaleSessions } from './utils/StaleSessionPruner.js';
 
 // Node modules that are huge and stinky and we don't want to look at them
 // (JK we love the developers that made these awesome modules)
 import Express, { json } from 'express';
 import ExpressRateLimit from 'express-rate-limit';
-import { pruneAllStaleSessions } from './utils/StaleSessionPruner.js';
+import ms from 'ms';
 
 // Create a new logger instance
 export const logger = new Logger(
@@ -43,7 +44,7 @@ app.use(
 );
 
 // Prune all stale sessions every hour
-setInterval(pruneAllStaleSessions, 1000 * 60 * 60);
+setInterval(pruneAllStaleSessions, ms('1h'));
 
 // Cute little hello world endpoint
 app.all('/api/', (_, res) => {
