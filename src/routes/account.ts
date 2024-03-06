@@ -429,7 +429,7 @@ app.put(
         // Update the email.
         await req.user.update({
           email: req.body.email,
-          verified: false,
+          verifiedAt: null,
           emailVerificationToken: verifyToken,
           verificationRequestedAt: new Date(),
         });
@@ -638,7 +638,23 @@ app.delete(
       );
 
       // Update the user's email verification status.
-      await user.update({ verified: false });
+      await user.update({ verifiedAt: null });
+
+      // Send the user object.
+      return res
+        .status(200)
+        .send(
+          KVExtractor(
+            user.toJSON(),
+            [
+              'password',
+              'sessions',
+              'emailVerificationToken',
+              'verificationRequestedAt',
+            ],
+            true,
+          ),
+        );
     } catch (error) {
       logger.error(error);
       return res.status(500).send(new Errors.Internal());
