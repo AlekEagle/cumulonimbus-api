@@ -2,14 +2,19 @@
 
 // In-house modules because we're cool like that
 import './utils/Env.js';
-import Logger, { Level } from './utils/Logger.js';
-import { PORT, API_VERSION } from './utils/Constants.js';
-import DeviceDetector from './middleware/DeviceDetector.js';
-import DevelopmentCORS from './middleware/DevelopmentCORS.js';
-import Compression from './middleware/Compression.js';
-import QueryStringParser from './middleware/QueryStringParser.js';
 import AuthProvider from './middleware/AuthProvider.js';
+import Compression from './middleware/Compression.js';
+import DevelopmentCORS from './middleware/DevelopmentCORS.js';
+import DeviceDetector from './middleware/DeviceDetector.js';
+import Logger, { Level } from './utils/Logger.js';
+import QueryStringParser from './middleware/QueryStringParser.js';
 import defaultRateLimitConfig from './utils/RateLimitUtils.js';
+import { PORT, API_VERSION } from './utils/Constants.js';
+import {
+  getKillSwitches,
+  initKillSwitches,
+} from './utils/GlobalKillSwitches.js';
+import KillSwitch from './middleware/KillSwitch.js';
 import { pruneAllStaleSessions } from './utils/StaleSessionPruner.js';
 
 // Node modules that are huge and stinky and we don't want to look at them
@@ -22,6 +27,9 @@ import ms from 'ms';
 export const logger = new Logger(
   process.env.ENV === 'development' ? Level.DEBUG : Level.INFO,
 );
+
+// Initialize the kill switches
+await initKillSwitches();
 
 // Create a new express instance
 export const app = Express();
@@ -41,7 +49,10 @@ app.use(
   json(),
   AuthProvider,
   ExpressRateLimit(defaultRateLimitConfig),
+  KillSwitch(),
 );
+
+logger.log(await getKillSwitches());
 
 // Prune all stale sessions every hour
 setInterval(pruneAllStaleSessions, ms('1h'));

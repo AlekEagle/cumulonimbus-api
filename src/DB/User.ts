@@ -1,6 +1,6 @@
 import { sequelize, init as initDB } from './index.js';
-import { Model, DataTypes } from 'sequelize';
 import { logger } from '../index.js';
+import { Model, DataTypes } from 'sequelize';
 
 export default class User extends Model {
   id: string;
@@ -89,8 +89,8 @@ export default class User extends Model {
   );
   try {
     await User.sync();
-    logger.log('User table synced with DB.');
+    logger.log('User model synced with DB.');
   } catch (error) {
-    logger.error('Unable to sync User table. Error: ', error);
+    logger.error('Unable to sync User model. Error: ', error);
   }
 })();

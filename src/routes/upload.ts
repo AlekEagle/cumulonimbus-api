@@ -2,15 +2,17 @@ import { logger, app } from '../index.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import File from '../DB/File.js';
 import SessionChecker from '../middleware/SessionChecker.js';
+import {
+  FILENAME_LENGTH,
+  TROUBLESOME_FILE_EXTENSIONS,
+} from '../utils/Constants.js';
+import KillSwitch from '../middleware/KillSwitch.js';
+import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 
 import Multer from 'multer';
 import { Response } from 'express';
 import { Readable } from 'node:stream';
 import { createWriteStream } from 'node:fs';
-import {
-  FILENAME_LENGTH,
-  TROUBLESOME_FILE_EXTENSIONS,
-} from '../utils/Constants.js';
 import { join } from 'node:path';
 import { randomInt } from 'node:crypto';
 import { ReadableStreamWithFileType, fileTypeStream } from 'file-type';
@@ -41,6 +43,7 @@ app.post(
   '/api/upload',
   SessionChecker(),
   Multer().single('file'),
+  KillSwitch(KillSwitches.FILE_CREATE),
   async (
     req,
     res: Response<

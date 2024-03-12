@@ -113,6 +113,12 @@ declare global {
         thumbnail: string;
         manage: string;
       }
+
+      export type KillSwitchList = List<{
+        id: number;
+        name: string;
+        state: boolean;
+      }>;
     }
   }
 }

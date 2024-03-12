@@ -23,6 +23,8 @@ import { sendSignupVerificationEmail } from '../mail/SignupVerification.js';
 import { sendResendVerificationEmail } from '../mail/ResendVerification.js';
 import { sendUpdateVerificationEmail } from '../mail/UpdateVerification.js';
 import { sendBannedNotice } from '../mail/BannedNotice.js';
+import KillSwitch from '../middleware/KillSwitch.js';
+import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -57,6 +59,8 @@ app.post(
       return res.statusCode === 409;
     },
   }),
+  KillSwitch(KillSwitches.ACCOUNT_CREATE),
+  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   async (
     req: Request<
       null,
@@ -105,7 +109,10 @@ app.post(
       const now = Date.now().toString();
 
       // Hash the password.
-      const hashedPassword = await Bcrypt.hash(req.body.password, 15);
+      const hashedPassword = await Bcrypt.hash(
+        req.body.password,
+        PASSWORD_HASH_ROUNDS,
+      );
 
       const tokenName = nameSession(req);
 
@@ -276,6 +283,7 @@ app.put(
     username: 'string',
     password: new ExtendedValidBodyTypes('string', true),
   }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ id: string }, null, { username: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -384,6 +392,8 @@ app.put(
     email: 'string',
     password: new ExtendedValidBodyTypes('string', true),
   }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   async (
     req: Request<{ id: string }, null, { email: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -513,6 +523,7 @@ app.put(
   BodyValidator({
     token: new ExtendedValidBodyTypes('string', true),
   }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ id: string }, null, { token?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -671,6 +682,7 @@ app.get(
     windowMs: ms('5m'),
     max: 1,
   }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -766,6 +778,7 @@ app.put(
     newPassword: 'string',
     confirmNewPassword: 'string',
   }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<
       { id: string },
@@ -1069,6 +1082,7 @@ app.put(
     domain: 'string',
     subdomain: new ExtendedValidBodyTypes('string', true),
   }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ id: string }, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -1179,6 +1193,7 @@ app.delete(
     username: new ExtendedValidBodyTypes('string', true),
     password: new ExtendedValidBodyTypes('string', true),
   }),
+  KillSwitch(KillSwitches.ACCOUNT_DELETE),
   async (
     req: Request<
       { id: string },
