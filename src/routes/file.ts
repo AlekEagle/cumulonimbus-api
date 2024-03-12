@@ -8,6 +8,9 @@ import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
+import LimitOffset from '../middleware/LimitOffset.js';
+import KillSwitch from '../middleware/KillSwitch.js';
+import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
@@ -15,7 +18,6 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
-import LimitOffset from '../middleware/LimitOffset.js';
 
 logger.debug('Loading: File Routes...');
 
@@ -151,6 +153,7 @@ app.put(
   BodyValidator({
     name: 'string',
   }),
+  KillSwitch(KillSwitches.FILE_MODIFY),
   async (
     req: Request<{ id: string }, null, { name: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -189,6 +192,7 @@ app.delete(
   // DELETE /api/files/:id/name
   '/api/files/:id/name',
   SessionChecker(),
+  KillSwitch(KillSwitches.FILE_MODIFY),
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -231,6 +235,7 @@ app.put(
   BodyValidator({
     extension: 'string',
   }),
+  KillSwitch(KillSwitches.FILE_MODIFY),
   async (
     req: Request<{ id: string }, null, { extension: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -302,6 +307,10 @@ app.delete(
   // DELETE /api/files/all
   '/api/files/all',
   SessionChecker(),
+  BodyValidator({
+    password: new ExtendedValidBodyTypes('string', true),
+  }),
+  KillSwitch(KillSwitches.FILE_DELETE),
   async (
     req: Request<null, null, { password: string }, { user: string }>,
     res: Response<
@@ -414,6 +423,7 @@ app.delete(
   // DELETE /api/files/:id
   '/api/files/:id',
   SessionChecker(),
+  KillSwitch(KillSwitches.FILE_DELETE),
   async (
     req: Request<{ id: string }, null, null, null>,
     res: Response<
@@ -463,6 +473,7 @@ app.delete(
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),
+  KillSwitch(KillSwitches.FILE_DELETE),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<

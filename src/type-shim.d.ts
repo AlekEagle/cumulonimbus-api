@@ -113,6 +113,12 @@ declare global {
         thumbnail: string;
         manage: string;
       }
+
+      export interface KillSwitch {
+        id: number;
+        name: string;
+        state: boolean;
+      }
     }
   }
 }

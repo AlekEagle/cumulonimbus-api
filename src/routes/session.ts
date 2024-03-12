@@ -9,6 +9,8 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
+import KillSwitch from '../middleware/KillSwitch.js';
+import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -31,6 +33,7 @@ app.post(
     windowMs: 60 * 1000, // 1 minute
     max: 3,
   }),
+  KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   async (
     req: Request<
       null,
@@ -254,6 +257,7 @@ app.delete(
   // DELETE /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
   SessionChecker(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -348,6 +352,7 @@ app.delete(
   // DELETE /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13}|me)/sessions',
   SessionChecker(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ uid: string }, null, { ids: string[] }>,
     res: Response<
@@ -424,6 +429,7 @@ app.delete(
   // DELETE /api/users/:uid/sessions/all
   '/api/users/:uid([0-9]{13}|me)/sessions/all',
   SessionChecker(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ uid: string }>,
     res: Response<
