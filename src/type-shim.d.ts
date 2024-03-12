@@ -114,11 +114,11 @@ declare global {
         manage: string;
       }
 
-      export type KillSwitchList = List<{
+      export interface KillSwitch {
         id: number;
         name: string;
         state: boolean;
-      }>;
+      }
     }
   }
 }

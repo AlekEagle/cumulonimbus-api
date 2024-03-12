@@ -18,7 +18,8 @@ app.get(
   async (
     req,
     res: Response<
-      Cumulonimbus.Structures.KillSwitchList | Cumulonimbus.Structures.Error
+      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.KillSwitch>
+      | Cumulonimbus.Structures.Error
     >,
   ) => {
     try {
@@ -46,7 +47,8 @@ app.put(
   async (
     req: Request<{ id: string }>,
     res: Response<
-      Cumulonimbus.Structures.KillSwitchList | Cumulonimbus.Structures.Error
+      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.KillSwitch>
+      | Cumulonimbus.Structures.Error
     >,
   ) => {
     try {
@@ -76,7 +78,8 @@ app.delete(
   async (
     req: Request<{ id: string }>,
     res: Response<
-      Cumulonimbus.Structures.KillSwitchList | Cumulonimbus.Structures.Error
+      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.KillSwitch>
+      | Cumulonimbus.Structures.Error
     >,
   ) => {
     try {
@@ -106,7 +109,8 @@ app.delete(
   async (
     req,
     res: Response<
-      Cumulonimbus.Structures.KillSwitchList | Cumulonimbus.Structures.Error
+      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.KillSwitch>
+      | Cumulonimbus.Structures.Error
     >,
   ) => {
     try {
