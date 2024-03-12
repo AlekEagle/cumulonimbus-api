@@ -1,5 +1,5 @@
 import { logger, app } from '../index.js';
-import { Errors, Success } from '../utils/TemplateResponses.js';
+import { Errors } from '../utils/TemplateResponses.js';
 import SessionChecker from '../middleware/SessionChecker.js';
 import {
   KillSwitches,
