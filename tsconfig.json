@@ -12,5 +12,10 @@
     "esModuleInterop": true,
     "moduleResolution": "nodenext"
   },
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*"],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node",
+    "transpileOnly": true
+  }
 }
