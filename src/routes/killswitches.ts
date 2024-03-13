@@ -119,9 +119,9 @@ app.delete(
       );
 
       await Promise.all(
-        Object.keys(KillSwitches).map((key) =>
-          setKillSwitch(Number(key), false),
-        ),
+        Object.keys(KillSwitches)
+          .filter((a) => !isNaN(Number(a)))
+          .map((key) => setKillSwitch(Number(key), false)),
       );
 
       const result = await getKillSwitches();

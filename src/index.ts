@@ -10,10 +10,7 @@ import Logger, { Level } from './utils/Logger.js';
 import QueryStringParser from './middleware/QueryStringParser.js';
 import defaultRateLimitConfig from './utils/RateLimitUtils.js';
 import { PORT, API_VERSION } from './utils/Constants.js';
-import {
-  getKillSwitches,
-  initKillSwitches,
-} from './utils/GlobalKillSwitches.js';
+import { initKillSwitches } from './utils/GlobalKillSwitches.js';
 import KillSwitch from './middleware/KillSwitch.js';
 import { pruneAllStaleSessions } from './utils/StaleSessionPruner.js';
 
@@ -51,8 +48,6 @@ app.use(
   ExpressRateLimit(defaultRateLimitConfig),
   KillSwitch(),
 );
-
-logger.log(await getKillSwitches());
 
 // Prune all stale sessions every hour
 setInterval(pruneAllStaleSessions, ms('1h'));
