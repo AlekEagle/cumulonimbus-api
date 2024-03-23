@@ -9,8 +9,8 @@ export default class Instruction extends Model {
   filename: string | null;
   content: string;
   description: string;
-  createdAt: Date;
-  updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 (async function () {

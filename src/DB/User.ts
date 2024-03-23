@@ -15,12 +15,15 @@ export default class User extends Model {
   staff: boolean;
   domain: string;
   subdomain: string | null;
-  emailVerificationToken: string | null;
   verificationRequestedAt: Date | null;
   verifiedAt: Date | null;
   bannedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  twoFactorMethods: {
+    type: string;
+    secret: string;
+  }[];
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 (async function () {
@@ -65,10 +68,6 @@ export default class User extends Model {
         type: DataTypes.STRING(64),
         allowNull: true,
       },
-      emailVerificationToken: {
-        type: DataTypes.STRING(128),
-        allowNull: true,
-      },
       verificationRequestedAt: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -80,6 +79,11 @@ export default class User extends Model {
       bannedAt: {
         type: DataTypes.DATE,
         allowNull: true,
+      },
+      twoFactorMethods: {
+        type: DataTypes.JSONB,
+        defaultValue: [],
+        allowNull: false,
       },
     },
     {

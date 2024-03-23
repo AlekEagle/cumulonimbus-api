@@ -100,6 +100,11 @@ declare global {
         exp: number;
       }
 
+      export interface TwoFactorIntermediate {
+        token: string;
+        methods: string[];
+      }
+
       export interface File {
         id: string;
         userID: string;

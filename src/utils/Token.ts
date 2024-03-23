@@ -2,15 +2,14 @@
 import { importX509, importPKCS8, KeyLike, SignJWT, jwtVerify } from 'jose';
 // We need this to read the JWT public and private keypair
 import { readFile } from 'node:fs/promises';
-// We need this to generate secure random numbers
-import { randomInt } from 'node:crypto';
 // Those Constants that are constant that we need
 import {
   TOKEN_ALGORITHM,
   LONG_LIVED_TOKEN_EXPIRY,
   SHORT_LIVED_TOKEN_EXPIRY,
   TOKEN_TYPE,
-  EMAIL_VERIFICATION_TOKEN_LENGTH,
+  EMAIL_VERIFICATION_TOKEN_EXPIRY,
+  TWO_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
 } from './Constants.js';
 import { Request } from 'express';
 
@@ -43,22 +42,60 @@ export async function importCertificates() {
   return;
 }
 
-export async function generateToken(
+// Generate a session token for the provided user.
+export async function generateSessionToken(
   subject: string,
   longLived: boolean = false,
 ): Promise<{ token: string; data: TokenStructure }> {
   // Import certificates if they aren't already imported.
   await importCertificates();
-  let token: string, data: TokenStructure;
-  token = await new SignJWT({})
-    .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
-    .setIssuedAt()
-    .setSubject(subject)
-    .setExpirationTime(
-      longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY,
-    )
-    .sign(privKey);
-  data = extractToken(token);
+  // Generate the token.
+  let token: string = await new SignJWT({})
+      .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
+      .setIssuedAt()
+      .setSubject(subject)
+      .setExpirationTime(
+        longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY,
+      )
+      .sign(privKey),
+    // Extract the token data from the newly generated token.
+    data = extractToken(token);
+  return { token, data };
+}
+
+// Generate an email verification token for the provided email.
+export async function generateEmailVerificationToken(
+  email: string,
+): Promise<{ token: string; data: TokenStructure }> {
+  // Import certificates if they aren't already imported.
+  await importCertificates();
+  // Generate the token.
+  let token: string = await new SignJWT({})
+      .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
+      .setIssuedAt()
+      .setSubject(email)
+      .setExpirationTime(EMAIL_VERIFICATION_TOKEN_EXPIRY)
+      .sign(privKey),
+    // Extract the token data from the newly generated token.
+    data = extractToken(token);
+  return { token, data };
+}
+
+// Generate a 2FA intermediate token for the provided user.
+export async function generateTwoFactorIntermediateToken(
+  subject: string,
+): Promise<{ token: string; data: TokenStructure }> {
+  // Import certificates if they aren't already imported.
+  await importCertificates();
+  // Generate the token.
+  let token: string = await new SignJWT({})
+      .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
+      .setIssuedAt()
+      .setSubject(subject)
+      .setExpirationTime(TWO_FACTOR_INTERMEDIATE_TOKEN_EXPIRY)
+      .sign(privKey),
+    // Extract the token data from the newly generated token.
+    data = extractToken(token);
   return { token, data };
 }
 
@@ -116,12 +153,4 @@ export function nameSession(req: Request): string {
   }
 
   return name;
-}
-
-export function generateVerifyEmailToken() {
-  return Buffer.from(
-    new Array(EMAIL_VERIFICATION_TOKEN_LENGTH)
-      .fill(0)
-      .map((_) => randomInt(0, 255)),
-  ).toString('base64');
 }

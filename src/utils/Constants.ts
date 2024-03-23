@@ -16,6 +16,11 @@ export const EMAIL_REGEX =
   /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/i;
 export const INSTRUCTION_REGEX = /^[a-z0-9_\-\.]{1,64}$/;
 export const PASSWORD_HASH_ROUNDS = 15;
+export const OMITTED_USER_FIELDS = [
+  'password',
+  'sessions',
+  'verificationRequestedAt',
+];
 
 // ========= FILE RELATED CONSTANTS =========
 export const FILENAME_LENGTH = 10;
@@ -45,4 +50,6 @@ export const TOKEN_TYPE = 'JWT';
 
 // ========= EMAIL RELATED CONSTANTS =========
 export const EMAIL_VERIFICATION_TOKEN_EXPIRY = '1h';
-export const EMAIL_VERIFICATION_TOKEN_LENGTH = 96; // 96 bytes = 128 base64 characters
+
+// ========= 2FA RELATED CONSTANTS =========
+export const TWO_FACTOR_INTERMEDIATE_TOKEN_EXPIRY = '5m';

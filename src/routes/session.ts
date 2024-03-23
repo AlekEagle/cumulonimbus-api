@@ -3,7 +3,7 @@ import { Errors, Success } from '../utils/TemplateResponses.js';
 import User from '../DB/User.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
-import { generateToken, nameSession } from '../utils/Token.js';
+import { generateSessionToken, nameSession } from '../utils/Token.js';
 import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
   ExtendedValidBodyTypes,
@@ -75,7 +75,7 @@ app.post(
         (req.headers['x-session-name'] as string) || nameSession(req);
 
       // Generate a new token for the user.
-      let token = await generateToken(user.id, req.body.rememberMe);
+      let token = await generateSessionToken(user.id, req.body.rememberMe);
 
       // Add the new session to the user's sessions.
       let sessions = [

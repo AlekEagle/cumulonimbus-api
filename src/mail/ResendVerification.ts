@@ -1,14 +1,22 @@
 import { logger } from '../index.js';
 import { transport, init } from './index.js';
-import { generateVerifyEmailToken } from '../utils/Token.js';
+import {
+  generateEmailVerificationToken,
+  TokenStructure,
+} from '../utils/Token.js';
 
 await init();
 
 export async function sendResendVerificationEmail(
   to: string,
   username: string,
-): Promise<{ success: boolean; error?: string; token: string }> {
-  const token = generateVerifyEmailToken(),
+): Promise<{
+  success: boolean;
+  error?: string;
+  token?: string;
+  tokenData?: TokenStructure;
+}> {
+  const { token, data } = await generateEmailVerificationToken(to),
     url = `${
       process.env.ENV === 'development'
         ? 'http://localhost:5173'
@@ -66,9 +74,9 @@ export async function sendResendVerificationEmail(
   </body>
 </html>`.trim(),
     });
-    return { success: true, token };
+    return { success: true, token, tokenData: data };
   } catch (err) {
     logger.error(err);
-    return { success: false, error: err.message, token };
+    return { success: false, error: err.message };
   }
 }

@@ -7,8 +7,8 @@ export default class File extends Model {
   userID: string;
   size: number;
   name: string;
-  createdAt: Date;
-  updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 (async function () {
