@@ -219,7 +219,7 @@ app.get(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user is requesting their own user object.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       logger.debug(
         `User ${req.user.username} (${req.user.id}) fetched their own user object.`,
       );
@@ -270,7 +270,7 @@ app.put(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user wants to modify their own username.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       try {
         // This portion of the endpoint requires a password, if the password is not present, return an error 400
         if (!req.body.password)
@@ -358,7 +358,7 @@ app.put(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user wants to modify their own email.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       try {
         // This portion of the endpoint requires a password, if the password is not present, return an error 400
         if (!req.body.password)
@@ -461,7 +461,8 @@ app.put(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user wants to verify their own email.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
+      // FIXME: Rework verification system to not require being logged in, and verify email regardless of if the user is logged in, and which account they are logged in to.
       // Check if the user's email is already verified.
       if (req.user.verifiedAt)
         return res.status(400).send(new Errors.EmailAlreadyVerified());
@@ -592,7 +593,7 @@ app.get(
     >,
   ) => {
     // Check if the user wants to request a new verification email for their own account.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       // Check if the user's email is already verified.
       if (req.user.verifiedAt)
         return res.status(400).send(new Errors.EmailAlreadyVerified());
@@ -688,7 +689,7 @@ app.put(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user wants to modify their own password.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       try {
         // This portion of the endpoint requires a password, if the password is not present, return an error 400
         if (!req.body.password)
@@ -928,7 +929,7 @@ app.put(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     // Check if the user is trying to change their own domain.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       try {
         // Check if the domain is valid.
         let domain = await Domain.findByPk(req.body.domain);
@@ -1023,7 +1024,7 @@ app.delete(
     >,
   ) => {
     // Check if the user is trying to delete their own account.
-    if (req.params.id === 'me' || req.params.id === req.user.id) {
+    if (req.params.id === 'me') {
       try {
         // This portion of the endpoint requires both the username and password, if not present, return an error 400
         if (!req.body.username || !req.body.password)

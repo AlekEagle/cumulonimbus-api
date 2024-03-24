@@ -115,7 +115,7 @@ app.get(
     >,
   ) => {
     // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me') {
       // Check if the user is requesting the current session.
       if (req.params.sid === 'me') {
         logger.debug(
@@ -203,7 +203,7 @@ app.get(
     >,
   ) => {
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me') {
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested their sessions.`,
       );
@@ -265,7 +265,7 @@ app.delete(
     >,
   ) => {
     // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me') {
       // Check if the user is requesting the current session.
       if (req.params.sid === 'me') {
         // Remove the current session.
@@ -364,7 +364,7 @@ app.delete(
       return res.status(400).json(new Errors.BodyTooLarge());
 
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me') {
       // Check if the user is requesting the current session.
       if (req.body.ids.includes('me'))
         // Replace `me` with the current session ID.
@@ -437,7 +437,7 @@ app.delete(
     >,
   ) => {
     // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === 'me' || req.params.uid === req.user.id) {
+    if (req.params.uid === 'me') {
       // Remove the sessions.
       let sessions = req.query['include-self']
         ? []

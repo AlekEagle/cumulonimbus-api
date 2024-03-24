@@ -7,6 +7,10 @@ export let transport: ReturnType<typeof createTransport>;
 
 export async function init(): Promise<boolean> {
   if (!transport) {
+    logger.info('Initializing SMTP transport...');
+    logger.debug(
+      `Connecting to ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}...`,
+    );
     transport = createTransport(
       {
         host: process.env.SMTP_HOST,
@@ -30,7 +34,7 @@ export async function init(): Promise<boolean> {
       return false;
     }
 
-    logger.log('SMTP connection established successfully.');
+    logger.info('SMTP connection established successfully.');
     return true;
   }
   return false;

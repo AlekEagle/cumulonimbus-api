@@ -9,6 +9,7 @@ await import('./domain.js');
 await import('./file.js');
 await import('./instruction.js');
 await import('./killswitches.js');
+await import('./secondfactor.js');
 await import('./session.js');
 await import('./upload.js');
 

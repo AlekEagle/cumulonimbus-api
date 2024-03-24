@@ -24,6 +24,10 @@ export default class File extends Model {
       userID: {
         type: DataTypes.STRING,
         allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
       },
       size: {
         type: DataTypes.INTEGER,
@@ -41,7 +45,7 @@ export default class File extends Model {
   );
   try {
     await File.sync();
-    logger.log('Upload model synced with DB.');
+    logger.info('Upload model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Upload model. Error: ', error);
   }

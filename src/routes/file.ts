@@ -55,7 +55,7 @@ app.get(
       }
 
       // If the user provided a user that isn't their own id or "me", check if they are staff.
-      if (req.query.uid !== 'me' && req.query.uid !== req.user.id) {
+      if (req.query.uid !== 'me') {
         if (!req.user.staff)
           return res.status(403).send(new Errors.InsufficientPermissions());
 
@@ -322,7 +322,7 @@ app.delete(
       return res.status(400).send(new Errors.MissingFields(['user']));
 
     // Check if the user is trying delete their own files.
-    if (req.query.user === req.user.id || req.query.user === 'me') {
+    if (req.query.user === 'me') {
       // Check if the request body contains the password field.
       if (!req.body.password)
         return res.status(400).send(new Errors.MissingFields(['password']));

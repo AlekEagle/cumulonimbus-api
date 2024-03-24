@@ -105,6 +105,29 @@ declare global {
         methods: string[];
       }
 
+      export interface TwoFactorBaseRegistration {
+        token: string;
+        exp: number;
+      }
+
+      export type TwoFactorTOTPRegistration = TwoFactorBaseRegistration & {
+        type: 'totp';
+        data: {
+          secret: string;
+          algorithm: string;
+          digits: number;
+          period: number;
+        };
+      };
+
+      // TODO: Create a proper type for this
+      export type TwoFactorWebAuthnRegistration = TwoFactorBaseRegistration &
+        never;
+
+      export type TwoFactorRegistration =
+        | TwoFactorTOTPRegistration
+        | TwoFactorWebAuthnRegistration;
+
       export interface File {
         id: string;
         userID: string;
@@ -123,6 +146,13 @@ declare global {
         id: number;
         name: string;
         state: boolean;
+      }
+
+      export interface TwoFactorRegisterSuccess {
+        id: string;
+        name: string;
+        type: 'totp' | 'webauthn';
+        backupCodes?: string[];
       }
     }
   }

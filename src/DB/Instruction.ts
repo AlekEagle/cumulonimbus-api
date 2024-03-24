@@ -51,7 +51,7 @@ export default class Instruction extends Model {
   );
   try {
     await Instruction.sync();
-    logger.log('Instruction model synced with DB.');
+    logger.info('Instruction model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Instruction model. Error: ', error);
   }

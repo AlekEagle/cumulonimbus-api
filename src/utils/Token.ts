@@ -9,12 +9,12 @@ import {
   SHORT_LIVED_TOKEN_EXPIRY,
   TOKEN_TYPE,
   EMAIL_VERIFICATION_TOKEN_EXPIRY,
-  TWO_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
+  SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
 } from './Constants.js';
 import { Request } from 'express';
 
 // This is the structure of the token
-export declare interface TokenStructure {
+export declare interface TokenStructure<T = Record<string, string>> {
   header: {
     alg: typeof TOKEN_ALGORITHM;
     typ: 'JWT';
@@ -23,11 +23,31 @@ export declare interface TokenStructure {
     sub: string;
     iat: number;
     exp: number;
-  };
+    iss: string;
+  } & T;
+}
+
+export declare interface TokenGenerationResult<T = Record<string, string>> {
+  token: string;
+  data: TokenStructure<T>;
 }
 
 // After we import the keys, store them to reduce disk activity
 let pubKey: KeyLike, privKey: KeyLike;
+
+function generateBaseToken(data: Record<string, string> = {}): SignJWT {
+  return new SignJWT(data)
+    .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
+    .setIssuedAt()
+    .setIssuer(process.env.DEFAULT_DOMAIN);
+}
+
+async function completeToken<T = Record<string, string>>(
+  token: SignJWT,
+): Promise<TokenGenerationResult<T>> {
+  const signedToken = await token.sign(privKey);
+  return { token: signedToken, data: extractToken(signedToken) };
+}
 
 // Import the certificates from disk
 export async function importCertificates() {
@@ -46,57 +66,57 @@ export async function importCertificates() {
 export async function generateSessionToken(
   subject: string,
   longLived: boolean = false,
-): Promise<{ token: string; data: TokenStructure }> {
+): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token: string = await new SignJWT({})
-      .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
-      .setIssuedAt()
-      .setSubject(subject)
-      .setExpirationTime(
-        longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY,
-      )
-      .sign(privKey),
-    // Extract the token data from the newly generated token.
-    data = extractToken(token);
-  return { token, data };
+  let token = generateBaseToken()
+    .setSubject(subject)
+    .setExpirationTime(
+      longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY,
+    );
+  return await completeToken(token);
 }
 
 // Generate an email verification token for the provided email.
 export async function generateEmailVerificationToken(
   email: string,
-): Promise<{ token: string; data: TokenStructure }> {
+): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token: string = await new SignJWT({})
-      .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
-      .setIssuedAt()
-      .setSubject(email)
-      .setExpirationTime(EMAIL_VERIFICATION_TOKEN_EXPIRY)
-      .sign(privKey),
-    // Extract the token data from the newly generated token.
-    data = extractToken(token);
-  return { token, data };
+  let token = generateBaseToken()
+    .setSubject(email)
+    .setExpirationTime(EMAIL_VERIFICATION_TOKEN_EXPIRY);
+
+  return await completeToken(token);
+}
+
+// Generate a TOTP generation confirmation token for the provided user and TOTP secret.
+export async function generateTOTPGenerationConfirmationToken(
+  subject: string,
+  secret: string,
+): Promise<TokenGenerationResult<{ secret: string }>> {
+  // Import certificates if they aren't already imported.
+  await importCertificates();
+  // Generate the token.
+  let token = generateBaseToken({ secret })
+    .setSubject(subject)
+    .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
+  return await completeToken(token);
 }
 
 // Generate a 2FA intermediate token for the provided user.
 export async function generateTwoFactorIntermediateToken(
   subject: string,
-): Promise<{ token: string; data: TokenStructure }> {
+): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token: string = await new SignJWT({})
-      .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
-      .setIssuedAt()
-      .setSubject(subject)
-      .setExpirationTime(TWO_FACTOR_INTERMEDIATE_TOKEN_EXPIRY)
-      .sign(privKey),
-    // Extract the token data from the newly generated token.
-    data = extractToken(token);
-  return { token, data };
+  let token = generateBaseToken()
+    .setSubject(subject)
+    .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
+  return await completeToken(token);
 }
 
 export async function validateToken(
@@ -111,7 +131,9 @@ export async function validateToken(
   }
 }
 
-export function extractToken(token: string): TokenStructure {
+export function extractToken<T = Record<string, string>>(
+  token: string,
+): TokenStructure<T> {
   let t = token
     .split('.')
     .filter((a, i) => i !== 2)

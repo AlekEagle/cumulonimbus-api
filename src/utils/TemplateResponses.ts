@@ -16,6 +16,21 @@ export namespace Errors {
     public readonly message: string = 'Invalid Username';
   }
 
+  export class Invalid2FAMethod implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_2FA_METHOD_ERROR';
+    public readonly message: string = 'Invalid 2FA Method';
+  }
+
+  export class Invalid2FARegistration implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_2FA_REGISTRATION_ERROR';
+    public readonly message: string = 'Invalid 2FA Registration';
+  }
+
+  export class Invalid2FAResponse implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_2FA_RESPONSE_ERROR';
+    public readonly message: string = 'Invalid 2FA Response';
+  }
+
   export class InvalidPassword implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_PASSWORD_ERROR';
     public readonly message: string = 'Invalid Password';
@@ -129,6 +144,11 @@ export namespace Errors {
   export class Internal implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INTERNAL_SERVER_ERROR';
     public readonly message: string = 'Internal Server Error';
+  }
+
+  export class NotImplemented implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'NOT_IMPLEMENTED_ERROR';
+    public readonly message: string = 'Not Implemented';
   }
 }
 

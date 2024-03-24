@@ -18,10 +18,7 @@ export default class User extends Model {
   verificationRequestedAt: Date | null;
   verifiedAt: Date | null;
   bannedAt: Date | null;
-  twoFactorMethods: {
-    type: string;
-    secret: string;
-  }[];
+  twoFactorBackupCodes: string[] | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -80,10 +77,8 @@ export default class User extends Model {
         type: DataTypes.DATE,
         allowNull: true,
       },
-      twoFactorMethods: {
-        type: DataTypes.JSONB,
-        defaultValue: [],
-        allowNull: false,
+      twoFactorBackupCodes: {
+        type: DataTypes.ARRAY(DataTypes.STRING(128)),
       },
     },
     {
@@ -93,7 +88,7 @@ export default class User extends Model {
   );
   try {
     await User.sync();
-    logger.log('User model synced with DB.');
+    logger.info('User model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync User model. Error: ', error);
   }
