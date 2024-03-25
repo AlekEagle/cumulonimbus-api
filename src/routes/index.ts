@@ -15,7 +15,7 @@ await import('./upload.js');
 
 app.all('*', (req, res) => {
   logger.warn(`A request was made to an invalid endpoint: ${req.path}`);
-  res.status(404).send(new Errors.InvalidEndpoint());
+  res.status(404).json(new Errors.InvalidEndpoint());
 });
 
 logger.debug('Loaded catch-all 404 route.');

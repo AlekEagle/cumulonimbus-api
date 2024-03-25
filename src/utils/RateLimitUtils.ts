@@ -10,7 +10,7 @@ export function keyGenerator(req: Request) {
 }
 
 export function handler(_: Request, res: Response) {
-  res.status(429).send(new Errors.RateLimited());
+  res.status(429).json(new Errors.RateLimited());
 }
 
 const defaultRateLimitConfig = {

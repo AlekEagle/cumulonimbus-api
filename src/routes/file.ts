@@ -37,7 +37,7 @@ app.get(
       // If the user did not provide a user, check if they are staff.
       if (!req.query.uid) {
         if (!req.user.staff)
-          return res.status(403).send(new Errors.InsufficientPermissions());
+          return res.status(403).json(new Errors.InsufficientPermissions());
         let { count, rows: files } = await File.findAndCountAll({
           limit: req.limit,
           offset: req.offset,
@@ -51,19 +51,19 @@ app.get(
           `User ${req.user.username} (${req.user.id}) requested all user files. (limit: ${req.limit}, offset: ${req.offset})`,
         );
 
-        return res.status(200).send({ count, items });
+        return res.status(200).json({ count, items });
       }
 
       // If the user provided a user that isn't their own id or "me", check if they are staff.
       if (req.query.uid !== 'me') {
         if (!req.user.staff)
-          return res.status(403).send(new Errors.InsufficientPermissions());
+          return res.status(403).json(new Errors.InsufficientPermissions());
 
         // Check if the user exists.
         let user = await User.findByPk(req.query.uid + '');
 
         // If the user does not exist, return an InvalidUser error.
-        if (!user) return res.status(404).send(new Errors.InvalidUser());
+        if (!user) return res.status(404).json(new Errors.InvalidUser());
 
         // Get the user's files.
         let { count, rows: files } = await File.findAndCountAll({
@@ -82,7 +82,7 @@ app.get(
           `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.uid}. (limit: ${req.limit}, offset: ${req.offset})`,
         );
 
-        return res.status(200).send({ count, items });
+        return res.status(200).json({ count, items });
       }
 
       // If the user provided their own id or "me", return their files.
@@ -102,10 +102,10 @@ app.get(
         `User ${req.user.username} (${req.user.id}) requested their files. (limit: ${req.limit}, offset: ${req.offset})`,
       );
 
-      return res.status(200).send({ count, items });
+      return res.status(200).json({ count, items });
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -123,13 +123,13 @@ app.get(
       let file = await File.findByPk(req.params.id);
 
       // If the file does not exist, return an InvalidFile error.
-      if (!file) return res.status(404).send(new Errors.InvalidFile());
+      if (!file) return res.status(404).json(new Errors.InvalidFile());
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
-          return res.status(404).send(new Errors.InvalidFile());
+          return res.status(404).json(new Errors.InvalidFile());
       }
 
       logger.debug(
@@ -137,10 +137,10 @@ app.get(
       );
 
       // Return the file.
-      return res.status(200).send(file.toJSON());
+      return res.status(200).json(file.toJSON());
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -163,13 +163,13 @@ app.put(
       let file = await File.findByPk(req.params.id);
 
       // If the file does not exist, return an InvalidFile error.
-      if (!file) return res.status(404).send(new Errors.InvalidFile());
+      if (!file) return res.status(404).json(new Errors.InvalidFile());
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
-          return res.status(404).send(new Errors.InvalidFile());
+          return res.status(404).json(new Errors.InvalidFile());
       }
 
       logger.debug(
@@ -180,10 +180,10 @@ app.put(
       await file.update({ name: req.body.name });
 
       // Return the file.
-      return res.status(200).send(file.toJSON());
+      return res.status(200).json(file.toJSON());
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -202,13 +202,13 @@ app.delete(
       let file = await File.findByPk(req.params.id);
 
       // If the file does not exist, return an InvalidFile error.
-      if (!file) return res.status(404).send(new Errors.InvalidFile());
+      if (!file) return res.status(404).json(new Errors.InvalidFile());
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
-          return res.status(404).send(new Errors.InvalidFile());
+          return res.status(404).json(new Errors.InvalidFile());
       }
 
       logger.debug(
@@ -219,10 +219,10 @@ app.delete(
       await file.update({ name: null });
 
       // Return the file.
-      return res.status(200).send(file.toJSON());
+      return res.status(200).json(file.toJSON());
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -253,13 +253,13 @@ app.put(
       let file = await File.findByPk(req.params.id);
 
       // If the file does not exist, return an InvalidFile error.
-      if (!file) return res.status(404).send(new Errors.InvalidFile());
+      if (!file) return res.status(404).json(new Errors.InvalidFile());
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
-          return res.status(404).send(new Errors.InvalidFile());
+          return res.status(404).json(new Errors.InvalidFile());
       }
 
       // Check if the file has a thumbnail, and delete it if it does.
@@ -295,10 +295,10 @@ app.put(
 
       await file.destroy();
 
-      return res.status(200).send(newFile.toJSON());
+      return res.status(200).json(newFile.toJSON());
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -319,17 +319,17 @@ app.delete(
   ) => {
     // If the query does not contain the user parameter, return a MissingFields error.
     if (!req.query.user)
-      return res.status(400).send(new Errors.MissingFields(['user']));
+      return res.status(400).json(new Errors.MissingFields(['user']));
 
     // Check if the user is trying delete their own files.
     if (req.query.user === 'me') {
       // Check if the request body contains the password field.
       if (!req.body.password)
-        return res.status(400).send(new Errors.MissingFields(['password']));
+        return res.status(400).json(new Errors.MissingFields(['password']));
       try {
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).send(new Errors.InvalidPassword());
+          return res.status(401).json(new Errors.InvalidPassword());
 
         // Fetch all files belonging to the user.
         let { count, rows: files } = await File.findAndCountAll({
@@ -363,23 +363,23 @@ app.delete(
           `User ${req.user.username} (${req.user.id}) deleted all of their files.`,
         );
 
-        return res.status(200).send(new Success.DeleteFiles(count));
+        return res.status(200).json(new Success.DeleteFiles(count));
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
 
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Check if the user exists.
       let user = await User.findByPk(req.query.user);
 
       // If the user does not exist, return an InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Fetch all files belonging to the user.
       let { count, rows: files } = await File.findAndCountAll({
@@ -411,10 +411,10 @@ app.delete(
         `User ${req.user.username} (${req.user.id}) deleted ${count} files belonging to user ${user.username} (${user.id}).`,
       );
 
-      return res.status(200).send(new Success.DeleteFiles(count));
+      return res.status(200).json(new Success.DeleteFiles(count));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -435,13 +435,13 @@ app.delete(
       let file = await File.findByPk(req.params.id);
 
       // If the file does not exist, return an InvalidFile error.
-      if (!file) return res.status(404).send(new Errors.InvalidFile());
+      if (!file) return res.status(404).json(new Errors.InvalidFile());
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
-          return res.status(404).send(new Errors.InvalidFile());
+          return res.status(404).json(new Errors.InvalidFile());
       }
 
       // First, delete the thumbnail if it exists.
@@ -458,10 +458,10 @@ app.delete(
         `User ${req.user.username} (${req.user.id}) deleted file ${file.id}.`,
       );
 
-      return res.status(200).send(new Success.DeleteFile());
+      return res.status(200).json(new Success.DeleteFile());
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -482,7 +482,7 @@ app.delete(
   ) => {
     // Check if the user is trying to delete more than 50 files.
     if (req.body.ids.length > 50)
-      return res.status(400).send(new Errors.BodyTooLarge());
+      return res.status(400).json(new Errors.BodyTooLarge());
 
     try {
       // Find all files specified in the request body.
@@ -501,7 +501,7 @@ app.delete(
       }
 
       // If the count is 0, return an InvalidFile error.
-      if (count === 0) return res.status(404).send(new Errors.InvalidFile());
+      if (count === 0) return res.status(404).json(new Errors.InvalidFile());
 
       // Delete all files.
       await Promise.all(
@@ -526,10 +526,10 @@ app.delete(
         `User ${req.user.username} (${req.user.id}) deleted ${count} files.`,
       );
 
-      return res.status(200).send(new Success.DeleteFiles(count));
+      return res.status(200).json(new Success.DeleteFiles(count));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );

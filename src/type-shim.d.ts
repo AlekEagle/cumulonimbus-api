@@ -104,7 +104,7 @@ declare global {
       export interface SecondFactorChallenge {
         token: string;
         exp: number;
-        types: SecondFactorType[];
+        types: (SecondFactorType | 'backup')[];
         challenge?: string; // This will only be present if 'webauthn' is in the types array
       }
 
@@ -155,11 +155,15 @@ declare global {
         state: boolean;
       }
 
-      export interface TwoFactorRegisterSuccess {
+      export interface SecondFactorRegisterSuccess {
         id: string;
         name: string;
         type: 'totp' | 'webauthn';
         backupCodes?: string[];
+      }
+
+      export interface SecondFactorBackupRegisterSuccess {
+        codes: string[];
       }
     }
   }

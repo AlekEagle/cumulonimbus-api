@@ -21,11 +21,6 @@ export namespace Errors {
     public readonly message: string = 'Invalid 2FA Method';
   }
 
-  export class Invalid2FARegistration implements Cumulonimbus.Structures.Error {
-    public readonly code: string = 'INVALID_2FA_REGISTRATION_ERROR';
-    public readonly message: string = 'Invalid 2FA Registration';
-  }
-
   export class Invalid2FAResponse implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_2FA_RESPONSE_ERROR';
     public readonly message: string = 'Invalid 2FA Response';

@@ -83,18 +83,18 @@ app.post(
     >,
   ) => {
     // If someone attempts to register while logged in, return an InvalidSession error.
-    if (req.user) return res.status(401).send(new Errors.InvalidSession());
+    if (req.user) return res.status(401).json(new Errors.InvalidSession());
 
     // If the password and confirmPassword fields do not match, return a PasswordsDoNotMatch error.
     if (req.body.password !== req.body.confirmPassword)
-      return res.status(400).send(new Errors.PasswordsDoNotMatch());
+      return res.status(400).json(new Errors.PasswordsDoNotMatch());
 
     // If the username or email do not match their respective RegExp, return an InvalidUsername or InvalidEmail error.
     if (!USERNAME_REGEX.test(req.body.username))
-      return res.status(400).send(new Errors.InvalidUsername());
+      return res.status(400).json(new Errors.InvalidUsername());
 
     if (!EMAIL_REGEX.test(req.body.email))
-      return res.status(400).send(new Errors.InvalidEmail());
+      return res.status(400).json(new Errors.InvalidEmail());
 
     // Check if the username or email are already in use.
     const existingUser = await User.findOne({
@@ -107,7 +107,7 @@ app.post(
     });
 
     // If a user with the same username or email exists, return UserExists error.
-    if (existingUser) return res.status(409).send(new Errors.UserExists());
+    if (existingUser) return res.status(409).json(new Errors.UserExists());
 
     try {
       // Get the current Unix timestamp.
@@ -133,7 +133,7 @@ app.post(
       // If the email failed to send, return an error 500.
       if (!success) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
 
       // Create the user and send the user object.
@@ -156,10 +156,10 @@ app.post(
       logger.debug(`User ${user.username} (${user.id}) account created.`);
       return res
         .status(201)
-        .send({ token: token.token, exp: token.data.payload.exp });
+        .json({ token: token.token, exp: token.data.payload.exp });
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -197,7 +197,7 @@ app.get(
       );
 
       // Send the users.
-      return res.status(200).send({
+      return res.status(200).json({
         count,
         items: users.map((user) =>
           KVExtractor(user.toJSON(), ['id', 'username']),
@@ -205,7 +205,7 @@ app.get(
       });
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -226,19 +226,19 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) fetched user ${user.username} (${user.id}).`,
@@ -247,10 +247,10 @@ app.get(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -282,11 +282,11 @@ app.put(
 
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).send(new Errors.InvalidPassword());
+          return res.status(401).json(new Errors.InvalidPassword());
 
         // Check if the username is already taken.
         if (await User.findOne({ where: { username: req.body.username } }))
-          return res.status(409).send(new Errors.UserExists());
+          return res.status(409).json(new Errors.UserExists());
 
         logger.debug(
           `User ${req.user.username} (${req.user.id}) changed their username to ${req.body.username}.`,
@@ -298,23 +298,23 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+          .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Check if the username meets username character requirements
       if (!USERNAME_REGEX.test(req.body.username))
@@ -322,7 +322,7 @@ app.put(
 
       // Check if the username is already taken.
       if (await User.findOne({ where: { username: req.body.username } }))
-        return res.status(409).send(new Errors.UserExists());
+        return res.status(409).json(new Errors.UserExists());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s username to ${req.body.username}.`,
@@ -334,10 +334,10 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -370,11 +370,11 @@ app.put(
 
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).send(new Errors.InvalidPassword());
+          return res.status(401).json(new Errors.InvalidPassword());
 
         // Check if the email is already taken.
         if (await User.findOne({ where: { email: req.body.email } }))
-          return res.status(409).send(new Errors.UserExists());
+          return res.status(409).json(new Errors.UserExists());
 
         logger.debug(
           `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
@@ -388,7 +388,7 @@ app.put(
         // If the email failed to send, return an error 500.
         if (!success) {
           logger.error(error);
-          return res.status(500).send(new Errors.Internal());
+          return res.status(500).json(new Errors.Internal());
         }
 
         // Update the email.
@@ -401,23 +401,23 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+          .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Check if the email is a valid email
       if (!EMAIL_REGEX.test(req.body.email))
@@ -425,7 +425,7 @@ app.put(
 
       // Check if the email is already taken.
       if (await User.findOne({ where: { email: req.body.email } }))
-        return res.status(409).send(new Errors.UserExists());
+        return res.status(409).json(new Errors.UserExists());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s email to ${req.body.email}. (Previously: ${user.email})`,
@@ -440,10 +440,10 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -465,18 +465,18 @@ app.put(
       // FIXME: Rework verification system to not require being logged in, and verify email regardless of if the user is logged in, and which account they are logged in to.
       // Check if the user's email is already verified.
       if (req.user.verifiedAt)
-        return res.status(400).send(new Errors.EmailAlreadyVerified());
+        return res.status(400).json(new Errors.EmailAlreadyVerified());
 
       // Check if the user has a verification token.
       if (!req.user.verificationRequestedAt)
-        return res.status(400).send(new Errors.InvalidVerificationToken());
+        return res.status(400).json(new Errors.InvalidVerificationToken());
 
       // Validate the token.
       const result = await validateToken(req.body.token);
 
       if (result instanceof Error) {
         logger.error(result);
-        return res.status(400).send(new Errors.InvalidVerificationToken());
+        return res.status(400).json(new Errors.InvalidVerificationToken());
       } else if (
         result.payload.sub !== req.user.email ||
         result.payload.iat !== req.user.verificationRequestedAt.getTime()
@@ -484,7 +484,7 @@ app.put(
         logger.error(
           `Token was valid, but did not match ${req.user.username}'s (${req.user.id}) verification email and/or timestamp.`,
         );
-        return res.status(400).send(new Errors.InvalidVerificationToken());
+        return res.status(400).json(new Errors.InvalidVerificationToken());
       }
 
       logger.debug(
@@ -500,22 +500,22 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
     } else {
       // If the user is not staff, return a InsufficientPermissions error.
       if (!req.user.staff)
-        return res.status(403).send(new Errors.InsufficientPermissions());
+        return res.status(403).json(new Errors.InsufficientPermissions());
 
       try {
         // Get the user.
         const user = await User.findByPk(req.params.id);
 
         // If the user does not exist, return a InvalidUser error.
-        if (!user) return res.status(404).send(new Errors.InvalidUser());
+        if (!user) return res.status(404).json(new Errors.InvalidUser());
 
         // Check if the user's email is already verified.
         if (user.verifiedAt)
-          return res.status(400).send(new Errors.EmailAlreadyVerified());
+          return res.status(400).json(new Errors.EmailAlreadyVerified());
 
         // Verify the user's email.
         await user.update({
@@ -530,10 +530,10 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+          .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
   },
@@ -552,11 +552,11 @@ app.delete(
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Check if the user's email is already unverified.
       if (!user.verifiedAt)
-        return res.status(400).send(new Errors.EmailNotVerified());
+        return res.status(400).json(new Errors.EmailNotVerified());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) unverified user ${user.username} (${user.id})'s email.`,
@@ -568,10 +568,10 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -596,7 +596,7 @@ app.get(
     if (req.params.id === 'me') {
       // Check if the user's email is already verified.
       if (req.user.verifiedAt)
-        return res.status(400).send(new Errors.EmailAlreadyVerified());
+        return res.status(400).json(new Errors.EmailAlreadyVerified());
 
       // Send the verification email.
       const { success, error, tokenData } = await sendResendVerificationEmail(
@@ -607,7 +607,7 @@ app.get(
       // If the email failed to send, return an error 500.
       if (!success) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
 
       // Update the user's email verification status.
@@ -624,18 +624,18 @@ app.get(
     } else {
       // If the user is not staff, return a InsufficientPermissions error.
       if (!req.user.staff)
-        return res.status(403).send(new Errors.InsufficientPermissions());
+        return res.status(403).json(new Errors.InsufficientPermissions());
 
       try {
         // Get the user.
         const user = await User.findByPk(req.params.id);
 
         // If the user does not exist, return a InvalidUser error.
-        if (!user) return res.status(404).send(new Errors.InvalidUser());
+        if (!user) return res.status(404).json(new Errors.InvalidUser());
 
         // Check if the user's email is already verified.
         if (user.verifiedAt)
-          return res.status(400).send(new Errors.EmailAlreadyVerified());
+          return res.status(400).json(new Errors.EmailAlreadyVerified());
 
         // Send the verification email.
         const {
@@ -647,7 +647,7 @@ app.get(
         // If the email failed to send, return an error 500.
         if (!success) {
           logger.error(error);
-          return res.status(500).send(new Errors.Internal());
+          return res.status(500).json(new Errors.Internal());
         }
 
         // Update the user's email verification status.
@@ -664,7 +664,7 @@ app.get(
         return res.status(201).json(new Success.SendVerificationEmail());
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
   },
@@ -697,11 +697,11 @@ app.put(
 
         // Check if the password is correct.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).send(new Errors.InvalidPassword());
+          return res.status(401).json(new Errors.InvalidPassword());
 
         // Check if the new password matches the confirmation.
         if (req.body.newPassword !== req.body.confirmNewPassword)
-          return res.status(400).send(new Errors.PasswordsDoNotMatch());
+          return res.status(400).json(new Errors.PasswordsDoNotMatch());
 
         logger.debug(
           `User ${req.user.username} (${req.user.id}) changed their password.`,
@@ -718,7 +718,7 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(
+          .json(
             KVExtractor(
               req.user.toJSON(),
               ['password', 'sessions', 'verificationRequestedAt'],
@@ -727,24 +727,24 @@ app.put(
           );
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Check if the new password matches the confirmation.
       if (req.body.newPassword !== req.body.confirmNewPassword)
-        return res.status(400).send(new Errors.PasswordsDoNotMatch());
+        return res.status(400).json(new Errors.PasswordsDoNotMatch());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s password.`,
@@ -758,10 +758,10 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -779,7 +779,7 @@ app.put(
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) granted user ${user.username} (${user.id}) staff privileges.`,
@@ -791,10 +791,10 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -812,7 +812,7 @@ app.delete(
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) revoked user ${user.username} (${user.id})'s staff privileges.`,
@@ -824,10 +824,10 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -848,7 +848,7 @@ app.put(
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) banned user ${user.username} (${user.id}).`,
@@ -864,7 +864,7 @@ app.put(
       // If the email failed to send, return an error 500.
       if (!success) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
 
       // Update the banned status.
@@ -873,10 +873,10 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -894,7 +894,7 @@ app.delete(
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) unbanned user ${user.username} (${user.id}).`,
@@ -906,10 +906,10 @@ app.delete(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -933,11 +933,11 @@ app.put(
       try {
         // Check if the domain is valid.
         let domain = await Domain.findByPk(req.body.domain);
-        if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+        if (!domain) return res.status(404).json(new Errors.InvalidDomain());
 
         // Check if the domain permits subdomains.
         if (!domain.subdomains && req.body.subdomain)
-          return res.status(400).send(new Errors.SubdomainNotAllowed());
+          return res.status(400).json(new Errors.SubdomainNotAllowed());
 
         // Format the subdomain to comply with URL standards.
         let subdomain = req.body.subdomain
@@ -946,7 +946,7 @@ app.put(
 
         // Check if the subdomain exceeds the maximum length.
         if (subdomain && subdomain.length > 63)
-          return res.status(400).send(new Errors.SubdomainTooLong());
+          return res.status(400).json(new Errors.SubdomainTooLong());
 
         // Update the user's domain and subdomain.
         await req.user.update({ domain: domain.id, subdomain });
@@ -954,31 +954,31 @@ app.put(
         // Send the user object.
         return res
           .status(200)
-          .send(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+          .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Check if the domain is valid.
       let domain = await Domain.findByPk(req.body.domain);
-      if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+      if (!domain) return res.status(404).json(new Errors.InvalidDomain());
 
       // Check if the domain permits subdomains.
       if (!domain.subdomains && req.body.subdomain)
-        return res.status(400).send(new Errors.SubdomainNotAllowed());
+        return res.status(400).json(new Errors.SubdomainNotAllowed());
 
       // Format the subdomain to comply with URL standards.
       let subdomain = req.body.subdomain
@@ -987,7 +987,7 @@ app.put(
 
       // Check if the subdomain exceeds the maximum length.
       if (subdomain && subdomain.length > 63)
-        return res.status(400).send(new Errors.SubdomainTooLong());
+        return res.status(400).json(new Errors.SubdomainTooLong());
 
       // Update the user's domain and subdomain.
       await user.update({ domain: domain.id, subdomain });
@@ -995,10 +995,10 @@ app.put(
       // Send the user object.
       return res
         .status(200)
-        .send(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -1041,11 +1041,11 @@ app.delete(
 
         // Check if the username in the body matches the user's username.
         if (req.body.username !== req.user.username)
-          return res.status(400).send(new Errors.InvalidUsername());
+          return res.status(400).json(new Errors.InvalidUsername());
 
         // Check if the password in the body matches the user's password.
         if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(400).send(new Errors.InvalidPassword());
+          return res.status(400).json(new Errors.InvalidPassword());
 
         // Delete the user's files.
         const files = await File.findAll({ where: { userID: req.user.id } });
@@ -1073,23 +1073,23 @@ app.delete(
         // Delete the user.
         await req.user.destroy();
 
-        return res.status(200).send(new Success.DeleteUser());
+        return res.status(200).json(new Success.DeleteUser());
       } catch (error) {
         logger.error(error);
-        return res.status(500).send(new Errors.Internal());
+        return res.status(500).json(new Errors.Internal());
       }
     }
 
     // If the user is not staff, return a InsufficientPermissions error.
     if (!req.user.staff)
-      return res.status(403).send(new Errors.InsufficientPermissions());
+      return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
       // If the user does not exist, return a InvalidUser error.
-      if (!user) return res.status(404).send(new Errors.InvalidUser());
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Delete the user's files.
       const files = await File.findAll({ where: { userID: user.id } });
@@ -1115,10 +1115,10 @@ app.delete(
       // Delete the user.
       await user.destroy();
 
-      return res.status(200).send(new Success.DeleteUser());
+      return res.status(200).json(new Success.DeleteUser());
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -1148,7 +1148,7 @@ app.delete(
       });
 
       // If there are no users, return a InvalidUser error.
-      if (!count) return res.status(404).send(new Errors.InvalidUser());
+      if (!count) return res.status(404).json(new Errors.InvalidUser());
 
       // Delete the users.
       await Promise.all(
@@ -1181,10 +1181,10 @@ app.delete(
         }),
       );
 
-      return res.status(200).send(new Success.DeleteUsers(count));
+      return res.status(200).json(new Success.DeleteUsers(count));
     } catch (error) {
       logger.error(error);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );

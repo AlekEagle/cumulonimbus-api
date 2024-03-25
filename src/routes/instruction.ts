@@ -40,7 +40,7 @@ app.get(
       );
 
       // Return the instructions.
-      return res.status(200).send({
+      return res.status(200).json({
         count,
         items: instructions.map((d) =>
           KVExtractor(d.toJSON(), ['id', 'name', 'description']),
@@ -48,7 +48,7 @@ app.get(
       });
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -69,17 +69,17 @@ app.get(
 
       // If the instruction doesn't exist, return a InvalidInstruction error.
       if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
+        return res.status(404).json(new Errors.InvalidInstruction());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) fetched instruction ${instruction.name} (${instruction.id}).`,
       );
 
       // Return the instruction.
-      return res.status(200).send(instruction.toJSON());
+      return res.status(200).json(instruction.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -117,14 +117,14 @@ app.post(
     try {
       // If the ID is invalid, return an InvalidInstruction error.
       if (!INSTRUCTION_REGEX.test(req.body.id))
-        return res.status(400).send(new Errors.InvalidInstruction());
+        return res.status(400).json(new Errors.InvalidInstruction());
 
       // Check if the instruction already exists.
       const instruction = await Instruction.findByPk(req.body.id);
 
       // If the instruction already exists, return an InstructionExists error.
       if (instruction)
-        return res.status(409).send(new Errors.InstructionExists());
+        return res.status(409).json(new Errors.InstructionExists());
 
       // Create the instruction.
       const newInstruction = await Instruction.create({
@@ -141,10 +141,10 @@ app.post(
       );
 
       // Return the instruction.
-      return res.status(201).send(newInstruction.toJSON());
+      return res.status(201).json(newInstruction.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -169,7 +169,7 @@ app.put(
 
       // If the instruction doesn't exist, return an InvalidInstruction error.
       if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
+        return res.status(404).json(new Errors.InvalidInstruction());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}). (name: ${req.body.name})`,
@@ -179,10 +179,10 @@ app.put(
       await instruction.update({ name: req.body.name });
 
       // Return the instruction.
-      return res.status(200).send(instruction.toJSON());
+      return res.status(200).json(instruction.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -207,7 +207,7 @@ app.put(
 
       // If the instruction doesn't exist, return an InvalidInstruction error.
       if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
+        return res.status(404).json(new Errors.InvalidInstruction());
 
       // Update the instruction.
       await instruction.update({ description: req.body.description });
@@ -217,10 +217,10 @@ app.put(
       );
 
       // Return the instruction.
-      return res.status(200).send(instruction.toJSON());
+      return res.status(200).json(instruction.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -246,7 +246,7 @@ app.put(
 
       // If the instruction doesn't exist, return an InvalidInstruction error.
       if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
+        return res.status(404).json(new Errors.InvalidInstruction());
 
       // Update the instruction.
       await instruction.update({
@@ -259,10 +259,10 @@ app.put(
       );
 
       // Return the instruction.
-      return res.status(200).send(instruction.toJSON());
+      return res.status(200).json(instruction.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -287,7 +287,7 @@ app.put(
 
       // If the instruction doesn't exist, return an InvalidInstruction error.
       if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
+        return res.status(404).json(new Errors.InvalidInstruction());
 
       // Update the instruction.
       await instruction.update({ steps: req.body.steps });
@@ -297,10 +297,10 @@ app.put(
       );
 
       // Return the instruction.
-      return res.status(200).send(instruction.toJSON());
+      return res.status(200).json(instruction.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -321,7 +321,7 @@ app.delete(
 
       // If the instruction doesn't exist, return an InvalidInstruction error.
       if (!instruction)
-        return res.status(404).send(new Errors.InvalidInstruction());
+        return res.status(404).json(new Errors.InvalidInstruction());
 
       // Delete the instruction.
       await instruction.destroy();
@@ -331,10 +331,10 @@ app.delete(
       );
 
       // Return a success.
-      return res.status(200).send(new Success.DeleteInstruction());
+      return res.status(200).json(new Success.DeleteInstruction());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -354,7 +354,7 @@ app.delete(
   ) => {
     // Check if they are trying to delete more than 50 instructions.
     if (req.body.ids.length > 50)
-      return res.status(400).send(new Errors.BodyTooLarge());
+      return res.status(400).json(new Errors.BodyTooLarge());
 
     try {
       // fetch the instructions.
@@ -367,7 +367,7 @@ app.delete(
       });
 
       // If there are no instructions, return an InvalidInstruction error.
-      if (!count) return res.status(404).send(new Errors.InvalidInstruction());
+      if (!count) return res.status(404).json(new Errors.InvalidInstruction());
 
       // Delete the instructions.
       await Promise.all(
@@ -379,10 +379,10 @@ app.delete(
       );
 
       // Return a success.
-      return res.status(200).send(new Success.DeleteInstruction());
+      return res.status(200).json(new Success.DeleteInstruction());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );

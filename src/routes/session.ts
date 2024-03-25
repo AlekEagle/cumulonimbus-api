@@ -3,7 +3,11 @@ import { Errors, Success } from '../utils/TemplateResponses.js';
 import User from '../DB/User.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
-import { generateSessionToken, nameSession } from '../utils/Token.js';
+import {
+  extractToken,
+  generateSessionToken,
+  nameSession,
+} from '../utils/Token.js';
 import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
   ExtendedValidBodyTypes,
@@ -11,11 +15,18 @@ import BodyValidator, {
 import LimitOffset from '../middleware/LimitOffset.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
+import {
+  generateSecondFactorChallenge,
+  SecondFactorChallengeResponse,
+  verifySecondFactor,
+} from '../utils/SecondFactor.js';
+import SecondFactor from '../DB/SecondFactor.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { fn, col, where } from 'sequelize';
 import ExpressRateLimit from 'express-rate-limit';
+import isType from '../utils/TypeAsserter.js';
 
 logger.debug('Loading: Session Routes...');
 
@@ -24,9 +35,12 @@ app.post(
   '/api/login',
   AutoTrim(),
   BodyValidator({
-    username: 'string',
-    password: 'string',
+    username: new ExtendedValidBodyTypes('string', true),
+    password: new ExtendedValidBodyTypes('string', true),
     rememberMe: new ExtendedValidBodyTypes('boolean', true),
+    token: new ExtendedValidBodyTypes('string', true),
+    type: new ExtendedValidBodyTypes('string', true),
+    code: new ExtendedValidBodyTypes('string', true),
   }),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
@@ -38,68 +52,136 @@ app.post(
     req: Request<
       null,
       null,
-      {
-        username: string;
-        password: string;
-        rememberMe?: boolean;
-      }
+      | {
+          username: string;
+          password: string;
+          rememberMe?: boolean;
+        }
+      | (SecondFactorChallengeResponse & { rememberMe?: boolean })
     >,
     res: Response<
-      Cumulonimbus.Structures.SuccessfulAuth | Cumulonimbus.Structures.Error
+      | Cumulonimbus.Structures.SuccessfulAuth
+      | Cumulonimbus.Structures.SecondFactorChallenge
+      | Cumulonimbus.Structures.Error
     >,
   ) => {
     // If the user is already logged in, return an InvalidSession error.
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
+    if (
+      isType<{ username: string; password: string; rememberMe?: boolean }>(
+        req.body,
+        ['username'],
+      )
+    ) {
+      try {
+        // Find a user with the given username.
+        let user = await User.findOne({
+          where: where(
+            fn('lower', col('username')),
+            req.body.username.toLowerCase(),
+          ),
+        });
 
-    try {
-      // Find a user with the given username.
-      let user = await User.findOne({
-        where: where(
-          fn('lower', col('username')),
-          req.body.username.toLowerCase(),
-        ),
-      });
+        // If no user was found, return an InvalidUser error.
+        if (!user) return res.status(404).json(new Errors.InvalidUser());
 
-      // If no user was found, return an InvalidUser error.
-      if (!user) return res.status(404).json(new Errors.InvalidUser());
+        // If the user is banned, return a Banned error.
+        if (user.bannedAt) return res.status(403).json(new Errors.Banned());
 
-      // If the user is banned, return a Banned error.
-      if (user.bannedAt) return res.status(403).json(new Errors.Banned());
+        // Compare the given password with the user's password.
+        if (!(await Bcrypt.compare(req.body.password, user.password)))
+          return res.status(401).json(new Errors.InvalidPassword());
 
-      // Compare the given password with the user's password.
-      if (!(await Bcrypt.compare(req.body.password, user.password)))
-        return res.status(401).json(new Errors.InvalidPassword());
+        if (
+          (await SecondFactor.findAll({ where: { user: user.id } })).length !==
+          0
+        ) {
+          // If the user has second factors, generate a second factor challenge.
+          return res
+            .status(401)
+            .json(await generateSecondFactorChallenge(user));
+        }
 
-      // Generate a session name for the new session.
-      let sessionName =
-        (req.headers['x-session-name'] as string) || nameSession(req);
+        // Generate a session name for the new session.
+        let sessionName =
+          (req.headers['x-session-name'] as string) || nameSession(req);
 
-      // Generate a new token for the user.
-      let token = await generateSessionToken(user.id, req.body.rememberMe);
+        // Generate a new token for the user.
+        let token = await generateSessionToken(user.id, req.body.rememberMe);
 
-      // Add the new session to the user's sessions.
-      let sessions = [
-        ...user.sessions,
-        {
-          name: sessionName,
-          iat: token.data.payload.iat,
+        // Add the new session to the user's sessions.
+        let sessions = [
+          ...user.sessions,
+          {
+            name: sessionName,
+            iat: token.data.payload.iat,
+            exp: token.data.payload.exp,
+          },
+        ];
+
+        // Update the user's sessions.
+        await user.update({ sessions });
+
+        logger.debug(`User ${user.username} (${user.id}) logged in.`);
+
+        // Return a SuccessfulAuth response.
+        return res.status(201).json({
+          token: token.token,
           exp: token.data.payload.exp,
-        },
-      ];
+        });
+      } catch (error) {
+        logger.error(error);
+        return res.status(500).json(new Errors.Internal());
+      }
+    } else {
+      try {
+        const uid = extractToken(req.body.token).payload.sub,
+          user = await User.findByPk(uid);
+        if (await verifySecondFactor(req.body, user)) {
+          // Generate a session name for the new session.
+          let sessionName =
+            (req.headers['x-session-name'] as string) || nameSession(req);
 
-      // Update the user's sessions.
-      await user.update({ sessions });
+          // Generate a new token for the user.
+          let token = await generateSessionToken(user.id, req.body.rememberMe);
 
-      logger.debug(`User ${user.username} (${user.id}) logged in.`);
+          // Add the new session to the user's sessions.
+          let sessions = [
+            ...user.sessions,
+            {
+              name: sessionName,
+              iat: token.data.payload.iat,
+              exp: token.data.payload.exp,
+            },
+          ];
 
-      // Return a SuccessfulAuth response.
-      return res.status(201).json({
-        token: token.token,
-        exp: token.data.payload.exp,
-      });
-    } catch (error) {
-      logger.error(error);
-      return res.status(500).json(new Errors.Internal());
+          // Update the user's sessions.
+          await user.update({ sessions });
+
+          logger.debug(
+            `User ${user.username} (${user.id}) logged in after solving 2FA challenge.`,
+          );
+
+          // Return a SuccessfulAuth response.
+          return res.status(201).json({
+            token: token.token,
+            exp: token.data.payload.exp,
+          });
+        }
+      } catch (error) {
+        if (error instanceof Errors.Invalid2FAResponse)
+          return res.status(401).json(error);
+        else if (error instanceof Errors.Internal)
+          return res.status(500).json(error);
+        else if (error instanceof Errors.NotImplemented)
+          return res.status(501).json(error);
+        else if (error instanceof Errors.Invalid2FAMethod)
+          return res.status(400).json(error);
+        else {
+          logger.error(error);
+          return res.status(500).json(new Errors.Internal());
+        }
+      }
     }
   },
 );
@@ -127,7 +209,7 @@ app.get(
           (session) => session.iat === req.session.payload.iat,
         );
 
-        return res.status(200).send({
+        return res.status(200).json({
           id: session.iat,
           exp: session.exp,
           name: session.name,
@@ -147,7 +229,7 @@ app.get(
       );
 
       // Return the session.
-      return res.status(200).send({
+      return res.status(200).json({
         id: session.iat,
         exp: session.exp,
         name: session.name,
@@ -178,7 +260,7 @@ app.get(
       );
 
       // Return the session.
-      return res.status(200).send({
+      return res.status(200).json({
         id: session.iat,
         exp: session.exp,
         name: session.name,
@@ -209,7 +291,7 @@ app.get(
       );
 
       // Return the user's sessions.
-      return res.status(200).send({
+      return res.status(200).json({
         count: req.user.sessions.length,
         items: req.user.sessions
           .slice(req.offset, req.offset + req.limit)
@@ -237,7 +319,7 @@ app.get(
       );
 
       // Return the user's sessions.
-      return res.status(200).send({
+      return res.status(200).json({
         count: user.sessions.length,
         items: user.sessions
           .slice(req.offset, req.offset + req.limit)
