@@ -107,7 +107,7 @@ export async function generateTOTPGenerationConfirmationToken(
 }
 
 // Generate a 2FA intermediate token for the provided user.
-export async function generateTwoFactorIntermediateToken(
+export async function generateSecondFactorIntermediateToken(
   subject: string,
 ): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.

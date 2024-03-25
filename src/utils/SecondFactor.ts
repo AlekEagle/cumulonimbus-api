@@ -1,50 +1,42 @@
-import { SECOND_FACTOR_BACKUP_CODE_LENGTH } from './Constants.js';
+import {
+  SECOND_FACTOR_ALGORITHM,
+  SECOND_FACTOR_BACKUP_CODE_LENGTH,
+  SECOND_FACTOR_TOTP_DIGITS,
+  SECOND_FACTOR_TOTP_STEP,
+} from './Constants.js';
 
-import {
-  TOTPAsync,
-  HashAlgorithms,
-  AuthenticatorAsync,
-  AuthenticatorAsyncOptions,
-  KeyDecoder,
-  KeyEncoder,
-} from '@otplib/core-async';
-import {
-  createDigest,
-  createRandomBytes,
-} from '@otplib/plugin-crypto-async-ronomon';
-import { keyDecoder, keyEncoder } from '@otplib/plugin-thirty-two';
+import { HashAlgorithms } from '@otplib/core';
+import { authenticator } from '@otplib/preset-default-async';
 import { randomBytes, createHash } from 'crypto';
 
-const authenticator = new AuthenticatorAsync<AuthenticatorAsyncOptions>({
-  createDigest,
-  createRandomBytes,
-  keyDecoder: keyDecoder as unknown as KeyDecoder<Promise<string>>,
-  keyEncoder: keyEncoder as unknown as KeyEncoder<Promise<string>>,
-  step: 30,
-  digits: 6,
-});
-
-const totp = new TOTPAsync({
-  step: 30,
-  digits: 6,
+authenticator.options = {
   window: [2, 1],
-  createDigest,
-  algorithm: HashAlgorithms.SHA512,
-});
+  step: SECOND_FACTOR_TOTP_STEP,
+  digits: SECOND_FACTOR_TOTP_DIGITS,
+  algorithm: HashAlgorithms[SECOND_FACTOR_ALGORITHM],
+};
 
 export async function generateTOTPSecret(): Promise<string> {
   return await authenticator.generateSecret();
 }
 
 export async function generateTOTP(secret: string): Promise<string> {
-  return await totp.generate(secret);
+  return await authenticator.generate(secret);
+}
+
+export async function checkTOTPDelta(
+  token: string,
+  secret: string,
+): Promise<number | null> {
+  const delta = await authenticator.checkDelta(token, secret);
+  return delta;
 }
 
 export async function verifyTOTP(
   token: string,
   secret: string,
-): Promise<number> {
-  return await totp.checkDelta(token, secret);
+): Promise<boolean> {
+  return (await checkTOTPDelta(token, secret)) !== null;
 }
 
 function generateBackupCode(): Promise<{

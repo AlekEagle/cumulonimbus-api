@@ -19,6 +19,7 @@ import {
   SECOND_FACTOR_TOTP_STEP,
 } from '../utils/Constants.js';
 import SecondFactor from '../DB/SecondFactor.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -38,7 +39,7 @@ app.put(
   async (
     req: Request<null, null, { type: 'totp' | 'webauthn'; password: string }>,
     res: Response<
-      | Cumulonimbus.Structures.TwoFactorRegistration
+      | Cumulonimbus.Structures.SecondFactorRegistration
       | Cumulonimbus.Structures.Error
     >,
   ) => {
@@ -121,7 +122,7 @@ app.put(
       switch (req.body.type) {
         case 'totp':
           // Check if the provided code is valid.
-          if (!verifyTOTP(req.body.data.code, result.payload.secret))
+          if (!(await verifyTOTP(req.body.data.code, result.payload.secret)))
             return res.status(400).send(new Errors.Invalid2FAResponse());
 
           // Save the new TOTP second factor.
@@ -168,5 +169,23 @@ app.put(
         default:
           return res.status(400).send(new Errors.Invalid2FAMethod());
       }
+  },
+);
+
+app.put(
+  // PUT /api/users/me/2fa/test
+  '/api/users/me/2fa/test',
+  SessionChecker(),
+  ReverifyIdentity(),
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    return res.status(200).send({
+      code: '2FA_TEST_SUCCESS',
+      message: 'Successfully authenticated with 2FA!',
+    });
   },
 );

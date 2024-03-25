@@ -7,10 +7,12 @@ import type {
   AuthenticatorTransportFuture,
 } from '@simplewebauthn/types';
 
+export type SecondFactorType = 'totp' | 'webauthn';
+
 export default class SecondFactor extends Model {
   id: string;
   user: string;
-  type: 'totp' | 'webauthn';
+  type: SecondFactorType;
   name: string;
   // Fields used by TOTP
   secret?: string;

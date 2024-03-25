@@ -30,7 +30,6 @@
     "typescript": "^5.1.3"
   },
   "dependencies": {
-    "@otplib/plugin-crypto": "^12.0.1",
     "@otplib/preset-default-async": "^12.0.1",
     "@simplewebauthn/server": "^9.0.3",
     "bcrypt": "^5.1.0",

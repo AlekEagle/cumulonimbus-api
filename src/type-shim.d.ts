@@ -2,6 +2,7 @@
 import { DetectResult } from 'node-device-detector';
 import User from './DB/User.ts';
 import { TokenStructure } from './utils/Token.ts';
+import type { SecondFactorType } from './DB/SecondFactor.ts';
 
 export {};
 declare global {
@@ -100,17 +101,21 @@ declare global {
         exp: number;
       }
 
-      export interface TwoFactorIntermediate {
-        token: string;
-        methods: string[];
-      }
-
-      export interface TwoFactorBaseRegistration {
+      export interface SecondFactorChallenge {
         token: string;
         exp: number;
+        types: SecondFactorType[];
+        challenge?: string; // This will only be present if 'webauthn' is in the types array
       }
 
-      export type TwoFactorTOTPRegistration = TwoFactorBaseRegistration & {
+      export interface SecondFactorBaseRegistration {
+        token: string;
+        exp: number;
+        type: SecondFactorType;
+      }
+
+      export interface SecondFactorTOTPRegistration
+        extends SecondFactorBaseRegistration {
         type: 'totp';
         data: {
           secret: string;
@@ -118,15 +123,17 @@ declare global {
           digits: number;
           period: number;
         };
-      };
+      }
 
-      // TODO: Create a proper type for this
-      export type TwoFactorWebAuthnRegistration = TwoFactorBaseRegistration &
-        never;
+      // TODO: Populate this with the correct fields
+      export interface SecondFactorWebAuthnRegistration
+        extends SecondFactorBaseRegistration {
+        type: 'webauthn';
+      }
 
-      export type TwoFactorRegistration =
-        | TwoFactorTOTPRegistration
-        | TwoFactorWebAuthnRegistration;
+      export type SecondFactorRegistration =
+        | SecondFactorTOTPRegistration
+        | SecondFactorWebAuthnRegistration;
 
       export interface File {
         id: string;
