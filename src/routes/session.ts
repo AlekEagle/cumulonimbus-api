@@ -137,7 +137,7 @@ app.post(
       try {
         const uid = extractToken(req.body.token).payload.sub,
           user = await User.findByPk(uid);
-        if (await verifySecondFactor(req.body, user)) {
+        if (await verifySecondFactor(req.body, user, res)) {
           // Generate a session name for the new session.
           let sessionName =
             (req.headers['x-session-name'] as string) || nameSession(req);
@@ -168,19 +168,11 @@ app.post(
             exp: token.data.payload.exp,
           });
         }
+        // verifySecondFactor will handle sending the error response, we're done here.
+        else return;
       } catch (error) {
-        if (error instanceof Errors.Invalid2FAResponse)
-          return res.status(401).json(error);
-        else if (error instanceof Errors.Internal)
-          return res.status(500).json(error);
-        else if (error instanceof Errors.NotImplemented)
-          return res.status(501).json(error);
-        else if (error instanceof Errors.Invalid2FAMethod)
-          return res.status(400).json(error);
-        else {
-          logger.error(error);
-          return res.status(500).json(new Errors.Internal());
-        }
+        logger.error(error);
+        return res.status(500).json(new Errors.Internal());
       }
     }
   },

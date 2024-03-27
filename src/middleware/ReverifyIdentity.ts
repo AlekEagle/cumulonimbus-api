@@ -1,21 +1,13 @@
 import SecondFactor from '../DB/SecondFactor.js';
 import { Errors } from '../utils/TemplateResponses.js';
-import {
-  generateSecondFactorIntermediateToken,
-  validateToken,
-} from '../utils/Token.js';
 import { logger } from '../index.js';
 import {
-  verifyTOTP,
-  verifyBackupCode,
   generateSecondFactorChallenge,
   verifySecondFactor,
-  SecondFactorChallengeResponse,
 } from '../utils/SecondFactor.js';
 
 import { RequestHandler } from 'express';
 import Bcrypt from 'bcrypt';
-import { errors as JoseErrors } from 'jose';
 
 // A middleware that will reverify the user's identity using their password or second factors.
 // This can be used in place of SessionChecker.
@@ -39,6 +31,10 @@ export default function ReverifyIdentity(
         logger.debug(`Route: ${req.path} | staff required: ${staffRequired}`);
     }
 
+    // Check if the user provided a body. If they didn't, we will send an error response.
+    if (!req.body)
+      return res.status(400).json(new Errors.MissingFields(['password']));
+
     const secondFactors = await SecondFactor.findAll({
         where: {
           user: req.user.id,
@@ -49,7 +45,7 @@ export default function ReverifyIdentity(
         .filter((t, i, a) => a.indexOf(t) === i);
 
     // If they aren't responding to a challenge, check if they provided the correct password.
-    if (!req.body['2fa'].token) {
+    if (!req.body['2fa'] || !req.body['2fa'].token) {
       if (!req.body.password)
         // If they didn't provide a password, we will send an error response.
         return res.status(400).json(new Errors.MissingFields(['password']));
@@ -61,32 +57,21 @@ export default function ReverifyIdentity(
     // If they have second factors, we will also use them to reverify their identity.
     if (availableFactors.length !== 0) {
       // They are not responding to a challenge, so we will send them one.
-      if (!req.body['2fa'].token) {
+      if (!req.body['2fa'] || !req.body['2fa'].token) {
         return res
           .status(401)
           .json(await generateSecondFactorChallenge(req.user));
       } else {
         try {
-          if (await verifySecondFactor(req.body['2fa'], req.user)) {
+          if (await verifySecondFactor(req.body['2fa'], req.user, res)) {
             logger.debug(
               `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their second factor.`,
             );
             return next();
           }
         } catch (e) {
-          // All errors thrown by verifySecondFactor should be forwarded to the user.
-          if (e instanceof Errors.MissingFields) return res.status(400).json(e);
-          else if (e instanceof Errors.Invalid2FAResponse)
-            return res.status(401).json(e);
-          else if (e instanceof Errors.Internal) return res.status(500).json(e);
-          else if (e instanceof Errors.NotImplemented)
-            return res.status(501).json(e);
-          else {
-            logger.error(
-              `An unexpected error occurred while reverifying the user's identity using their second factor. User: ${req.user.username} (${req.user.id}) | Error: ${e}`,
-            );
-            return res.status(500).json(new Errors.Internal());
-          }
+          // verifySecondFactor will handle sending the error response. We're done here.
+          return;
         }
       }
     }

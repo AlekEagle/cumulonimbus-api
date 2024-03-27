@@ -106,14 +106,31 @@ export async function generateTOTPGenerationConfirmationToken(
   return await completeToken(token);
 }
 
+// Generate a WebAuthn generation confirmation token for the provided user and WebAuthn registration challenge.
+export async function generateWebAuthnGenerationConfirmationToken(
+  subject: string,
+  challenge: string,
+): Promise<TokenGenerationResult<{ challenge: string }>> {
+  // Import certificates if they aren't already imported.
+  await importCertificates();
+  // Generate the token.
+  let token = generateBaseToken({ challenge })
+    .setSubject(subject)
+    .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
+  return await completeToken(token);
+}
+
 // Generate a 2FA intermediate token for the provided user.
+// We put the challenge in the token so that we can verify it later
+// if they decide to use WebAuthn.
 export async function generateSecondFactorIntermediateToken(
   subject: string,
+  challenge?: string, // Optional challenge for WebAuthn
 ): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token = generateBaseToken()
+  let token = generateBaseToken(challenge ? { challenge } : {})
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
   return await completeToken(token);

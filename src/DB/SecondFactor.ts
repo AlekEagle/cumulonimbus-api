@@ -17,7 +17,8 @@ export default class SecondFactor extends Model {
   // Fields used by TOTP
   secret?: string;
   // Fields used by WebAuthn
-  publicKey?: string;
+  keyId?: string;
+  publicKey?: Buffer;
   counter?: number;
   deviceType?: CredentialDeviceType;
   transports?: AuthenticatorTransportFuture[];
@@ -53,6 +54,9 @@ export default class SecondFactor extends Model {
         allowNull: false,
       },
       secret: {
+        type: DataTypes.STRING,
+      },
+      keyId: {
         type: DataTypes.STRING,
       },
       publicKey: {

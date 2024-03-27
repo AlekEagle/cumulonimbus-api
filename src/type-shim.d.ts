@@ -1,8 +1,10 @@
 // Woah! type definitions for global modules!
-import { DetectResult } from 'node-device-detector';
 import User from './DB/User.ts';
 import { TokenStructure } from './utils/Token.ts';
 import type { SecondFactorType } from './DB/SecondFactor.ts';
+
+import { DetectResult } from 'node-device-detector';
+import { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/types';
 
 export {};
 declare global {
@@ -19,6 +21,7 @@ declare global {
       BASE_UPLOAD_PATH: string;
       BASE_THUMBNAIL_PATH: string;
       DEFAULT_DOMAIN: string;
+      WEBAUTHN_RPID: string;
       FRONTEND_BASE_URL: string;
       THUMBNAIL_BASE_URL: string;
       SMTP_HOST: string;
@@ -105,7 +108,6 @@ declare global {
         token: string;
         exp: number;
         types: (SecondFactorType | 'backup')[];
-        challenge?: string; // This will only be present if 'webauthn' is in the types array
       }
 
       export interface SecondFactorBaseRegistration {
@@ -117,17 +119,16 @@ declare global {
       export interface SecondFactorTOTPRegistration
         extends SecondFactorBaseRegistration {
         type: 'totp';
-        data: {
-          secret: string;
-          algorithm: string;
-          digits: number;
-          period: number;
-        };
+        secret: string;
+        algorithm: string;
+        digits: number;
+        period: number;
       }
 
       // TODO: Populate this with the correct fields
       export interface SecondFactorWebAuthnRegistration
-        extends SecondFactorBaseRegistration {
+        extends SecondFactorBaseRegistration,
+          PublicKeyCredentialCreationOptionsJSON {
         type: 'webauthn';
       }
 
