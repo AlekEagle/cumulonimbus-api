@@ -18,7 +18,9 @@ export default function SessionChecker(
         );
         return res.status(403).json(new Errors.InsufficientPermissions());
       } else {
-        logger.debug(`Route: ${req.path} | staff required: ${staffRequired}`);
+        logger.debug(
+          `Route: ${req.path} | staff required: ${staffRequired} | User: ${req.user.username} (${req.user.id})`,
+        );
         next();
       }
     }

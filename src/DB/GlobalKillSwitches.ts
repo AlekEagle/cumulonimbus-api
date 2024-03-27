@@ -32,7 +32,7 @@ export default class GlobalKillSwitches extends Model {
   );
   try {
     await GlobalKillSwitches.sync();
-    logger.log('GlobalKillSwitches model synced with DB.');
+    logger.info('GlobalKillSwitches model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync GlobalKillSwitches model. Error:', error);
   }

@@ -27,7 +27,7 @@ export type KillSwitchList = Array<KillSwitch>;
 
 // Find or create all the kill switches in the database and log their state
 export async function initKillSwitches() {
-  logger.log('Initializing kill switches...');
+  logger.info('Initializing kill switches...');
   // Filter out the enum keys that are not numbers
   for (const killSwitch in Object.keys(KillSwitches).filter(
     (v) => !isNaN(Number(v)),
@@ -36,17 +36,17 @@ export async function initKillSwitches() {
       where: { id: killSwitch },
     }).then(([killSwitchDB, created]) => {
       if (created) {
-        logger.log(
+        logger.info(
           `KillSwitch ${KillSwitches[killSwitch]}(${killSwitch}): ${killSwitchDB.state}`,
         );
       } else {
-        logger.log(
+        logger.info(
           `KillSwitch ${KillSwitches[killSwitch]}(${killSwitch}): ${killSwitchDB.state}`,
         );
       }
     });
   }
-  logger.log('All kill switches initialized.');
+  logger.info('All kill switches initialized.');
 }
 
 // Set the state of a kill switch in the database and cache
@@ -58,7 +58,7 @@ export async function setKillSwitch(
     throw new Error('Invalid kill switch');
   }
   await GlobalKillSwitches.upsert({ id: killSwitch, state });
-  logger.log(
+  logger.info(
     `KillSwitch ${KillSwitches[killSwitch]}(${killSwitch}) set to: ${state}`,
   );
   return await getKillSwitches();

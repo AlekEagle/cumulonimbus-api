@@ -1,9 +1,17 @@
+import type { SecondFactorType } from '../DB/SecondFactor.js';
+import type { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
+
 export namespace Errors {
   export class InsufficientPermissions
     implements Cumulonimbus.Structures.Error
   {
     public readonly code: string = 'INSUFFICIENT_PERMISSIONS_ERROR';
     public readonly message: string = 'Insufficient Permissions';
+  }
+
+  export class EndpointRequires2FA implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'ENDPOINT_REQUIRES_2FA_ERROR';
+    public readonly message: string = 'Endpoint Requires 2FA';
   }
 
   export class InvalidUser implements Cumulonimbus.Structures.Error {
@@ -14,6 +22,31 @@ export namespace Errors {
   export class InvalidUsername implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_USERNAME_ERROR';
     public readonly message: string = 'Invalid Username';
+  }
+
+  export class Invalid2FAMethod implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_2FA_METHOD_ERROR';
+    public readonly message: string = 'Invalid 2FA Method';
+  }
+
+  export class Invalid2FAResponse implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_2FA_RESPONSE_ERROR';
+    public readonly message: string = 'Invalid 2FA Response';
+  }
+
+  export class Challenge2FARequired
+    implements
+      Cumulonimbus.Structures.Error,
+      Cumulonimbus.Structures.SecondFactorChallenge
+  {
+    public readonly code: string = 'CHALLENGE_2FA_REQUIRED_ERROR';
+    public readonly message: string = 'Challenge 2FA Required';
+    constructor(
+      public readonly token: string,
+      public readonly exp: number,
+      public readonly types: (SecondFactorType | 'backup')[],
+      public readonly challenge?: PublicKeyCredentialRequestOptionsJSON,
+    ) {}
   }
 
   export class InvalidPassword implements Cumulonimbus.Structures.Error {
@@ -130,6 +163,11 @@ export namespace Errors {
     public readonly code: string = 'INTERNAL_SERVER_ERROR';
     public readonly message: string = 'Internal Server Error';
   }
+
+  export class NotImplemented implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'NOT_IMPLEMENTED_ERROR';
+    public readonly message: string = 'Not Implemented';
+  }
 }
 
 export namespace Success {
@@ -193,5 +231,10 @@ export namespace Success {
   {
     public readonly code: string = 'SEND_VERIFICATION_EMAIL_SUCCESS';
     public readonly message: string = 'Verification Email Successfully Sent';
+  }
+
+  export class VerifyEmail implements Cumulonimbus.Structures.Success {
+    public readonly code: string = 'VERIFY_EMAIL_SUCCESS';
+    public readonly message: string = 'Successfully Verified Email';
   }
 }

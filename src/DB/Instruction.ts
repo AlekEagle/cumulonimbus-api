@@ -9,8 +9,8 @@ export default class Instruction extends Model {
   filename: string | null;
   content: string;
   description: string;
-  createdAt: Date;
-  updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 (async function () {
@@ -51,7 +51,7 @@ export default class Instruction extends Model {
   );
   try {
     await Instruction.sync();
-    logger.log('Instruction model synced with DB.');
+    logger.info('Instruction model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Instruction model. Error: ', error);
   }

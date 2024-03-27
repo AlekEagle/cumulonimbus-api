@@ -15,12 +15,12 @@ export default class User extends Model {
   staff: boolean;
   domain: string;
   subdomain: string | null;
-  emailVerificationToken: string | null;
   verificationRequestedAt: Date | null;
   verifiedAt: Date | null;
   bannedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  twoFactorBackupCodes: string[] | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 (async function () {
@@ -65,10 +65,6 @@ export default class User extends Model {
         type: DataTypes.STRING(64),
         allowNull: true,
       },
-      emailVerificationToken: {
-        type: DataTypes.STRING(128),
-        allowNull: true,
-      },
       verificationRequestedAt: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -81,6 +77,9 @@ export default class User extends Model {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      twoFactorBackupCodes: {
+        type: DataTypes.ARRAY(DataTypes.STRING(128)),
+      },
     },
     {
       sequelize,
@@ -89,7 +88,7 @@ export default class User extends Model {
   );
   try {
     await User.sync();
-    logger.log('User model synced with DB.');
+    logger.info('User model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync User model. Error: ', error);
   }

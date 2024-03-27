@@ -5,8 +5,8 @@ import { Model, DataTypes } from 'sequelize';
 export default class Domain extends Model {
   id: string;
   subdomains: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
 
 (async function () {
@@ -31,7 +31,7 @@ export default class Domain extends Model {
   );
   try {
     await Domain.sync();
-    logger.log('Domain model synced with DB.');
+    logger.info('Domain model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Domain model. Error: ', error);
   }
