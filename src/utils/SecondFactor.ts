@@ -11,6 +11,7 @@ import SecondFactor from '../DB/SecondFactor.js';
 import { Errors } from './TemplateResponses.js';
 import { logger } from '../index.js';
 import {
+  extractToken,
   generateSecondFactorIntermediateToken,
   validateToken,
 } from './Token.js';
@@ -193,7 +194,7 @@ export async function generateSecondFactorChallenge(
 
   const token = await generateSecondFactorIntermediateToken(
     user.id,
-    challenge.challenge,
+    challenge?.challenge,
   );
 
   return {
@@ -438,6 +439,18 @@ export async function verifySecondFactor(
         res.status(400).json(new Errors.MissingFields(['response']));
         return false;
       }
+
+      const { payload } = extractToken<{ challenge: string }>(challenge.token);
+
+      // Check if the challenge is in the token
+      if (!payload.challenge) {
+        logger.error(
+          `User ${user.username} (${user.id}) attempted to use a WebAuthn response without a challenge in the token.`,
+        );
+        res.status(400).json(new Errors.Invalid2FAResponse());
+        return false;
+      }
+
       // Verify the WebAuthn response
       if (
         await verifyWebAuthnAuthentication(

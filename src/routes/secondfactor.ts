@@ -179,10 +179,8 @@ app.put(
         user: payload.sub,
         type: 'webauthn',
         keyId: Buffer.from(result.registrationInfo.credentialID)
-          .toString('base64')
-          .replace(/=/g, '') // Obliterate the base64 padding from existence
-          .replace(/\+/g, '-') // Replace + with -
-          .replace(/\//g, '_'), // Replace / with _
+          .toString('base64url')
+          .replace(/=/g, ''), // Obliterate the base64 padding from existence
         publicKey: Buffer.from(result.registrationInfo.credentialPublicKey),
         counter: result.registrationInfo.counter,
         deviceType: result.registrationInfo.credentialDeviceType,
