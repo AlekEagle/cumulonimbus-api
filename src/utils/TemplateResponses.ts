@@ -9,6 +9,11 @@ export namespace Errors {
     public readonly message: string = 'Insufficient Permissions';
   }
 
+  export class EndpointRequires2FA implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'ENDPOINT_REQUIRES_2FA_ERROR';
+    public readonly message: string = 'Endpoint Requires 2FA';
+  }
+
   export class InvalidUser implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_USER_ERROR';
     public readonly message: string = 'Invalid User';
@@ -226,5 +231,10 @@ export namespace Success {
   {
     public readonly code: string = 'SEND_VERIFICATION_EMAIL_SUCCESS';
     public readonly message: string = 'Verification Email Successfully Sent';
+  }
+
+  export class VerifyEmail implements Cumulonimbus.Structures.Success {
+    public readonly code: string = 'VERIFY_EMAIL_SUCCESS';
+    public readonly message: string = 'Successfully Verified Email';
   }
 }

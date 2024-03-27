@@ -38,6 +38,7 @@ import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import ms from 'ms';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 
 logger.debug('Loading: Account Routes...');
 
@@ -211,28 +212,31 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:id
-  '/api/users/:id([0-9]{13}|me)',
+  // GET /api/users/me
+  '/api/users/me',
   SessionChecker(),
+  async (
+    req: Request,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) fetched their own user object.`,
+    );
+    // Send the user object.
+    return res
+      .status(200)
+      .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+  },
+);
+
+app.get(
+  // GET /api/users/:id
+  '/api/users/:id([0-9]{13})',
+  SessionChecker(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if the user is requesting their own user object.
-    if (req.params.id === 'me') {
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) fetched their own user object.`,
-      );
-      // Send the user object.
-      return res
-        .status(200)
-        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
-    }
-
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -256,59 +260,57 @@ app.get(
 );
 
 app.put(
-  // PUT /api/users/:id/username
-  '/api/users/:id([0-9]{13}|me)/username',
-  SessionChecker(),
-  AutoTrim(['password']),
+  // PUT /api/users/me/username
+  '/api/users/me/username',
+  ReverifyIdentity(),
+  AutoTrim(),
   BodyValidator({
     username: 'string',
-    password: new ExtendedValidBodyTypes('string', true),
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
-    req: Request<{ id: string }, null, { username: string; password?: string }>,
+    req: Request<null, null, { username: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if the user wants to modify their own username.
-    if (req.params.id === 'me') {
-      try {
-        // This portion of the endpoint requires a password, if the password is not present, return an error 400
-        if (!req.body.password)
-          return res.status(400).json(new Errors.MissingFields(['password']));
+    try {
+      // Check if the username meets username character requirements
+      if (!USERNAME_REGEX.test(req.body.username))
+        return res.status(400).json(new Errors.InvalidUsername());
 
-        // Check if the username meets username character requirements
-        if (!USERNAME_REGEX.test(req.body.username))
-          return res.status(400).json(new Errors.InvalidUsername());
+      // Check if the username is already taken.
+      if (await User.findOne({ where: { username: req.body.username } }))
+        return res.status(409).json(new Errors.UserExists());
 
-        // Check if the password is correct.
-        if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).json(new Errors.InvalidPassword());
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) changed their username to ${req.body.username}.`,
+      );
 
-        // Check if the username is already taken.
-        if (await User.findOne({ where: { username: req.body.username } }))
-          return res.status(409).json(new Errors.UserExists());
+      // Update the username.
+      await req.user.update({ username: req.body.username });
 
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their username to ${req.body.username}.`,
-        );
-
-        // Update the username.
-        await req.user.update({ username: req.body.username });
-
-        // Send the user object.
-        return res
-          .status(200)
-          .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
-      } catch (error) {
-        logger.error(error);
-        return res.status(500).json(new Errors.Internal());
-      }
+      // Send the user object.
+      return res
+        .status(200)
+        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
     }
+  },
+);
 
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
+app.put(
+  // PUT /api/users/:id/username
+  '/api/users/:id([0-9]{13})/username',
+  ReverifyIdentity(true),
+  AutoTrim(),
+  BodyValidator({
+    username: 'string',
+  }),
+  async (
+    req: Request<{ id: string }, null, { username: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -343,75 +345,74 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/email
-  '/api/users/:id([0-9]{13}|me)/email',
-  SessionChecker(),
-  AutoTrim(['password']),
+  // PUT /api/users/me/email
+  '/api/users/me/email',
+  ReverifyIdentity(),
+  AutoTrim(),
   BodyValidator({
     email: 'string',
-    password: new ExtendedValidBodyTypes('string', true),
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   async (
-    req: Request<{ id: string }, null, { email: string; password?: string }>,
+    req: Request<null, null, { email: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if the user wants to modify their own email.
-    if (req.params.id === 'me') {
-      try {
-        // This portion of the endpoint requires a password, if the password is not present, return an error 400
-        if (!req.body.password)
-          return res.status(400).json(new Errors.MissingFields(['password']));
+    try {
+      // Check if the email is a valid email
+      if (!EMAIL_REGEX.test(req.body.email))
+        return res.status(400).json(new Errors.InvalidEmail());
 
-        // Check if the email is a valid email
-        if (!EMAIL_REGEX.test(req.body.email))
-          return res.status(400).json(new Errors.InvalidEmail());
+      // Check if the email is already taken.
+      if (await User.findOne({ where: { email: req.body.email } }))
+        return res.status(409).json(new Errors.UserExists());
 
-        // Check if the password is correct.
-        if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).json(new Errors.InvalidPassword());
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
+      );
 
-        // Check if the email is already taken.
-        if (await User.findOne({ where: { email: req.body.email } }))
-          return res.status(409).json(new Errors.UserExists());
+      const { success, error, tokenData } = await sendUpdateVerificationEmail(
+        req.body.email,
+        req.user.username,
+      );
 
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
-        );
-
-        const { success, error, tokenData } = await sendUpdateVerificationEmail(
-          req.body.email,
-          req.user.username,
-        );
-
-        // If the email failed to send, return an error 500.
-        if (!success) {
-          logger.error(error);
-          return res.status(500).json(new Errors.Internal());
-        }
-
-        // Update the email.
-        await req.user.update({
-          email: req.body.email,
-          verifiedAt: null,
-          verificationRequestedAt: tokenData.payload.iat,
-        });
-
-        // Send the user object.
-        return res
-          .status(200)
-          .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
-      } catch (error) {
+      // If the email failed to send, return an error 500.
+      if (!success) {
         logger.error(error);
         return res.status(500).json(new Errors.Internal());
       }
+
+      // Update the email.
+      await req.user.update({
+        email: req.body.email,
+        verifiedAt: null,
+        verificationRequestedAt: tokenData.payload.iat,
+      });
+
+      // Send the user object.
+      return res
+        .status(200)
+        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
     }
+  },
+);
 
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
+app.put(
+  // PUT /api/users/:id/email
+  '/api/users/:id([0-9]{13})/email',
+  ReverifyIdentity(true),
+  AutoTrim(),
+  BodyValidator({
+    email: 'string',
+    password: new ExtendedValidBodyTypes('string', true),
+  }),
+  async (
+    req: Request<{ id: string }, null, { email: string; password?: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -449,92 +450,87 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/verify
-  '/api/users/:id([0-9]{13}|me)/verify',
-  SessionChecker(),
+  // PUT /api/users/verify
+  '/api/users/verify',
   BodyValidator({
-    token: new ExtendedValidBodyTypes('string', true),
+    token: 'string',
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
-    req: Request<{ id: string }, null, { token?: string }>,
-    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+    req: Request<null, null, { token: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
   ) => {
-    // Check if the user wants to verify their own email.
-    if (req.params.id === 'me') {
-      // FIXME: Rework verification system to not require being logged in, and verify email regardless of if the user is logged in, and which account they are logged in to.
-      // Check if the user's email is already verified.
-      if (req.user.verifiedAt)
-        return res.status(400).json(new Errors.EmailAlreadyVerified());
-
-      // Check if the user has a verification token.
-      if (!req.user.verificationRequestedAt)
-        return res.status(400).json(new Errors.InvalidVerificationToken());
-
-      // Validate the token.
+    try {
       const result = await validateToken(req.body.token);
 
       if (result instanceof Error) {
         logger.error(result);
         return res.status(400).json(new Errors.InvalidVerificationToken());
-      } else if (
-        result.payload.sub !== req.user.email ||
-        result.payload.iat !== req.user.verificationRequestedAt.getTime()
-      ) {
-        logger.error(
-          `Token was valid, but did not match ${req.user.username}'s (${req.user.id}) verification email and/or timestamp.`,
-        );
-        return res.status(400).json(new Errors.InvalidVerificationToken());
+      } else {
+        // Find the user that we're verifying
+        const user = await User.findOne({
+          where: {
+            email: result.payload.sub,
+            verificationRequestedAt: new Date(result.payload.iat),
+          },
+        });
+        // If there's no user, return an InvalidVerificationToken error
+        if (!user)
+          return res.status(400).json(new Errors.InvalidVerificationToken());
+
+        // Update the user's email verification status.
+        await user.update({
+          verificationRequestedAt: null,
+          verifiedAt: new Date(),
+        });
+
+        return res.status(200).json(new Success.VerifyEmail());
       }
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.put(
+  // PUT /api/users/:id/verify
+  '/api/users/:id([0-9]{13})/verify',
+  ReverifyIdentity(true),
+  async (
+    req: Request<{ id: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
+    try {
+      // Get the user.
+      const user = await User.findByPk(req.params.id);
+
+      // If the user does not exist, return a InvalidUser error.
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      // Check if the user's email is already verified.
+      if (user.verifiedAt)
+        return res.status(400).json(new Errors.EmailAlreadyVerified());
+
+      // Verify the user's email.
+      await user.update({
+        verifiedAt: new Date(),
+        verificationRequestedAt: null,
+      });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) verified their email.`,
+        `User ${req.user.username} (${req.user.id}) verified user ${user.username} (${user.id})'s email.`,
       );
-
-      // Update the user's email verification status.
-      await req.user.update({
-        verificationRequestedAt: null,
-        verifiedAt: new Date(),
-      });
 
       // Send the user object.
       return res
         .status(200)
-        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
-    } else {
-      // If the user is not staff, return a InsufficientPermissions error.
-      if (!req.user.staff)
-        return res.status(403).json(new Errors.InsufficientPermissions());
-
-      try {
-        // Get the user.
-        const user = await User.findByPk(req.params.id);
-
-        // If the user does not exist, return a InvalidUser error.
-        if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-        // Check if the user's email is already verified.
-        if (user.verifiedAt)
-          return res.status(400).json(new Errors.EmailAlreadyVerified());
-
-        // Verify the user's email.
-        await user.update({
-          verifiedAt: new Date(),
-          verificationRequestedAt: null,
-        });
-
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) verified user ${user.username} (${user.id})'s email.`,
-        );
-
-        // Send the user object.
-        return res
-          .status(200)
-          .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
-      } catch (error) {
-        logger.error(error);
-        return res.status(500).json(new Errors.Internal());
-      }
+        .json(KVExtractor(user.toJSON(), OMITTED_USER_FIELDS, true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -542,7 +538,7 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/verify
   '/api/users/:id([0-9]{13})/verify',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -577,8 +573,62 @@ app.delete(
 );
 
 app.get(
+  // GET /api/users/me/verify
+  '/api/users/me/verify',
+  SessionChecker(),
+  ExpressRateLimit({
+    ...defaultRateLimitConfig,
+    windowMs: ms('5m'),
+    max: 1,
+  }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    try {
+      // Check if the user's email is already verified.
+      if (req.user.verifiedAt)
+        return res.status(400).json(new Errors.EmailAlreadyVerified());
+
+      // Send the verification email.
+      const {
+        success,
+        error,
+        token: verifyToken,
+      } = await sendResendVerificationEmail(req.user.email, req.user.username);
+
+      // If the email failed to send, return an error 500.
+      if (!success) {
+        logger.error(error);
+        return res.status(500).json(new Errors.Internal());
+      }
+
+      // Update the user's email verification status.
+      await req.user.update({
+        emailVerificationToken: verifyToken,
+        verificationRequestedAt: new Date(),
+      });
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested a new verification email.`,
+      );
+
+      // Send a success response.
+      return res.status(201).json(new Success.SendVerificationEmail());
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.get(
   // GET /api/users/:id/verify
-  '/api/users/:id([0-9]{13}|me)/verify',
+  '/api/users/:id([0-9]{13})/verify',
   SessionChecker(),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
@@ -592,17 +642,23 @@ app.get(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the user wants to request a new verification email for their own account.
-    if (req.params.id === 'me') {
+    try {
+      // Get the user.
+      const user = await User.findByPk(req.params.id);
+
+      // If the user does not exist, return a InvalidUser error.
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
+
       // Check if the user's email is already verified.
-      if (req.user.verifiedAt)
+      if (user.verifiedAt)
         return res.status(400).json(new Errors.EmailAlreadyVerified());
 
       // Send the verification email.
-      const { success, error, tokenData } = await sendResendVerificationEmail(
-        req.user.email,
-        req.user.username,
-      );
+      const {
+        success,
+        error,
+        token: verifyToken,
+      } = await sendResendVerificationEmail(user.email, user.username);
 
       // If the email failed to send, return an error 500.
       if (!success) {
@@ -611,130 +667,83 @@ app.get(
       }
 
       // Update the user's email verification status.
-      await req.user.update({
-        verificationRequestedAt: tokenData.payload.iat,
+      await user.update({
+        emailVerificationToken: verifyToken,
+        verificationRequestedAt: new Date(),
       });
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested a new verification email.`,
+        `User ${req.user.username} (${req.user.id}) requested a new verification email for user ${user.username} (${user.id}).`,
       );
 
       // Send a success response.
       return res.status(201).json(new Success.SendVerificationEmail());
-    } else {
-      // If the user is not staff, return a InsufficientPermissions error.
-      if (!req.user.staff)
-        return res.status(403).json(new Errors.InsufficientPermissions());
-
-      try {
-        // Get the user.
-        const user = await User.findByPk(req.params.id);
-
-        // If the user does not exist, return a InvalidUser error.
-        if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-        // Check if the user's email is already verified.
-        if (user.verifiedAt)
-          return res.status(400).json(new Errors.EmailAlreadyVerified());
-
-        // Send the verification email.
-        const {
-          success,
-          error,
-          token: verifyToken,
-        } = await sendResendVerificationEmail(user.email, user.username);
-
-        // If the email failed to send, return an error 500.
-        if (!success) {
-          logger.error(error);
-          return res.status(500).json(new Errors.Internal());
-        }
-
-        // Update the user's email verification status.
-        await user.update({
-          emailVerificationToken: verifyToken,
-          verificationRequestedAt: new Date(),
-        });
-
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested a new verification email for user ${user.username} (${user.id}).`,
-        );
-
-        // Send a success response.
-        return res.status(201).json(new Success.SendVerificationEmail());
-      } catch (error) {
-        logger.error(error);
-        return res.status(500).json(new Errors.Internal());
-      }
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
 
 app.put(
-  // PUT /api/users/:id/password
-  '/api/users/:id([0-9]{13}|me)/password',
-  SessionChecker(),
+  // PUT /api/users/me/password
+  '/api/users/me/password',
+  ReverifyIdentity(),
+  AutoTrim(),
   BodyValidator({
-    password: new ExtendedValidBodyTypes('string', true),
     newPassword: 'string',
     confirmNewPassword: 'string',
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<
-      { id: string },
       null,
-      { password?: string; newPassword: string; confirmNewPassword: string }
+      null,
+      { newPassword: string; confirmNewPassword: string }
     >,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if the user wants to modify their own password.
-    if (req.params.id === 'me') {
-      try {
-        // This portion of the endpoint requires a password, if the password is not present, return an error 400
-        if (!req.body.password)
-          return res.status(400).json(new Errors.MissingFields(['password']));
+    try {
+      // Check if the new password matches the confirmation.
+      if (req.body.newPassword !== req.body.confirmNewPassword)
+        return res.status(400).json(new Errors.PasswordsDoNotMatch());
 
-        // Check if the password is correct.
-        if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(401).json(new Errors.InvalidPassword());
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) changed their password.`,
+      );
 
-        // Check if the new password matches the confirmation.
-        if (req.body.newPassword !== req.body.confirmNewPassword)
-          return res.status(400).json(new Errors.PasswordsDoNotMatch());
+      // Update the password.
+      await req.user.update({
+        password: await Bcrypt.hash(req.body.newPassword, PASSWORD_HASH_ROUNDS),
+      });
 
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) changed their password.`,
-        );
-
-        // Update the password.
-        await req.user.update({
-          password: await Bcrypt.hash(
-            req.body.newPassword,
-            PASSWORD_HASH_ROUNDS,
-          ),
-        });
-
-        // Send the user object.
-        return res
-          .status(200)
-          .json(
-            KVExtractor(
-              req.user.toJSON(),
-              ['password', 'sessions', 'verificationRequestedAt'],
-              true,
-            ),
-          );
-      } catch (error) {
-        logger.error(error);
-        return res.status(500).json(new Errors.Internal());
-      }
+      // Send the user object.
+      return res
+        .status(200)
+        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
     }
+  },
+);
 
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
+app.put(
+  // PUT /api/users/:id/password
+  '/api/users/:id([0-9]{13})/password',
+  ReverifyIdentity(true),
+  BodyValidator({
+    newPassword: 'string',
+    confirmNewPassword: 'string',
+  }),
+  async (
+    req: Request<
+      { id: string },
+      null,
+      { newPassword: string; confirmNewPassword: string }
+    >,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -769,7 +778,7 @@ app.put(
 app.put(
   // PUT /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -802,7 +811,7 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -835,7 +844,7 @@ app.delete(
 app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   BodyValidator({
     reason: 'string',
   }),
@@ -884,7 +893,7 @@ app.put(
 app.delete(
   // DELETE /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -915,9 +924,59 @@ app.delete(
 );
 
 app.put(
-  // PUT /api/users/:id/domain
-  '/api/users/:id([0-9]{13}|me)/domain',
+  // PUT /api/users/me/domain
+  '/api/users/me/domain',
   SessionChecker(),
+  AutoTrim(),
+  BodyValidator({
+    domain: 'string',
+    subdomain: new ExtendedValidBodyTypes('string', true),
+  }),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  async (
+    req: Request<null, null, { domain: string; subdomain?: string }>,
+    res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
+  ) => {
+    try {
+      // Check if the domain is valid.
+      let domain = await Domain.findByPk(req.body.domain);
+      if (!domain) return res.status(404).json(new Errors.InvalidDomain());
+
+      // Check if the domain permits subdomains.
+      if (!domain.subdomains && req.body.subdomain)
+        return res.status(400).json(new Errors.SubdomainNotAllowed());
+
+      // Format the subdomain to comply with URL standards.
+      let subdomain = req.body.subdomain
+        ? SubdomainFormatter(req.body.subdomain)
+        : null;
+
+      // Check if the subdomain exceeds the maximum length.
+      if (subdomain && subdomain.length > 63)
+        return res.status(400).json(new Errors.SubdomainTooLong());
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) changed their domain to ${domain.id} and subdomain to ${subdomain}.`,
+      );
+
+      // Update the user's domain and subdomain.
+      await req.user.update({ domain: domain.id, subdomain });
+
+      // Send the user object.
+      return res
+        .status(200)
+        .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.put(
+  // PUT /api/users/:id/domain
+  '/api/users/:id([0-9]{13})/domain',
+  SessionChecker(true),
   AutoTrim(),
   BodyValidator({
     domain: 'string',
@@ -928,43 +987,6 @@ app.put(
     req: Request<{ id: string }, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
-    // Check if the user is trying to change their own domain.
-    if (req.params.id === 'me') {
-      try {
-        // Check if the domain is valid.
-        let domain = await Domain.findByPk(req.body.domain);
-        if (!domain) return res.status(404).json(new Errors.InvalidDomain());
-
-        // Check if the domain permits subdomains.
-        if (!domain.subdomains && req.body.subdomain)
-          return res.status(400).json(new Errors.SubdomainNotAllowed());
-
-        // Format the subdomain to comply with URL standards.
-        let subdomain = req.body.subdomain
-          ? SubdomainFormatter(req.body.subdomain)
-          : null;
-
-        // Check if the subdomain exceeds the maximum length.
-        if (subdomain && subdomain.length > 63)
-          return res.status(400).json(new Errors.SubdomainTooLong());
-
-        // Update the user's domain and subdomain.
-        await req.user.update({ domain: domain.id, subdomain });
-
-        // Send the user object.
-        return res
-          .status(200)
-          .json(KVExtractor(req.user.toJSON(), OMITTED_USER_FIELDS, true));
-      } catch (error) {
-        logger.error(error);
-        return res.status(500).json(new Errors.Internal());
-      }
-    }
-
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -1004,86 +1026,59 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/:id
-  '/api/users/:id([0-9]{13}|me)',
-  SessionChecker(),
-  AutoTrim(['password']),
-  BodyValidator({
-    username: new ExtendedValidBodyTypes('string', true),
-    password: new ExtendedValidBodyTypes('string', true),
-  }),
+  // DELETE /api/users/me
+  '/api/users/me',
+  ReverifyIdentity(),
   KillSwitch(KillSwitches.ACCOUNT_DELETE),
   async (
-    req: Request<
-      { id: string },
-      null,
-      { username?: string; password?: string }
-    >,
+    req: Request,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the user is trying to delete their own account.
-    if (req.params.id === 'me') {
-      try {
-        // This portion of the endpoint requires both the username and password, if not present, return an error 400
-        if (!req.body.username || !req.body.password)
-          return res
-            .status(400)
-            .json(
-              new Errors.MissingFields(
-                [
-                  !req.body.username ? 'username' : undefined,
-                  !req.body.password ? 'password' : undefined,
-                ].filter((v) => v !== undefined),
-              ),
+    try {
+      // Delete the user's files.
+      const files = await File.findAll({ where: { userID: req.user.id } });
+
+      await Promise.all(
+        files.map(async (file) => {
+          // First, delete the thumbnail if it exists.
+          if (
+            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
+          )
+            await unlink(
+              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
             );
 
-        // Check if the username in the body matches the user's username.
-        if (req.body.username !== req.user.username)
-          return res.status(400).json(new Errors.InvalidUsername());
+          // Delete the file from the disk.
+          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
 
-        // Check if the password in the body matches the user's password.
-        if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-          return res.status(400).json(new Errors.InvalidPassword());
+          // Delete the file from the database.
+          await file.destroy();
+        }),
+      );
 
-        // Delete the user's files.
-        const files = await File.findAll({ where: { userID: req.user.id } });
+      // Delete the user.
+      await req.user.destroy();
 
-        await Promise.all(
-          files.map(async (file) => {
-            // First, delete the thumbnail if it exists.
-            if (
-              existsSync(
-                join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-              )
-            )
-              await unlink(
-                join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-              );
-
-            // Delete the file from the disk.
-            await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
-
-            // Delete the file from the database.
-            await file.destroy();
-          }),
-        );
-
-        // Delete the user.
-        await req.user.destroy();
-
-        return res.status(200).json(new Success.DeleteUser());
-      } catch (error) {
-        logger.error(error);
-        return res.status(500).json(new Errors.Internal());
-      }
+      return res.status(200).json(new Success.DeleteUser());
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
     }
+  },
+);
 
-    // If the user is not staff, return a InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
+app.delete(
+  // DELETE /api/users/:id
+  '/api/users/:id([0-9]{13})',
+  ReverifyIdentity(true),
+  async (
+    req: Request<{ id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -1126,7 +1121,7 @@ app.delete(
 app.delete(
   // DELETE /api/users
   '/api/users',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   AutoTrim(),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),

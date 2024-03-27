@@ -142,7 +142,7 @@ export async function generateWebAuthnRegistrationObject(user: User) {
     timeout: ms(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY),
     attestationType: 'none',
     excludeCredentials: existingWebAuthnCredentials.map((cred) => ({
-      id: Buffer.from(cred.keyId, 'base64'),
+      id: Buffer.from(cred.keyId, 'base64url'),
       type: 'public-key',
       transports: cred.transports,
     })),
@@ -217,14 +217,20 @@ export async function verifyWebAuthnRegistration(
   if (result instanceof Error) {
     if (result instanceof JoseErrors.JWTExpired) {
       logger.debug(
-        `User ${user.username} (${user.id}) attempted to use an expired 2FA intermediate token.`,
+        `User ${user.username} (${user.id}) attempted to use an expired 2FA WebAuthn registration token.`,
       );
       res.status(401).json(new Errors.Invalid2FAResponse());
       return null;
     }
+  } else if (!result.payload.challenge) {
+    logger.warn(
+      `User ${user.username} (${user.id}) attempted to use a non-2FA WebAuthn registration token (no challenge).`,
+    );
+    res.status(401).json(new Errors.Invalid2FAResponse());
+    return null;
   } else if (result.payload.sub !== user.id) {
     logger.warn(
-      `User ${user.username} (${user.id}) attempted to use a 2FA intermediate token that does not belong to them.`,
+      `User ${user.username} (${user.id}) attempted to use a 2FA WebAuthn registration token that does not belong to them.`,
     );
     res.status(401).json(new Errors.Invalid2FAResponse());
     return null;
@@ -294,7 +300,7 @@ export async function verifyWebAuthnAuthentication(
       const verification = await verifyAuthenticationResponse({
         authenticator: {
           counter: credential.counter,
-          credentialID: Buffer.from(credential.keyId, 'base64'),
+          credentialID: Buffer.from(credential.keyId, 'base64url'),
           credentialPublicKey: credential.publicKey,
           transports: credential.transports,
         },
@@ -347,138 +353,137 @@ export async function verifySecondFactor(
     );
     res.status(401).json(new Errors.Invalid2FAResponse());
     return false;
-  }
-  switch (challenge.type) {
-    case 'backup':
-      // Check if required fields are present
-      if (!challenge.code) {
-        logger.debug(
-          `User ${user.username} (${user.id}) attempted to use a backup code without providing a code.`,
-        );
-        res.status(400).json(new Errors.MissingFields(['code']));
-        return false;
-      }
-      // Check if the user has backup codes
-      if (!user.twoFactorBackupCodes) {
-        logger.error(
-          `User ${user.username} (${user.id}) was challenged for a second factor and attempted to use a backup code, but they do not have any backup codes! This should not happen!`,
-        );
-        res.status(500).json(new Errors.Internal());
-        return false;
-      }
-      // Check if the backup code is valid
-      if (
-        !user.twoFactorBackupCodes.some((hash) =>
-          verifyBackupCode(challenge.code, hash),
-        )
-      ) {
-        logger.debug(
-          `User ${user.username} (${user.id}) attempted to use an invalid backup code.`,
-        );
-        res.status(401).json(new Errors.Invalid2FAResponse());
-        return false;
-      } else {
-        // Find the backup code that was used and remove it
-        await user.update({
-          twoFactorBackupCodes: user.twoFactorBackupCodes.filter(
-            (hash) => !verifyBackupCode(challenge.code, hash),
-          ),
+  } else
+    switch (challenge.type) {
+      case 'backup':
+        // Check if required fields are present
+        if (!challenge.code) {
+          logger.debug(
+            `User ${user.username} (${user.id}) attempted to use a backup code without providing a code.`,
+          );
+          res.status(400).json(new Errors.MissingFields(['code']));
+          return false;
+        }
+        // Check if the user has backup codes
+        if (!user.twoFactorBackupCodes) {
+          logger.error(
+            `User ${user.username} (${user.id}) was challenged for a second factor and attempted to use a backup code, but they do not have any backup codes! This should not happen!`,
+          );
+          res.status(500).json(new Errors.Internal());
+          return false;
+        }
+        // Check if the backup code is valid
+        if (
+          !user.twoFactorBackupCodes.some((hash) =>
+            verifyBackupCode(challenge.code, hash),
+          )
+        ) {
+          logger.debug(
+            `User ${user.username} (${user.id}) attempted to use an invalid backup code.`,
+          );
+          res.status(401).json(new Errors.Invalid2FAResponse());
+          return false;
+        } else {
+          // Find the backup code that was used and remove it
+          await user.update({
+            twoFactorBackupCodes: user.twoFactorBackupCodes.filter(
+              (hash) => !verifyBackupCode(challenge.code, hash),
+            ),
+          });
+          return true;
+        }
+      case 'totp':
+        // Check if required fields are present
+        if (!challenge.code) {
+          logger.debug(
+            `User ${user.username} (${user.id}) attempted to use a TOTP code without providing a code.`,
+          );
+          res.status(400).json(new Errors.MissingFields(['code']));
+          return false;
+        }
+        // Go through each TOTP second factor and check if the code is valid
+        const secondFactors = await SecondFactor.findAll({
+          where: {
+            user: user.id,
+            type: 'totp',
+          },
         });
-        return true;
-      }
-    case 'totp':
-      // Check if required fields are present
-      if (!challenge.code) {
-        logger.debug(
-          `User ${user.username} (${user.id}) attempted to use a TOTP code without providing a code.`,
-        );
-        res.status(400).json(new Errors.MissingFields(['code']));
-        return false;
-      }
-      // Go through each TOTP second factor and check if the code is valid
-      const secondFactors = await SecondFactor.findAll({
-        where: {
-          user: user.id,
-          type: 'totp',
-        },
-      });
-      // If the user has no TOTP second factors, we will send an error response.
-      if (secondFactors.length === 0) {
+        // If the user has no TOTP second factors, we will send an error response.
+        if (secondFactors.length === 0) {
+          logger.error(
+            `User ${user.username} (${user.id}) was challenged for a second factor and attempted to use a TOTP code, but they do not have any TOTP second factors.`,
+          );
+          res.status(400).json(new Errors.Invalid2FAMethod());
+          return false;
+        }
+        if (
+          (
+            await Promise.all(
+              secondFactors.map(
+                async (factor) =>
+                  await verifyTOTP(challenge.code, factor.secret),
+              ),
+            )
+          ).some((result) => result)
+        ) {
+          logger.debug(
+            `User ${user.username} (${user.id}) successfully used a TOTP code.`,
+          );
+          return true;
+        } else {
+          logger.debug(
+            `User ${user.username} (${user.id}) attempted to use an invalid TOTP code.`,
+          );
+          res.status(401).json(new Errors.Invalid2FAResponse());
+          return false;
+        }
+      case 'webauthn':
+        // Check if required fields are present
+        if (!challenge.response) {
+          logger.debug(
+            `User ${user.username} (${user.id}) attempted to use a WebAuthn response without providing a response.`,
+          );
+          res.status(400).json(new Errors.MissingFields(['response']));
+          return false;
+        }
+
+        // Check if the challenge is in the token
+        if (!result.payload.challenge) {
+          logger.error(
+            `User ${user.username} (${user.id}) attempted to use a WebAuthn response without a challenge in the token.`,
+          );
+          res.status(400).json(new Errors.Invalid2FAResponse());
+          return false;
+        }
+
+        // Verify the WebAuthn response
+        if (
+          await verifyWebAuthnAuthentication(
+            challenge.response,
+            challenge.token,
+            res,
+            user,
+          )
+        ) {
+          logger.debug(
+            `User ${user.username} (${user.id}) successfully used a WebAuthn credential.`,
+          );
+          return true;
+        } else {
+          logger.debug(
+            `User ${user.username} (${user.id}) attempted to use an invalid WebAuthn response.`,
+          );
+          return false;
+        }
+      default:
         logger.error(
-          `User ${user.username} (${user.id}) was challenged for a second factor and attempted to use a TOTP code, but they do not have any TOTP second factors.`,
+          `User ${user.username} (${
+            user.id
+          }) attempted to use an invalid second factor type. Challenge response body: ${JSON.stringify(
+            challenge,
+          )}`,
         );
         res.status(400).json(new Errors.Invalid2FAMethod());
         return false;
-      }
-      if (
-        (
-          await Promise.all(
-            secondFactors.map(
-              async (factor) => await verifyTOTP(challenge.code, factor.secret),
-            ),
-          )
-        ).some((result) => result)
-      ) {
-        logger.debug(
-          `User ${user.username} (${user.id}) successfully used a TOTP code.`,
-        );
-        return true;
-      } else {
-        logger.debug(
-          `User ${user.username} (${user.id}) attempted to use an invalid TOTP code.`,
-        );
-        res.status(401).json(new Errors.Invalid2FAResponse());
-        return false;
-      }
-    case 'webauthn':
-      // Check if required fields are present
-      if (!challenge.response) {
-        logger.debug(
-          `User ${user.username} (${user.id}) attempted to use a WebAuthn response without providing a response.`,
-        );
-        res.status(400).json(new Errors.MissingFields(['response']));
-        return false;
-      }
-
-      const { payload } = extractToken<{ challenge: string }>(challenge.token);
-
-      // Check if the challenge is in the token
-      if (!payload.challenge) {
-        logger.error(
-          `User ${user.username} (${user.id}) attempted to use a WebAuthn response without a challenge in the token.`,
-        );
-        res.status(400).json(new Errors.Invalid2FAResponse());
-        return false;
-      }
-
-      // Verify the WebAuthn response
-      if (
-        await verifyWebAuthnAuthentication(
-          challenge.response,
-          challenge.token,
-          res,
-          user,
-        )
-      ) {
-        logger.debug(
-          `User ${user.username} (${user.id}) successfully used a WebAuthn credential.`,
-        );
-        return true;
-      } else {
-        logger.debug(
-          `User ${user.username} (${user.id}) attempted to use an invalid WebAuthn response.`,
-        );
-        return false;
-      }
-    default:
-      logger.error(
-        `User ${user.username} (${
-          user.id
-        }) attempted to use an invalid second factor type. Challenge response body: ${JSON.stringify(
-          challenge,
-        )}`,
-      );
-      res.status(400).json(new Errors.Invalid2FAMethod());
-      return false;
-  }
+    }
 }

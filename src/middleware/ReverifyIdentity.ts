@@ -28,7 +28,9 @@ export default function ReverifyIdentity(
         );
         return res.status(403).json(new Errors.InsufficientPermissions());
       } else
-        logger.debug(`Route: ${req.path} | staff required: ${staffRequired}`);
+        logger.debug(
+          `Route: ${req.path} | staff required: ${staffRequired} | User: ${req.user.username} (${req.user.id})`,
+        );
     }
 
     // Check if the user provided a body. If they didn't, we will send an error response.
@@ -57,30 +59,42 @@ export default function ReverifyIdentity(
     // If they have second factors, we will also use them to reverify their identity.
     if (availableFactors.length !== 0) {
       // They are not responding to a challenge, so we will send them one.
-      if (!req.body['2fa'] || !req.body['2fa'].token) {
-        return res
-          .status(401)
-          .json(await generateSecondFactorChallenge(req.user));
-      } else {
-        try {
+      try {
+        if (!req.body['2fa'] || !req.body['2fa'].token) {
+          return res
+            .status(401)
+            .json(await generateSecondFactorChallenge(req.user));
+        } else {
           if (await verifySecondFactor(req.body['2fa'], req.user, res)) {
             logger.debug(
               `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their second factor.`,
             );
             return next();
           }
-        } catch (e) {
-          // verifySecondFactor will handle sending the error response. We're done here.
-          return;
         }
+      } catch (e) {
+        logger.error(e);
+        return res.status(500).json(new Errors.Internal());
       }
     }
     // The user does not have any second factors, but their password is correct. There is no point in issuing a challenge that they would not be able to complete.
     else {
+      // If the endpoint requires staff privileges, but they don't have any second factors, we will send an error response.
+      if (staffRequired) {
+        logger.warn(
+          `User ${req.user.username} (${req.user.id}) attempted to access a staff-only endpoint without any second factors. Route: ${req.path}`,
+        );
+        return res.status(401).json(new Errors.EndpointRequires2FA());
+      }
       logger.debug(
         `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their password.`,
       );
       return next();
     }
+    // We somehow reached this point, not sure its even possible, but we will include this snippet just in case.
+    logger.warn(
+      `We somehow exited the primary logic of ReverifyIdentity. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
+    );
+    return res.status(500).json(new Errors.Internal());
   };
 }
