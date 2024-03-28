@@ -1,5 +1,6 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
+
 import { Model, DataTypes } from 'sequelize';
 
 export default class User extends Model {
@@ -7,11 +8,6 @@ export default class User extends Model {
   username: string;
   email: string;
   password: string;
-  sessions: {
-    iat: number;
-    exp: number;
-    name: string;
-  }[];
   staff: boolean;
   domain: string;
   subdomain: string | null;
@@ -45,11 +41,6 @@ export default class User extends Model {
       },
       password: {
         type: DataTypes.STRING(60),
-        allowNull: false,
-      },
-      sessions: {
-        type: DataTypes.ARRAY(DataTypes.JSONB),
-        defaultValue: [],
         allowNull: false,
       },
       staff: {

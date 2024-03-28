@@ -27,6 +27,8 @@ import sendVerificationEmail from '../mail/EmailVerification.js';
 import { sendBannedNotice } from '../mail/BannedNotice.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
+import Session from '../DB/Session.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -36,7 +38,6 @@ import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import ms from 'ms';
-import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 
 logger.debug('Loading: Account Routes...');
 
@@ -135,7 +136,7 @@ app.post(
         return res.status(500).json(new Errors.Internal());
       }
 
-      // Create the user and send the user object.
+      // Create the user.
       const user = await User.create({
         id: now,
         username: req.body.username,
@@ -143,16 +144,18 @@ app.post(
         email: req.body.email,
         domain: process.env.DEFAULT_DOMAIN,
         subdomain: null,
-        sessions: [
-          {
-            iat: token.data.payload.iat,
-            exp: token.data.payload.exp,
-            name: tokenName,
-          },
-        ],
         verificationRequestedAt: tokenData.payload.iat,
       });
+
+      // Create a corresponding session.
+      await Session.create({
+        name: tokenName,
+        token: token.token,
+        expiresAt: new Date(token.data.payload.exp * 1000),
+      });
+
       logger.debug(`User ${user.username} (${user.id}) account created.`);
+      // Send the user object
       return res
         .status(201)
         .json({ token: token.token, exp: token.data.payload.exp });

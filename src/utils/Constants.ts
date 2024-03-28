@@ -20,6 +20,7 @@ export const OMITTED_USER_FIELDS = [
   'password',
   'sessions',
   'verificationRequestedAt',
+  'twoFactorBackupCodes',
 ];
 
 // ========= FILE RELATED CONSTANTS =========
@@ -43,8 +44,6 @@ export const TROUBLESOME_FILE_EXTENSIONS = [
 ];
 
 // ========= TOKEN RELATED CONSTANTS =========
-export const SHORT_LIVED_TOKEN_EXPIRY = '24h';
-export const LONG_LIVED_TOKEN_EXPIRY = '10y';
 export const TOKEN_ALGORITHM = 'ES256';
 export const TOKEN_TYPE = 'JWT';
 
@@ -58,3 +57,7 @@ export const SECOND_FACTOR_TOTP_STEP = 30;
 export const SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY = '5m';
 export const SECOND_FACTOR_BACKUP_CODE_LENGTH = 10;
 export const SECOND_FACTOR_BACKUP_CODE_ALGORITHM = 'SHA512';
+
+// ========= SESSION RELATED CONSTANTS =========
+export const SHORT_LIVED_SESSION_EXPIRY = '24h';
+export const LONG_LIVED_SESSION_EXPIRY = '10y';

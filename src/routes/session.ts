@@ -21,10 +21,11 @@ import {
   verifySecondFactor,
 } from '../utils/SecondFactor.js';
 import SecondFactor from '../DB/SecondFactor.js';
+import Session from '../DB/Session.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
-import { fn, col, where } from 'sequelize';
+import { fn, col, where, Op } from 'sequelize';
 import ExpressRateLimit from 'express-rate-limit';
 import isType from '../utils/TypeAsserter.js';
 
@@ -75,7 +76,7 @@ app.post(
     ) {
       try {
         // Find a user with the given username.
-        let user = await User.findOne({
+        const user = await User.findOne({
           where: where(
             fn('lower', col('username')),
             req.body.username.toLowerCase(),
@@ -103,24 +104,19 @@ app.post(
         }
 
         // Generate a session name for the new session.
-        let sessionName =
+        const sessionName =
           (req.headers['x-session-name'] as string) || nameSession(req);
 
         // Generate a new token for the user.
-        let token = await generateSessionToken(user.id, req.body.rememberMe);
+        const token = await generateSessionToken(user.id, req.body.rememberMe);
 
-        // Add the new session to the user's sessions.
-        let sessions = [
-          ...user.sessions,
-          {
-            name: sessionName,
-            iat: token.data.payload.iat,
-            exp: token.data.payload.exp,
-          },
-        ];
-
-        // Update the user's sessions.
-        await user.update({ sessions });
+        // Create a new session for the user.
+        await Session.create({
+          id: token.data.payload.iat.toString(),
+          user: user.id,
+          exp: new Date(token.data.payload.exp * 1000),
+          name: sessionName,
+        });
 
         logger.debug(`User ${user.username} (${user.id}) logged in.`);
 
@@ -139,24 +135,22 @@ app.post(
           user = await User.findByPk(uid);
         if (await verifySecondFactor(req.body, user, res)) {
           // Generate a session name for the new session.
-          let sessionName =
+          const sessionName =
             (req.headers['x-session-name'] as string) || nameSession(req);
 
           // Generate a new token for the user.
-          let token = await generateSessionToken(user.id, req.body.rememberMe);
+          const token = await generateSessionToken(
+            user.id,
+            req.body.rememberMe,
+          );
 
-          // Add the new session to the user's sessions.
-          let sessions = [
-            ...user.sessions,
-            {
-              name: sessionName,
-              iat: token.data.payload.iat,
-              exp: token.data.payload.exp,
-            },
-          ];
-
-          // Update the user's sessions.
-          await user.update({ sessions });
+          // Create a new session for the user.
+          await Session.create({
+            id: token.data.payload.iat.toString(),
+            user: user.id,
+            exp: new Date(token.data.payload.exp * 1000),
+            name: sessionName,
+          });
 
           logger.debug(
             `User ${user.username} (${user.id}) logged in after solving 2FA challenge.`,
@@ -179,83 +173,101 @@ app.post(
 );
 
 app.get(
-  // GET /api/users/:uid/sessions/:sid
-  '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
+  // GET /api/users/me/sessions/me
+  '/api/users/me/sessions/me',
   SessionChecker(),
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) requested their current session.`,
+    );
+
+    return res.status(200).json({
+      id: req.session.id,
+      exp: req.session.exp.getTime() / 1000,
+      name: req.session.name,
+      permissionFlags: req.session.permissionFlags,
+    });
+  },
+);
+
+app.get(
+  // GET /api/users/me/sessions/:sid
+  '/api/users/me/sessions/:sid([0-9]{10}|me)',
+  SessionChecker(),
+  async (
+    req: Request<{ sid: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the session with the given ID.
+    const session = await Session.findOne({
+      where: {
+        user: req.user.id,
+        id: req.params.sid,
+      },
+    });
+
+    // If no session was found, return an InvalidSession error.
+    if (!session) return res.status(404).json(new Errors.InvalidSession());
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) requested their session ${session.name} (${session.id}).`,
+    );
+
+    // Return the session.
+    return res.status(200).json({
+      id: session.id,
+      exp: session.exp.getTime() / 1000,
+      name: session.name,
+      permissionFlags: session.permissionFlags,
+    });
+  },
+);
+
+app.get(
+  // GET /api/users/:uid/sessions/:sid
+  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
+  SessionChecker(true),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === 'me') {
-      // Check if the user is requesting the current session.
-      if (req.params.sid === 'me') {
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested their current session.`,
-        );
-
-        // Get the current session.
-        let session = req.user.sessions.find(
-          (session) => session.iat === req.session.payload.iat,
-        );
-
-        return res.status(200).json({
-          id: session.iat,
-          exp: session.exp,
-          name: session.name,
-        });
-      }
-
-      // Find the session with the given ID.
-      let session = req.user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid),
-      );
-
-      // If no session was found, return an InvalidSession error.
-      if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested their session ${session.name} (${session.iat}).`,
-      );
-
-      // Return the session.
-      return res.status(200).json({
-        id: session.iat,
-        exp: session.exp,
-        name: session.name,
-      });
-    }
-
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Find the user with the given ID.
-      let user = await User.findByPk(req.params.uid);
+      const user = await User.findByPk(req.params.uid);
 
       // If no user was found, return an InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Find the session with the given ID.
-      let session = user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid),
-      );
+      const session = await Session.findOne({
+        where: {
+          user: user.id,
+          id: req.params.sid,
+        },
+      });
 
       // If no session was found, return an InvalidSession error.
       if (!session) return res.status(404).json(new Errors.InvalidSession());
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`,
+        `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s session ${session.name} (${session.id}).`,
       );
 
       // Return the session.
       return res.status(200).json({
-        id: session.iat,
-        exp: session.exp,
+        id: session.id,
+        exp: session.exp.getTime() / 1000,
         name: session.name,
+        permissionFlags: session.permissionFlags,
       });
     } catch (error) {
       logger.error(error);
@@ -265,46 +277,68 @@ app.get(
 );
 
 app.get(
+  // GET /api/users/me/sessions
+  '/api/users/me/sessions',
+  SessionChecker(),
+  LimitOffset(0, 50),
+  async (
+    req: Request,
+    res: Response<
+      | Cumulonimbus.Structures.List<{ id: string; name: string }>
+      | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) requested their sessions.`,
+    );
+
+    const sessions = await Session.findAndCountAll({
+      where: {
+        user: req.user.id,
+      },
+      order: [['exp', 'DESC']],
+      limit: req.limit,
+      offset: req.offset,
+    });
+
+    // Return the user's sessions.
+    return res.status(200).json({
+      count: sessions.count,
+      items: sessions.rows.map((session) => ({
+        id: session.id,
+        name: session.name,
+      })),
+    });
+  },
+);
+
+app.get(
   // GET /api/users/:uid/sessions
-  '/api/users/:uid([0-9]{13}|me)/sessions',
+  '/api/users/:uid([0-9]{13})/sessions',
   SessionChecker(),
   LimitOffset(0, 50),
   async (
     req: Request<{ uid: string }, null, null>,
     res: Response<
-      | Cumulonimbus.Structures.List<{ id: number; name: string }>
+      | Cumulonimbus.Structures.List<{ id: string; name: string }>
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === 'me') {
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested their sessions.`,
-      );
-
-      // Return the user's sessions.
-      return res.status(200).json({
-        count: req.user.sessions.length,
-        items: req.user.sessions
-          .slice(req.offset, req.offset + req.limit)
-          .map((session) => ({
-            id: session.iat,
-            name: session.name,
-          }))
-          .reverse(),
-      });
-    }
-
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Find the user with the given ID.
-      let user = await User.findByPk(req.params.uid);
+      const user = await User.findByPk(req.params.uid);
 
       // If no user was found, return an InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      const sessions = await Session.findAndCountAll({
+        where: {
+          user: user.id,
+        },
+        order: [['exp', 'DESC']],
+        limit: req.limit,
+        offset: req.offset,
+      });
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested user ${user.username} (${user.id})'s sessions.`,
@@ -312,14 +346,79 @@ app.get(
 
       // Return the user's sessions.
       return res.status(200).json({
-        count: user.sessions.length,
-        items: user.sessions
-          .slice(req.offset, req.offset + req.limit)
-          .map((session) => ({
-            id: session.iat,
-            name: session.name,
-          })),
+        count: sessions.count,
+        items: sessions.rows.map((session) => ({
+          id: session.id,
+          name: session.name,
+        })),
       });
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.delete(
+  // DELETE /api/users/me/sessions/me
+  '/api/users/me/sessions/me',
+  SessionChecker(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    try {
+      // Delete the current session.
+      await req.session.destroy();
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove their current session.`,
+      );
+
+      // Return a success.
+      return res.status(200).json(new Success.DeleteSession());
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.delete(
+  // DELETE /api/users/me/sessions/:sid
+  '/api/users/me/sessions/:sid([0-9]{10})',
+  SessionChecker(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  async (
+    req: Request<{ sid: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the session with the given ID.
+    const session = await Session.findOne({
+      where: {
+        user: req.user.id,
+        id: req.params.sid,
+      },
+    });
+
+    // If no session was found, return an InvalidSession error.
+    if (!session) return res.status(404).json(new Errors.InvalidSession());
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) requested to remove their session ${session.name} (${session.id}).`,
+    );
+
+    try {
+      // Delete the session.
+      await session.destroy();
+
+      // Return a success.
+      return res.status(200).json(new Success.DeleteSession());
     } catch (error) {
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
@@ -329,8 +428,8 @@ app.get(
 
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
-  '/api/users/:uid([0-9]{13}|me)/sessions/:sid([0-9]{10}|me)',
-  SessionChecker(),
+  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
+  SessionChecker(true),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ uid: string; sid: string }>,
@@ -338,54 +437,6 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the user is requesting a session that belongs to them.
-    if (req.params.uid === 'me') {
-      // Check if the user is requesting the current session.
-      if (req.params.sid === 'me') {
-        // Remove the current session.
-        let sessions = req.user.sessions.filter(
-          (session) => session.iat !== req.session.payload.iat,
-        );
-
-        logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested to remove their current session.`,
-        );
-
-        // Update the user's sessions.
-        await req.user.update({ sessions });
-
-        // Return a success.
-        return res.status(200).json(new Success.DeleteSession());
-      }
-
-      // Find the session with the given ID.
-      let session = req.user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid),
-      );
-
-      // If no session was found, return an InvalidSession error.
-      if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-      // Remove the session.
-      let sessions = req.user.sessions.filter(
-        (session) => session.iat !== parseInt(req.params.sid),
-      );
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove their session ${session.name} (${session.iat}).`,
-      );
-
-      // Update the user's sessions.
-      await req.user.update({ sessions });
-
-      // Return a success.
-      return res.status(200).json(new Success.DeleteSession());
-    }
-
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -394,24 +445,21 @@ app.delete(
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
       // Find the session with the given ID.
-      let session = user.sessions.find(
-        (session) => session.iat === parseInt(req.params.sid),
-      );
+      const session = await Session.findOne({
+        where: {
+          user: user.id,
+          id: req.params.sid,
+        },
+      });
 
       // If no session was found, return an InvalidSession error.
       if (!session) return res.status(404).json(new Errors.InvalidSession());
 
-      // Remove the session.
-      let sessions = user.sessions.filter(
-        (session) => session.iat !== parseInt(req.params.sid),
-      );
+      await session.destroy();
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove user ${user.username} (${user.id})'s session ${session.name} (${session.iat}).`,
+        `User ${req.user.username} (${req.user.id}) requested to remove user ${user.username} (${user.id})'s session ${session.name} (${session.id}).`,
       );
-
-      // Update the user's sessions.
-      await user.update({ sessions });
 
       // Return a success.
       return res.status(200).json(new Success.DeleteSession());
@@ -423,10 +471,48 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/sessions
-  '/api/users/:uid([0-9]{13}|me)/sessions',
+  // DELETE /api/users/me/sessions
+  '/api/users/me/sessions',
   SessionChecker(),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
+  async (
+    req: Request<null, null, { ids: string[] }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Check if they are trying to remove more than 50 sessions.
+    if (req.body.ids.length > 50)
+      return res.status(400).json(new Errors.BodyTooLarge());
+
+    // Remove the sessions.
+    const { count, rows } = await Session.findAndCountAll({
+      where: {
+        user: req.user.id,
+        id: {
+          [Op.in]: req.body.ids,
+        },
+      },
+    });
+
+    await Promise.all(rows.map((session) => session.destroy()));
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) requested to remove ${count} of their sessions.`,
+    );
+
+    // Return a success.
+    return res.status(200).json(new Success.DeleteSessions(count));
+  },
+);
+
+app.delete(
+  // DELETE /api/users/:uid/sessions
+  '/api/users/:uid([0-9]{13})/sessions',
+  SessionChecker(true),
   async (
     req: Request<{ uid: string }, null, { ids: string[] }>,
     res: Response<
@@ -437,37 +523,6 @@ app.delete(
     if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());
 
-    // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === 'me') {
-      // Check if the user is requesting the current session.
-      if (req.body.ids.includes('me'))
-        // Replace `me` with the current session ID.
-        req.body.ids[req.body.ids.indexOf('me')] =
-          req.session.payload.iat.toString();
-
-      // Remove the sessions.
-      let sessions = req.user.sessions.filter(
-        (session) => !req.body.ids.includes(session.iat.toString()),
-      );
-
-      // Count the number of sessions removed.
-      let count = req.user.sessions.length - sessions.length;
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove ${count} of their sessions.`,
-      );
-
-      // Update the user's sessions.
-      await req.user.update({ sessions });
-
-      // Return a success.
-      return res.status(200).json(new Success.DeleteSessions(count));
-    }
-
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -475,20 +530,22 @@ app.delete(
       // If no user was found, return an InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
-      // Remove the sessions.
-      let sessions = user.sessions.filter(
-        (session) => !req.body.ids.includes(session.iat.toString()),
-      );
+      // Find all of the requested sessions.
+      const { rows, count } = await Session.findAndCountAll({
+        where: {
+          user: user.id,
+          id: {
+            [Op.in]: req.body.ids,
+          },
+        },
+      });
 
-      // Count the number of sessions removed.
-      let count = user.sessions.length - sessions.length;
+      // Delete the sessions.
+      await Promise.all(rows.map((session) => session.destroy()));
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested to remove ${count} of user ${user.username} (${user.id})'s sessions.`,
       );
-
-      // Update the user's sessions.
-      await user.update({ sessions });
 
       // Return a success.
       return res.status(200).json(new Success.DeleteSessions(count));
@@ -500,8 +557,47 @@ app.delete(
 );
 
 app.delete(
+  // Delete /api/users/me/sessions/all
+  '/api/users/me/sessions/all',
+  SessionChecker(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the sessions that belong to the user.
+    const { rows, count } = await Session.findAndCountAll({
+      where: {
+        user: req.user.id,
+        ...{
+          id: req.query['include-self']
+            ? { [Op.ne]: null }
+            : { [Op.ne]: req.session.id },
+        },
+      },
+    });
+
+    // Remove the sessions.
+    const sessions = rows.map((session) => session.id);
+
+    logger.debug(
+      `User ${req.user.username} (${
+        req.user.id
+      }) requested to remove all of their sessions. (they did${
+        req.query['include-self'] ? '' : ' not'
+      } include the current session)`,
+    );
+
+    // Return a success.
+    return res.status(200).json(new Success.DeleteSessions(count));
+  },
+);
+
+app.delete(
   // DELETE /api/users/:uid/sessions/all
-  '/api/users/:uid([0-9]{13}|me)/sessions/all',
+  '/api/users/:uid([0-9]{13})/sessions/all',
   SessionChecker(),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
@@ -510,37 +606,6 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Check if the user is requesting sessions that belong to them.
-    if (req.params.uid === 'me') {
-      // Remove the sessions.
-      let sessions = req.query['include-self']
-        ? []
-        : req.user.sessions.filter(
-            (session) => session.iat === req.session.payload.iat,
-          );
-
-      // Count the number of sessions removed.
-      let count = req.user.sessions.length - sessions.length;
-
-      logger.debug(
-        `User ${req.user.username} (${
-          req.user.id
-        }) requested to remove all of their sessions. (they did${
-          req.query['include-self'] ? '' : ' not'
-        } include the current session)`,
-      );
-
-      // Update the user's sessions.
-      await req.user.update({ sessions });
-
-      // Return a success.
-      return res.status(200).json(new Success.DeleteSessions(count));
-    }
-
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -548,15 +613,19 @@ app.delete(
       // If no user was found, return an InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
-      // Count the number of sessions removed.
-      let count = user.sessions.length;
+      // Find the user's sessions.
+      const { count, rows } = await Session.findAndCountAll({
+        where: {
+          user: user.id,
+        },
+      });
+
+      // Remove the sessions.
+      await Promise.all(rows.map((session) => session.destroy()));
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested to remove all of user ${user.username} (${user.id})'s sessions.`,
       );
-
-      // Update the user's sessions.
-      await user.update({ sessions: [] });
 
       // Return a success.
       return res.status(200).json(new Success.DeleteSessions(count));

@@ -1,5 +1,6 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
+
 import { Model, DataTypes } from 'sequelize';
 
 export default class Domain extends Model {

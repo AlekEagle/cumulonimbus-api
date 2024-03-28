@@ -5,8 +5,8 @@ import { readFile } from 'node:fs/promises';
 // Those Constants that are constant that we need
 import {
   TOKEN_ALGORITHM,
-  LONG_LIVED_TOKEN_EXPIRY,
-  SHORT_LIVED_TOKEN_EXPIRY,
+  LONG_LIVED_SESSION_EXPIRY,
+  SHORT_LIVED_SESSION_EXPIRY,
   TOKEN_TYPE,
   EMAIL_VERIFICATION_TOKEN_EXPIRY,
   SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
@@ -73,7 +73,7 @@ export async function generateSessionToken(
   let token = generateBaseToken()
     .setSubject(subject)
     .setExpirationTime(
-      longLived ? LONG_LIVED_TOKEN_EXPIRY : SHORT_LIVED_TOKEN_EXPIRY,
+      longLived ? LONG_LIVED_SESSION_EXPIRY : SHORT_LIVED_SESSION_EXPIRY,
     );
   return await completeToken(token);
 }

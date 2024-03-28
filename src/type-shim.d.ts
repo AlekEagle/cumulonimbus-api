@@ -1,6 +1,6 @@
 // Woah! type definitions for global modules!
 import User from './DB/User.ts';
-import { TokenStructure } from './utils/Token.ts';
+import Session from './DB/Session.ts';
 import type { SecondFactorType } from './DB/SecondFactor.ts';
 
 import { DetectResult } from 'node-device-detector';
@@ -36,7 +36,7 @@ declare global {
     interface Request {
       useragent: DetectResult;
       user?: User;
-      session?: TokenStructure;
+      session?: Session;
       limit?: number;
       offset?: number;
     }
@@ -61,9 +61,10 @@ declare global {
       }
 
       export interface Session {
-        id: number;
+        id: string;
         exp: number;
         name: string;
+        permissionFlags: number;
       }
 
       export interface List<T> {
