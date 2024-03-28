@@ -18,7 +18,7 @@ import {
   validateToken,
 } from '../utils/Token.js';
 import {
-  SECOND_FACTOR_ALGORITHM,
+  SECOND_FACTOR_TOTP_ALGORITHM,
   SECOND_FACTOR_TOTP_DIGITS,
   SECOND_FACTOR_TOTP_STEP,
 } from '../utils/Constants.js';
@@ -56,7 +56,7 @@ app.put(
       type: 'totp',
       secret,
       digits: SECOND_FACTOR_TOTP_DIGITS,
-      algorithm: SECOND_FACTOR_ALGORITHM,
+      algorithm: SECOND_FACTOR_TOTP_ALGORITHM,
       period: SECOND_FACTOR_TOTP_STEP,
     });
   },

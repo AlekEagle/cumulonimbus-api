@@ -7,7 +7,7 @@ import {
 
 await init();
 
-export async function sendResendVerificationEmail(
+export default async function sendVerificationEmail(
   to: string,
   username: string,
 ): Promise<{
@@ -26,7 +26,7 @@ export async function sendResendVerificationEmail(
   try {
     await transport.sendMail({
       to,
-      subject: 'Verify your Cumulonimbus account',
+      subject: 'Verify your Cumulonimbus account email',
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -54,7 +54,7 @@ export async function sendResendVerificationEmail(
   </head>
   <body>
     <h1>Hi ${username}!</h1>
-    <p>You requested a new verification email for your Cumulonimbus account. Before you can start uploading files, you'll need to verify your email address.</p>
+    <p>Before you can start uploading files, you'll need to verify your email address.</p>
 
     <div class="divider"></div>
 

@@ -23,9 +23,7 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
-import { sendSignupVerificationEmail } from '../mail/SignupVerification.js';
-import { sendResendVerificationEmail } from '../mail/ResendVerification.js';
-import { sendUpdateVerificationEmail } from '../mail/UpdateVerification.js';
+import sendVerificationEmail from '../mail/EmailVerification.js';
 import { sendBannedNotice } from '../mail/BannedNotice.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
@@ -102,7 +100,7 @@ app.post(
       where: {
         [Op.or]: [
           { username: req.body.username.toLowerCase() },
-          { email: req.body.email },
+          { email: req.body.email.toLowerCase() },
         ],
       },
     });
@@ -126,7 +124,7 @@ app.post(
       const token = await generateSessionToken(now, req.body.rememberMe);
 
       // Send the verification email.
-      const { success, error, tokenData } = await sendSignupVerificationEmail(
+      const { success, error, tokenData } = await sendVerificationEmail(
         req.body.email,
         req.body.username,
       );
@@ -371,7 +369,7 @@ app.put(
         `User ${req.user.username} (${req.user.id}) changed their email to ${req.body.email}. (Previously: ${req.user.email})`,
       );
 
-      const { success, error, tokenData } = await sendUpdateVerificationEmail(
+      const { success, error, tokenData } = await sendVerificationEmail(
         req.body.email,
         req.user.username,
       );
@@ -599,7 +597,7 @@ app.get(
         success,
         error,
         token: verifyToken,
-      } = await sendResendVerificationEmail(req.user.email, req.user.username);
+      } = await sendVerificationEmail(req.user.email, req.user.username);
 
       // If the email failed to send, return an error 500.
       if (!success) {
@@ -609,7 +607,6 @@ app.get(
 
       // Update the user's email verification status.
       await req.user.update({
-        emailVerificationToken: verifyToken,
         verificationRequestedAt: new Date(),
       });
 
@@ -629,7 +626,7 @@ app.get(
 app.get(
   // GET /api/users/:id/verify
   '/api/users/:id([0-9]{13})/verify',
-  SessionChecker(),
+  SessionChecker(true),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
     windowMs: ms('5m'),
@@ -658,7 +655,7 @@ app.get(
         success,
         error,
         token: verifyToken,
-      } = await sendResendVerificationEmail(user.email, user.username);
+      } = await sendVerificationEmail(user.email, user.username);
 
       // If the email failed to send, return an error 500.
       if (!success) {
@@ -668,7 +665,6 @@ app.get(
 
       // Update the user's email verification status.
       await user.update({
-        emailVerificationToken: verifyToken,
         verificationRequestedAt: new Date(),
       });
 

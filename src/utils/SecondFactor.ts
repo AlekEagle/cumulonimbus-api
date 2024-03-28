@@ -1,5 +1,5 @@
 import {
-  SECOND_FACTOR_ALGORITHM,
+  SECOND_FACTOR_TOTP_ALGORITHM,
   SECOND_FACTOR_BACKUP_CODE_ALGORITHM,
   SECOND_FACTOR_BACKUP_CODE_LENGTH,
   SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
@@ -11,7 +11,6 @@ import SecondFactor from '../DB/SecondFactor.js';
 import { Errors } from './TemplateResponses.js';
 import { logger } from '../index.js';
 import {
-  extractToken,
   generateSecondFactorIntermediateToken,
   validateToken,
 } from './Token.js';
@@ -35,7 +34,7 @@ authenticator.options = {
   window: [2, 1],
   step: SECOND_FACTOR_TOTP_STEP,
   digits: SECOND_FACTOR_TOTP_DIGITS,
-  algorithm: HashAlgorithms[SECOND_FACTOR_ALGORITHM],
+  algorithm: HashAlgorithms[SECOND_FACTOR_TOTP_ALGORITHM],
 };
 
 export interface BaseSecondFactorChallengeResponse {
