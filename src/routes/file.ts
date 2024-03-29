@@ -11,6 +11,7 @@ import BodyValidator, {
 import LimitOffset from '../middleware/LimitOffset.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
+import { PermissionFlags } from '../middleware/SessionPermissionChecker.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
@@ -36,7 +37,11 @@ app.get(
     try {
       // If the user did not provide a user, check if they are staff.
       if (!req.query.uid) {
-        if (!req.user.staff)
+        if (
+          !req.user.staff ||
+          (req.session.permissionFlags !== null &&
+            !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES))
+        )
           return res.status(403).json(new Errors.InsufficientPermissions());
         let { count, rows: files } = await File.findAndCountAll({
           limit: req.limit,
@@ -56,7 +61,11 @@ app.get(
 
       // If the user provided a user that isn't their own id or "me", check if they are staff.
       if (req.query.uid !== 'me') {
-        if (!req.user.staff)
+        if (
+          !req.user.staff ||
+          (req.session.permissionFlags !== null &&
+            !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES))
+        )
           return res.status(403).json(new Errors.InsufficientPermissions());
 
         // Check if the user exists.
@@ -130,6 +139,16 @@ app.get(
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
           return res.status(404).json(new Errors.InvalidFile());
+        else if (
+          req.session.permissionFlags !== null &&
+          !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
+        )
+          return res.status(403).json(new Errors.InsufficientPermissions());
+      } else if (
+        req.session.permissionFlags !== null &&
+        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
+      ) {
+        return res.status(403).json(new Errors.InsufficientPermissions());
       }
 
       logger.debug(
@@ -170,6 +189,16 @@ app.put(
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
           return res.status(404).json(new Errors.InvalidFile());
+        else if (
+          req.session.permissionFlags !== null &&
+          !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
+        )
+          return res.status(403).json(new Errors.InsufficientPermissions());
+      } else if (
+        req.session.permissionFlags !== null &&
+        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
+      ) {
+        return res.status(403).json(new Errors.InsufficientPermissions());
       }
 
       logger.debug(
@@ -209,6 +238,16 @@ app.delete(
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
           return res.status(404).json(new Errors.InvalidFile());
+        else if (
+          req.session.permissionFlags !== null &&
+          !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
+        )
+          return res.status(403).json(new Errors.InsufficientPermissions());
+      } else if (
+        req.session.permissionFlags !== null &&
+        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
+      ) {
+        return res.status(403).json(new Errors.InsufficientPermissions());
       }
 
       logger.debug(
@@ -260,6 +299,16 @@ app.put(
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
           return res.status(404).json(new Errors.InvalidFile());
+        else if (
+          req.session.permissionFlags !== null &&
+          !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
+        )
+          return res.status(403).json(new Errors.InsufficientPermissions());
+      } else if (
+        req.session.permissionFlags !== null &&
+        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
+      ) {
+        return res.status(403).json(new Errors.InsufficientPermissions());
       }
 
       // Check if the file has a thumbnail, and delete it if it does.
@@ -323,12 +372,15 @@ app.delete(
 
     // Check if the user is trying delete their own files.
     if (req.query.user === 'me') {
-      // Check if the request body contains the password field.
-      if (!req.body.password)
+      // Check if the request body contains the password field. (Only for non-scoped sessions.)
+      if (!req.body.password && req.session.permissionFlags === null)
         return res.status(400).json(new Errors.MissingFields(['password']));
       try {
-        // Check if the password is correct.
-        if (!(await Bcrypt.compare(req.body.password, req.user.password)))
+        // Check if the password is correct. (Only for non-scoped sessions.)
+        if (
+          req.session.permissionFlags === null &&
+          !(await Bcrypt.compare(req.body.password, req.user.password))
+        )
           return res.status(401).json(new Errors.InvalidPassword());
 
         // Fetch all files belonging to the user.
@@ -372,6 +424,11 @@ app.delete(
 
     // If the user is not staff, return an InsufficientPermissions error.
     if (!req.user.staff)
+      return res.status(403).json(new Errors.InsufficientPermissions());
+    else if (
+      req.session.permissionFlags !== null &&
+      !(req.session.permissionFlags & PermissionFlags.STAFF_MODIFY_FILES)
+    )
       return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
@@ -442,6 +499,16 @@ app.delete(
         // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
           return res.status(404).json(new Errors.InvalidFile());
+        else if (
+          req.session.permissionFlags !== null &&
+          !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
+        )
+          return res.status(403).json(new Errors.InsufficientPermissions());
+      } else if (
+        req.session.permissionFlags !== null &&
+        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
+      ) {
+        return res.status(403).json(new Errors.InsufficientPermissions());
       }
 
       // First, delete the thumbnail if it exists.

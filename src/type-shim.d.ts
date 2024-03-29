@@ -65,6 +65,7 @@ declare global {
         exp: number;
         name: string;
         permissionFlags: number;
+        usedAt: number;
       }
 
       export interface List<T> {
@@ -166,6 +167,10 @@ declare global {
 
       export interface SecondFactorBackupRegisterSuccess {
         codes: string[];
+      }
+
+      export interface ScopedSessionCreate extends Session {
+        token: string;
       }
     }
   }

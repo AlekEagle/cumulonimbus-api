@@ -152,9 +152,10 @@ app.post(
 
       // Create a corresponding session.
       await Session.create({
+        id: token.data.payload.iat.toString(),
+        user: user.id,
         name: tokenName,
-        token: token.token,
-        expiresAt: new Date(token.data.payload.exp * 1000),
+        exp: new Date(token.data.payload.exp * 1000),
       });
 
       logger.debug(`User ${user.username} (${user.id}) account created.`);
@@ -173,7 +174,7 @@ app.get(
   // GET /api/users
   '/api/users',
   SessionChecker(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_READ),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
   LimitOffset(0, 50),
   async (
     req: Request<
@@ -239,7 +240,7 @@ app.get(
   // GET /api/users/:id
   '/api/users/:id([0-9]{13})',
   SessionChecker(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_READ),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -311,7 +312,7 @@ app.put(
   // PUT /api/users/:id/username
   '/api/users/:id([0-9]{13})/username',
   ReverifyIdentity(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
   BodyValidator({
     username: 'string',
@@ -414,9 +415,7 @@ app.put(
   // PUT /api/users/:id/email
   '/api/users/:id([0-9]{13})/email',
   ReverifyIdentity(true),
-  SessionPermissionChecker(
-    PermissionFlags.ACCOUNT_MODIFY | PermissionFlags.STAFF_MODIFY,
-  ),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
   BodyValidator({
     email: 'string',
@@ -512,6 +511,7 @@ app.put(
   // PUT /api/users/:id/verify
   '/api/users/:id([0-9]{13})/verify',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -552,6 +552,7 @@ app.delete(
   // DELETE /api/users/:id/verify
   '/api/users/:id([0-9]{13})/verify',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -588,14 +589,15 @@ app.delete(
 app.get(
   // GET /api/users/me/verify
   '/api/users/me/verify',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
+  SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
   SessionChecker(),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
     windowMs: ms('5m'),
     max: 1,
   }),
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
-  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   async (
     req: Request,
     res: Response<
@@ -642,12 +644,7 @@ app.get(
   // GET /api/users/:id/verify
   '/api/users/:id([0-9]{13})/verify',
   SessionChecker(true),
-  ExpressRateLimit({
-    ...defaultRateLimitConfig,
-    windowMs: ms('5m'),
-    max: 1,
-  }),
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -700,12 +697,12 @@ app.put(
   // PUT /api/users/me/password
   '/api/users/me/password',
   ReverifyIdentity(),
-  AutoTrim(),
   BodyValidator({
     newPassword: 'string',
     confirmNewPassword: 'string',
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
   async (
     req: Request<
       null,
@@ -743,6 +740,7 @@ app.put(
   // PUT /api/users/:id/password
   '/api/users/:id([0-9]{13})/password',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   BodyValidator({
     newPassword: 'string',
     confirmNewPassword: 'string',
@@ -790,6 +788,7 @@ app.put(
   // PUT /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -823,6 +822,7 @@ app.delete(
   // DELETE /api/users/:id/staff
   '/api/users/:id([0-9]{13})/staff',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -856,6 +856,7 @@ app.put(
   // PUT /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   BodyValidator({
     reason: 'string',
   }),
@@ -905,6 +906,7 @@ app.delete(
   // DELETE /api/users/:id/ban
   '/api/users/:id([0-9]{13})/ban',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -938,6 +940,7 @@ app.put(
   // PUT /api/users/me/domain
   '/api/users/me/domain',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
   AutoTrim(),
   BodyValidator({
     domain: 'string',
@@ -988,6 +991,7 @@ app.put(
   // PUT /api/users/:id/domain
   '/api/users/:id([0-9]{13})/domain',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
   BodyValidator({
     domain: 'string',
@@ -1040,6 +1044,7 @@ app.delete(
   // DELETE /api/users/me
   '/api/users/me',
   ReverifyIdentity(),
+  SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_DELETE),
   async (
     req: Request,
@@ -1084,6 +1089,7 @@ app.delete(
   // DELETE /api/users/:id
   '/api/users/:id([0-9]{13})',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -1133,6 +1139,7 @@ app.delete(
   // DELETE /api/users
   '/api/users',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),

@@ -9,6 +9,9 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -89,6 +92,7 @@ app.post(
   '/api/instructions',
   AutoTrim(),
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   BodyValidator({
     id: 'string',
     name: 'string',
@@ -153,6 +157,7 @@ app.put(
   // PUT /api/instructions/:id/name
   '/api/instructions/:id/name',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
     name: 'string',
@@ -190,8 +195,9 @@ app.put(
 app.put(
   // PUT /api/instructions/:id/description
   '/api/instructions/:id/description',
-  AutoTrim(),
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
+  AutoTrim(),
   BodyValidator({
     description: 'string',
   }),
@@ -229,6 +235,7 @@ app.put(
   // PUT /api/instructions/:id/file
   '/api/instructions/:id/file',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
     filename: new ExtendedValidBodyTypes('string', true),
@@ -271,6 +278,7 @@ app.put(
   // PUT /api/instructions/:id/steps
   '/api/instructions/:id/steps',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
     steps: new ExtendedValidBodyTypes('array', false, 'string'),
@@ -309,6 +317,7 @@ app.delete(
   // DELETE /api/instructions/:id
   '/api/instructions/:id',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -343,6 +352,7 @@ app.delete(
   // DELETE /api/instructions
   '/api/instructions',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),

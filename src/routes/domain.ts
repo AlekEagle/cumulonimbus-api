@@ -9,6 +9,9 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -87,6 +90,7 @@ app.post(
   // POST /api/domains
   '/api/domains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   AutoTrim(),
   BodyValidator({
     id: 'string',
@@ -126,6 +130,7 @@ app.put(
   // PUT /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -161,6 +166,7 @@ app.delete(
   // DELETE /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -196,6 +202,7 @@ app.delete(
   // DELETE /api/domains/:id
   '/api/domains/:id',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -246,6 +253,7 @@ app.delete(
   // DELETE /api/domains
   '/api/domains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),

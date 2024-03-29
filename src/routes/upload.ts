@@ -8,6 +8,9 @@ import {
 } from '../utils/Constants.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import Multer from 'multer';
 import { Response } from 'express';
@@ -42,6 +45,7 @@ app.post(
   // POST /api/upload
   '/api/upload',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.UPLOAD_FILE),
   Multer().single('file'),
   KillSwitch(KillSwitches.FILE_CREATE),
   async (

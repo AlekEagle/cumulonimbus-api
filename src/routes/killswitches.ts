@@ -1,11 +1,14 @@
 import { logger, app } from '../index.js';
 import { Errors } from '../utils/TemplateResponses.js';
-import SessionChecker from '../middleware/SessionChecker.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 import {
   KillSwitches,
   setKillSwitch,
   getKillSwitches,
 } from '../utils/GlobalKillSwitches.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import { Request, Response } from 'express';
 
@@ -14,7 +17,8 @@ logger.debug('Loading: Kill switches Route...');
 app.get(
   // GET /api/killswitches
   '/api/killswitches',
-  SessionChecker(true),
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
     req,
     res: Response<
@@ -43,7 +47,8 @@ app.get(
 app.put(
   // PUT /api/killswitches/:id
   '/api/killswitches/:id(\\d+)',
-  SessionChecker(true),
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -74,7 +79,8 @@ app.put(
 app.delete(
   // DELETE /api/killswitches/:id
   '/api/killswitches/:id(\\d+)',
-  SessionChecker(true),
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -105,7 +111,8 @@ app.delete(
 app.delete(
   // DELETE /api/killswitches
   '/api/killswitches',
-  SessionChecker(true),
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
     req,
     res: Response<

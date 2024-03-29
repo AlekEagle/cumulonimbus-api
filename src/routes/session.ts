@@ -22,13 +22,17 @@ import {
 } from '../utils/SecondFactor.js';
 import SecondFactor from '../DB/SecondFactor.js';
 import Session from '../DB/Session.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
+import isType from '../utils/TypeAsserter.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { fn, col, where, Op } from 'sequelize';
 import ExpressRateLimit from 'express-rate-limit';
-import isType from '../utils/TypeAsserter.js';
-import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
+import ms from 'ms';
 
 logger.debug('Loading: Session Routes...');
 
@@ -43,6 +47,7 @@ app.post(
     token: new ExtendedValidBodyTypes('string', true),
     type: new ExtendedValidBodyTypes('string', true),
     code: new ExtendedValidBodyTypes('string', true),
+    response: new ExtendedValidBodyTypes('any', true),
   }),
   ExpressRateLimit({
     ...defaultRateLimitConfig,
@@ -179,12 +184,75 @@ app.post(
   ReverifyIdentity(),
   AutoTrim(),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  SessionPermissionChecker(PermissionFlags.SESSION_CREATE),
+  BodyValidator({
+    name: new ExtendedValidBodyTypes('string', true),
+    permissionFlags: 'number',
+    longLived: new ExtendedValidBodyTypes('boolean', true),
+  }),
+  async (
+    req: Request<
+      null,
+      null,
+      { name: string; permissionFlags: number; longLived: boolean }
+    >,
+    res: Response<
+      | Cumulonimbus.Structures.ScopedSessionCreate
+      | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Generate a session name for the new session.
+    const sessionName = req.body.name || nameSession(req);
+
+    // If the session creating this new session is a scoped session and not long lasting, do not allow the new session to be long lasting.
+    if (
+      req.session.exp.getDate() <
+      req.session.createdAt.getDate() + ms('1d1m')
+    )
+      req.body.longLived = false;
+
+    // Generate a new token for the user.
+    const token = await generateSessionToken(
+      req.user.id,
+      req.body.longLived || false,
+    );
+
+    // If the session creating this new session is a scoped session, make sure the new session can at most have the same permissions as the session creating it. (No privilege escalation!!)
+    const neuteredPermissionFlags =
+      req.session.permissionFlags === null
+        ? req.body.permissionFlags
+        : req.session.permissionFlags & req.body.permissionFlags;
+
+    // Create a new session for the user.
+    const session = await Session.create({
+      id: token.data.payload.iat.toString(),
+      user: req.user.id,
+      exp: new Date(token.data.payload.exp * 1000),
+      name: sessionName,
+      permissionFlags: neuteredPermissionFlags,
+    });
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) created a new session ${sessionName} (${session.id}).`,
+    );
+
+    // Return the new session.
+    return res.status(201).json({
+      token: token.token,
+      id: session.id,
+      exp: session.exp.getTime() / 1000,
+      name: session.name,
+      permissionFlags: session.permissionFlags,
+      usedAt: null,
+    });
+  },
 );
 
 app.get(
   // GET /api/users/me/sessions/me
   '/api/users/me/sessions/me',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_READ),
   async (
     req: Request,
     res: Response<
@@ -200,6 +268,7 @@ app.get(
       exp: req.session.exp.getTime() / 1000,
       name: req.session.name,
       permissionFlags: req.session.permissionFlags,
+      usedAt: req.session.usedAt.getTime(),
     });
   },
 );
@@ -208,6 +277,7 @@ app.get(
   // GET /api/users/me/sessions/:sid
   '/api/users/me/sessions/:sid([0-9]{10}|me)',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_READ),
   async (
     req: Request<{ sid: string }>,
     res: Response<
@@ -235,6 +305,7 @@ app.get(
       exp: session.exp.getTime() / 1000,
       name: session.name,
       permissionFlags: session.permissionFlags,
+      usedAt: session.usedAt.getTime(),
     });
   },
 );
@@ -243,6 +314,7 @@ app.get(
   // GET /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -277,6 +349,7 @@ app.get(
         exp: session.exp.getTime() / 1000,
         name: session.name,
         permissionFlags: session.permissionFlags,
+        usedAt: session.usedAt.getTime(),
       });
     } catch (error) {
       logger.error(error);
@@ -289,6 +362,7 @@ app.get(
   // GET /api/users/me/sessions
   '/api/users/me/sessions',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_READ),
   LimitOffset(0, 50),
   async (
     req: Request,
@@ -324,7 +398,8 @@ app.get(
 app.get(
   // GET /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13})/sessions',
-  SessionChecker(),
+  SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
   LimitOffset(0, 50),
   async (
     req: Request<{ uid: string }, null, null>,
@@ -372,6 +447,7 @@ app.delete(
   // DELETE /api/users/me/sessions/me
   '/api/users/me/sessions/me',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request,
@@ -400,6 +476,7 @@ app.delete(
   // DELETE /api/users/me/sessions/:sid
   '/api/users/me/sessions/:sid([0-9]{10})',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ sid: string }>,
@@ -439,6 +516,7 @@ app.delete(
   // DELETE /api/users/:uid/sessions/:sid
   '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ uid: string; sid: string }>,
@@ -483,6 +561,7 @@ app.delete(
   // DELETE /api/users/me/sessions
   '/api/users/me/sessions',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
@@ -522,6 +601,7 @@ app.delete(
   // DELETE /api/users/:uid/sessions
   '/api/users/:uid([0-9]{13})/sessions',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (
     req: Request<{ uid: string }, null, { ids: string[] }>,
     res: Response<
@@ -569,6 +649,7 @@ app.delete(
   // Delete /api/users/me/sessions/all
   '/api/users/me/sessions/all',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request,
@@ -589,7 +670,7 @@ app.delete(
     });
 
     // Remove the sessions.
-    const sessions = rows.map((session) => session.id);
+    await Promise.all(rows.map((session) => session.destroy()));
 
     logger.debug(
       `User ${req.user.username} (${
@@ -608,6 +689,7 @@ app.delete(
   // DELETE /api/users/:uid/sessions/all
   '/api/users/:uid([0-9]{13})/sessions/all',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<{ uid: string }>,

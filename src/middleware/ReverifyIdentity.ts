@@ -73,6 +73,9 @@ export default function ReverifyIdentity(
               `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their second factor.`,
             );
             return next();
+          } else {
+            // verifySecondFactor deals with sending the error response. We're done here.
+            return;
           }
         }
       } catch (e) {
@@ -94,10 +97,5 @@ export default function ReverifyIdentity(
       );
       return next();
     }
-    // We somehow reached this point, not sure its even possible, but we will include this snippet just in case.
-    logger.warn(
-      `We somehow exited the primary logic of ReverifyIdentity. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
-    );
-    return res.status(500).json(new Errors.Internal());
   };
 }
