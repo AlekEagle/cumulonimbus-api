@@ -29,6 +29,9 @@ import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 import Session from '../DB/Session.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -46,6 +49,8 @@ logger.debug('Loading: Account Routes...');
 app.post(
   // POST /api/register
   '/api/register',
+  KillSwitch(KillSwitches.ACCOUNT_CREATE),
+  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   AutoTrim(['password', 'confirmPassword']),
   BodyValidator({
     username: 'string',
@@ -64,8 +69,6 @@ app.post(
       return res.statusCode === 409;
     },
   }),
-  KillSwitch(KillSwitches.ACCOUNT_CREATE),
-  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   async (
     req: Request<
       null,
@@ -170,6 +173,7 @@ app.get(
   // GET /api/users
   '/api/users',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ),
   LimitOffset(0, 50),
   async (
     req: Request<
@@ -216,6 +220,7 @@ app.get(
   // GET /api/users/me
   '/api/users/me',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.ACCOUNT_READ),
   async (
     req: Request,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -234,6 +239,7 @@ app.get(
   // GET /api/users/:id
   '/api/users/:id([0-9]{13})',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -263,12 +269,13 @@ app.get(
 app.put(
   // PUT /api/users/me/username
   '/api/users/me/username',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
+
   AutoTrim(),
   BodyValidator({
     username: 'string',
   }),
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<null, null, { username: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -304,6 +311,7 @@ app.put(
   // PUT /api/users/:id/username
   '/api/users/:id([0-9]{13})/username',
   ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY),
   AutoTrim(),
   BodyValidator({
     username: 'string',
@@ -348,13 +356,14 @@ app.put(
 app.put(
   // PUT /api/users/me/email
   '/api/users/me/email',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   ReverifyIdentity(),
+  SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
   AutoTrim(),
   BodyValidator({
     email: 'string',
   }),
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
-  KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   async (
     req: Request<null, null, { email: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
@@ -405,6 +414,9 @@ app.put(
   // PUT /api/users/:id/email
   '/api/users/:id([0-9]{13})/email',
   ReverifyIdentity(true),
+  SessionPermissionChecker(
+    PermissionFlags.ACCOUNT_MODIFY | PermissionFlags.STAFF_MODIFY,
+  ),
   AutoTrim(),
   BodyValidator({
     email: 'string',

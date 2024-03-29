@@ -1,6 +1,6 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
-import { PermissionFlags } from '../utils/Session.js';
+import { PermissionFlags } from '../middleware/SessionPermissionChecker.js';
 
 import { Model, DataTypes } from 'sequelize';
 
@@ -9,7 +9,7 @@ export default class Session extends Model {
   user: string;
   exp: Date;
   name: string;
-  permissionFlags: PermissionFlags;
+  permissionFlags: PermissionFlags | null;
   usedAt: Date;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -44,9 +44,7 @@ export default class Session extends Model {
       },
       permissionFlags: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        // Default to ALL permissions
-        defaultValue: PermissionFlags.ALL,
+        allowNull: true,
       },
       usedAt: {
         type: DataTypes.DATE,

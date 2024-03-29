@@ -28,6 +28,7 @@ import Bcrypt from 'bcrypt';
 import { fn, col, where, Op } from 'sequelize';
 import ExpressRateLimit from 'express-rate-limit';
 import isType from '../utils/TypeAsserter.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 
 logger.debug('Loading: Session Routes...');
 
@@ -170,6 +171,14 @@ app.post(
       }
     }
   },
+);
+
+app.post(
+  // POST /api/session
+  '/api/users/me/sessions',
+  ReverifyIdentity(),
+  AutoTrim(),
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
 );
 
 app.get(

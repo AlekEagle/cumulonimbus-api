@@ -33,6 +33,9 @@ export default function ReverifyIdentity(
         );
     }
 
+    // If the session the user is using is a scoped session, we will skip the reverify process.
+    if (req.session.permissionFlags !== null) return next();
+
     // Check if the user provided a body. If they didn't, we will send an error response.
     if (!req.body)
       return res.status(400).json(new Errors.MissingFields(['password']));
