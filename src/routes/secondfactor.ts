@@ -1,8 +1,10 @@
 import { app, logger } from '../index.js';
-import { Errors } from '../utils/TemplateResponses.js';
+import { Errors, Success } from '../utils/TemplateResponses.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import SessionChecker from '../middleware/SessionChecker.js';
-import BodyValidator from '../middleware/BodyValidator.js';
+import BodyValidator, {
+  ExtendedValidBodyTypes,
+} from '../middleware/BodyValidator.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 import {
   generateTOTPSecret,
@@ -27,14 +29,21 @@ import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 
 import { Request, Response } from 'express';
 import { errors as JoseErrors } from 'jose';
+import LimitOffset from '../middleware/LimitOffset.js';
+import KVExtractor from '../utils/KVExtractor.js';
+import User from '../DB/User.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 logger.debug('Loading: Second Factor routes...');
 
 app.put(
   // PUT /api/users/me/2fa/totp
   '/api/users/me/2fa/totp',
-  ReverifyIdentity(),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  ReverifyIdentity(),
+  SessionPermissionChecker(), // Require a standard browser session
   async (
     req,
     res: Response<
@@ -65,13 +74,14 @@ app.put(
 app.put(
   // PUT /api/users/me/2fa/totp/confirm
   '/api/users/me/2fa/totp/confirm',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
+  SessionPermissionChecker(), // Require a standard browser session
   BodyValidator({
     token: 'string',
     name: 'string',
     code: 'string',
   }),
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<null, null, { token: string; name: string; code: string }>,
     res: Response<
@@ -83,11 +93,11 @@ app.put(
     const result = await validateToken(req.body.token);
     if (result instanceof Error) {
       if (result instanceof JoseErrors.JWTExpired)
-        return res.status(401).json(new Errors.Invalid2FAResponse());
+        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
     } else {
       // Verify the TOTP code
       if (!(await verifyTOTP(req.body.code, result.payload.secret)))
-        return res.status(401).json(new Errors.Invalid2FAResponse());
+        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
 
       // Store the TOTP secret in the database
       await SecondFactor.create({
@@ -122,8 +132,9 @@ app.put(
 app.put(
   // PUT /api/users/me/2fa/webauthn
   '/api/users/me/2fa/webauthn',
-  ReverifyIdentity(),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  ReverifyIdentity(),
+  SessionPermissionChecker(), // Require a standard browser session
   async (
     req,
     res: Response<
@@ -151,13 +162,14 @@ app.put(
 app.put(
   // PUT /api/users/me/2fa/webauthn/confirm
   '/api/users/me/2fa/webauthn/confirm',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
+  SessionPermissionChecker(), // Require a standard browser session
   BodyValidator({
     token: 'string',
     name: 'string',
     response: 'any',
   }),
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
     req: Request<null, null, { token: string; name: string; response: any }>,
     res: Response<
@@ -208,11 +220,12 @@ app.put(
   },
 );
 
-// Regenerating backup codes will require identity re-verification.
 app.put(
   // PUT /api/users/me/2fa/backup
   '/api/users/me/2fa/backup',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
+  SessionPermissionChecker(), // Require a standard browser session
   async (
     req: Request,
     res: Response<
@@ -229,6 +242,356 @@ app.put(
     return res.status(201).json({
       codes,
     });
+  },
+);
+
+app.get(
+  // GET /api/users/me/2fa
+  '/api/users/me/2fa',
+  SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
+  LimitOffset(0, 50),
+  async (
+    req: Request,
+    res: Response<
+      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.SecondFactor>
+      | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    try {
+      // Get the user's second factors
+      const factors = await SecondFactor.findAndCountAll({
+        where: {
+          user: req.user.id,
+        },
+        limit: req.limit,
+        offset: req.offset,
+      });
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) fetched their second factors. (offset: ${req.offset}, limit: ${req.limit})`,
+      );
+
+      // Return the second factors
+      return res.status(200).json({
+        count: factors.count,
+        items: factors.rows.map((factor) =>
+          KVExtractor(factor.toJSON(), ['id', 'name']),
+        ),
+      });
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.get(
+  // GET /api/users/:id/2fa
+  '/api/users/:id([0-9]{13})/2fa',
+  SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ_SECOND_FACTORS),
+  LimitOffset(0, 50),
+  async (
+    req: Request<{ id: string }>,
+    res: Response<
+      | Cumulonimbus.Structures.List<Cumulonimbus.Structures.SecondFactor>
+      | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    try {
+      const user = await User.findByPk(req.params.id);
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      // Get the user's second factors
+      const factors = await SecondFactor.findAndCountAll({
+        where: {
+          user: req.params.id,
+        },
+        limit: req.limit,
+        offset: req.offset,
+      });
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) fetched user ${user.username} (${user.id})'s second factors. (offset: ${req.offset}, limit: ${req.limit})`,
+      );
+
+      // Return the second factors
+      return res.status(200).json({
+        count: factors.count,
+        items: factors.rows.map((factor) =>
+          KVExtractor(factor.toJSON(), ['id', 'name']),
+        ),
+      });
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.delete(
+  // DELETE /api/users/me/2fa/:id
+  '/api/users/me/2fa/:id([0-9]{10})',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  ReverifyIdentity(),
+  SessionPermissionChecker(), // Require a standard browser session
+  async (
+    req: Request<{ id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the second factor
+    const factor = await SecondFactor.findByPk(req.params.id);
+    if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
+
+    // Delete the second factor
+    await factor.destroy();
+
+    // Check if the user has any second factors left
+    const remainingFactors = await SecondFactor.count({
+      where: {
+        user: req.user.id,
+      },
+    });
+
+    if (remainingFactors === 0) {
+      // If the user has no second factors left, delete their backup codes
+      await req.user.update({
+        twoFactorBackupCodes: null,
+      });
+    }
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) deleted their second factor ${factor.name} (${factor.id}). Remaining factors: ${remainingFactors}.`,
+    );
+
+    return res.status(200).json(new Success.DeleteSecondFactor());
+  },
+);
+
+app.delete(
+  // DELETE /api/users/:uid/2fa/:id
+  '/api/users/:uid([0-9]{13})/2fa/:id([0-9]{10})',
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
+  async (
+    req: Request<{ uid: string; id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the user
+    const user = await User.findByPk(req.params.uid);
+    if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+    // Find the second factor
+    const factor = await SecondFactor.findByPk(req.params.id);
+    if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
+
+    // Delete the second factor
+    await factor.destroy();
+
+    // Check if the user has any second factors left
+    const remainingFactors = await SecondFactor.count({
+      where: {
+        user: req.params.uid,
+      },
+    });
+
+    if (remainingFactors === 0) {
+      // If the user has no second factors left, delete their backup codes
+      await user.update({
+        twoFactorBackupCodes: null,
+      });
+    }
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) deleted user ${user.username} (${user.id})'s second factor ${factor.name} (${factor.id}). Remaining factors: ${remainingFactors}.`,
+    );
+
+    return res.status(200).json(new Success.DeleteSecondFactor());
+  },
+);
+
+app.delete(
+  // DELETE /api/users/me/2fa
+  '/api/users/me/2fa',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  ReverifyIdentity(),
+  SessionPermissionChecker(), // Require a standard browser session
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
+  async (
+    req: Request<null, null, { ids: string[] }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the second factors
+    const factors = await SecondFactor.findAll({
+      where: {
+        user: req.user.id,
+        id: req.body.ids,
+      },
+    });
+
+    // Delete the second factors
+    await Promise.all(factors.map((factor) => factor.destroy()));
+
+    // Check if the user has any second factors left
+    const remainingFactors = await SecondFactor.count({
+      where: {
+        user: req.user.id,
+      },
+    });
+
+    if (remainingFactors === 0) {
+      // If the user has no second factors left, delete their backup codes
+      await req.user.update({
+        twoFactorBackupCodes: null,
+      });
+    }
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) deleted ${factors.length} second factor(s). Remaining factors: ${remainingFactors}.`,
+    );
+
+    return res
+      .status(200)
+      .json(new Success.DeleteSecondFactors(factors.length));
+  },
+);
+
+app.delete(
+  // DELETE /api/users/:uid/2fa
+  '/api/users/:uid([0-9]{13})/2fa',
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
+  async (
+    req: Request<{ uid: string }, null, { ids: string[] }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the user
+    const user = await User.findByPk(req.params.uid);
+    if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+    // Find the second factors
+    const factors = await SecondFactor.findAll({
+      where: {
+        user: req.params.uid,
+        id: req.body.ids,
+      },
+    });
+
+    // Delete the second factors
+    await Promise.all(factors.map((factor) => factor.destroy()));
+
+    // Check if the user has any second factors left
+    const remainingFactors = await SecondFactor.count({
+      where: {
+        user: req.params.uid,
+      },
+    });
+
+    if (remainingFactors === 0) {
+      // If the user has no second factors left, delete their backup codes
+      await user.update({
+        twoFactorBackupCodes: null,
+      });
+    }
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) deleted user ${user.username} (${user.id})'s ${factors.length} second factor(s). Remaining factors: ${remainingFactors}.`,
+    );
+
+    return res
+      .status(200)
+      .json(new Success.DeleteSecondFactors(factors.length));
+  },
+);
+
+app.delete(
+  // DELETE /api/users/me/2fa/all
+  '/api/users/me/2fa/all',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  ReverifyIdentity(),
+  SessionPermissionChecker(), // Require a standard browser session
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the second factors
+    const factors = await SecondFactor.findAll({
+      where: {
+        user: req.user.id,
+      },
+    });
+
+    // Delete the second factors
+    await Promise.all(factors.map((factor) => factor.destroy()));
+
+    // Delete the user's backup codes
+    await req.user.update({
+      twoFactorBackupCodes: null,
+    });
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) deleted all of their second factors.`,
+    );
+
+    return res
+      .status(200)
+      .json(new Success.DeleteSecondFactors(factors.length));
+  },
+);
+
+app.delete(
+  // DELETE /api/users/:uid/2fa/all
+  '/api/users/:uid([0-9]{13})/2fa/all',
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
+  async (
+    req: Request<{ uid: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the user
+    const user = await User.findByPk(req.params.uid);
+    if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+    // Find the second factors
+    const factors = await SecondFactor.findAll({
+      where: {
+        user: req.params.uid,
+      },
+    });
+
+    // Delete the second factors
+    await Promise.all(factors.map((factor) => factor.destroy()));
+
+    // Delete the user's backup codes
+    await user.update({
+      twoFactorBackupCodes: null,
+    });
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) deleted all of user ${user.username} (${user.id})'s second factors.`,
+    );
+
+    return res
+      .status(200)
+      .json(new Success.DeleteSecondFactors(factors.length));
   },
 );
 

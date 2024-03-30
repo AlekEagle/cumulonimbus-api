@@ -173,7 +173,7 @@ export async function generateWebAuthnChallenge(user: User) {
 
 export async function generateSecondFactorChallenge(
   user: User,
-): Promise<Errors.Challenge2FARequired> {
+): Promise<Errors.SecondFactorChallengeRequired> {
   const secondFactors = await SecondFactor.findAll({
     where: { user: user.id },
   });
@@ -218,20 +218,20 @@ export async function verifyWebAuthnRegistration(
       logger.debug(
         `User ${user.username} (${user.id}) attempted to use an expired 2FA WebAuthn registration token.`,
       );
-      res.status(401).json(new Errors.Invalid2FAResponse());
+      res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return null;
     }
   } else if (!result.payload.challenge) {
     logger.warn(
       `User ${user.username} (${user.id}) attempted to use a non-2FA WebAuthn registration token (no challenge).`,
     );
-    res.status(401).json(new Errors.Invalid2FAResponse());
+    res.status(401).json(new Errors.InvalidSecondFactorResponse());
     return null;
   } else if (result.payload.sub !== user.id) {
     logger.warn(
       `User ${user.username} (${user.id}) attempted to use a 2FA WebAuthn registration token that does not belong to them.`,
     );
-    res.status(401).json(new Errors.Invalid2FAResponse());
+    res.status(401).json(new Errors.InvalidSecondFactorResponse());
     return null;
   } else {
     const verification = await verifyRegistrationResponse({
@@ -248,7 +248,7 @@ export async function verifyWebAuthnRegistration(
       logger.debug(
         `User ${user.username} (${user.id}) attempted to register a WebAuthn credential, but it was not able to be verified.`,
       );
-      res.status(401).json(new Errors.Invalid2FAResponse());
+      res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return null;
     }
   }
@@ -267,14 +267,14 @@ export async function verifyWebAuthnAuthentication(
       logger.debug(
         `User ${user.username} (${user.id}) attempted to use an expired 2FA intermediate token.`,
       );
-      res.status(401).json(new Errors.Invalid2FAResponse());
+      res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return false;
     }
   } else if (result.payload.sub !== user.id) {
     logger.warn(
       `User ${user.username} (${user.id}) attempted to use a 2FA intermediate token that does not belong to them.`,
     );
-    res.status(401).json(new Errors.Invalid2FAResponse());
+    res.status(401).json(new Errors.InvalidSecondFactorResponse());
     return false;
   } else {
     try {
@@ -292,7 +292,7 @@ export async function verifyWebAuthnAuthentication(
         logger.warn(
           `User ${user.username} (${user.id}) attempted to authenticate with a WebAuthn credential that does not exist.`,
         );
-        res.status(401).json(new Errors.Invalid2FAResponse());
+        res.status(401).json(new Errors.InvalidSecondFactorResponse());
         return false;
       }
 
@@ -316,7 +316,7 @@ export async function verifyWebAuthnAuthentication(
         logger.debug(
           `User ${user.username} (${user.id}) attempted to authenticate with a WebAuthn credential, but it was not able to be verified.`,
         );
-        res.status(401).json(new Errors.Invalid2FAResponse());
+        res.status(401).json(new Errors.InvalidSecondFactorResponse());
         return false;
       }
     } catch (e) {
@@ -343,14 +343,14 @@ export async function verifySecondFactor(
       logger.debug(
         `User ${user.username} (${user.id}) attempted to use an expired 2FA intermediate token.`,
       );
-      res.status(401).json(new Errors.Invalid2FAResponse());
+      res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return false;
     }
   } else if (result.payload.sub !== user.id) {
     logger.warn(
       `User ${user.username} (${user.id}) attempted to use a 2FA intermediate token that does not belong to them.`,
     );
-    res.status(401).json(new Errors.Invalid2FAResponse());
+    res.status(401).json(new Errors.InvalidSecondFactorResponse());
     return false;
   } else
     switch (challenge.type) {
@@ -380,7 +380,7 @@ export async function verifySecondFactor(
           logger.debug(
             `User ${user.username} (${user.id}) attempted to use an invalid backup code.`,
           );
-          res.status(401).json(new Errors.Invalid2FAResponse());
+          res.status(401).json(new Errors.InvalidSecondFactorResponse());
           return false;
         } else {
           // Find the backup code that was used and remove it
@@ -412,7 +412,7 @@ export async function verifySecondFactor(
           logger.error(
             `User ${user.username} (${user.id}) was challenged for a second factor and attempted to use a TOTP code, but they do not have any TOTP second factors.`,
           );
-          res.status(400).json(new Errors.Invalid2FAMethod());
+          res.status(400).json(new Errors.InvalidSecondFactorMethod());
           return false;
         }
         if (
@@ -433,7 +433,7 @@ export async function verifySecondFactor(
           logger.debug(
             `User ${user.username} (${user.id}) attempted to use an invalid TOTP code.`,
           );
-          res.status(401).json(new Errors.Invalid2FAResponse());
+          res.status(401).json(new Errors.InvalidSecondFactorResponse());
           return false;
         }
       case 'webauthn':
@@ -451,7 +451,7 @@ export async function verifySecondFactor(
           logger.error(
             `User ${user.username} (${user.id}) attempted to use a WebAuthn response without a challenge in the token.`,
           );
-          res.status(400).json(new Errors.Invalid2FAResponse());
+          res.status(400).json(new Errors.InvalidSecondFactorResponse());
           return false;
         }
 
@@ -482,7 +482,7 @@ export async function verifySecondFactor(
             challenge,
           )}`,
         );
-        res.status(400).json(new Errors.Invalid2FAMethod());
+        res.status(400).json(new Errors.InvalidSecondFactorMethod());
         return false;
     }
 }

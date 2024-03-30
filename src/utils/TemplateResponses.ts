@@ -9,9 +9,11 @@ export namespace Errors {
     public readonly message: string = 'Insufficient Permissions';
   }
 
-  export class EndpointRequires2FA implements Cumulonimbus.Structures.Error {
-    public readonly code: string = 'ENDPOINT_REQUIRES_2FA_ERROR';
-    public readonly message: string = 'Endpoint Requires 2FA';
+  export class EndpointRequiresSecondFactor
+    implements Cumulonimbus.Structures.Error
+  {
+    public readonly code: string = 'ENDPOINT_REQUIRES_SECOND_FACTOR_ERROR';
+    public readonly message: string = 'Endpoint Requires Second Factor';
   }
 
   export class InvalidUser implements Cumulonimbus.Structures.Error {
@@ -19,28 +21,44 @@ export namespace Errors {
     public readonly message: string = 'Invalid User';
   }
 
+  export class UserRequiresSecondFactor
+    implements Cumulonimbus.Structures.Error
+  {
+    public readonly code: string = 'USER_REQUIRES_SECOND_FACTOR_ERROR';
+    public readonly message: string = 'User Requires Second Factor';
+  }
+
   export class InvalidUsername implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_USERNAME_ERROR';
     public readonly message: string = 'Invalid Username';
   }
 
-  export class Invalid2FAMethod implements Cumulonimbus.Structures.Error {
-    public readonly code: string = 'INVALID_2FA_METHOD_ERROR';
-    public readonly message: string = 'Invalid 2FA Method';
+  export class InvalidSecondFactor implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_SECOND_FACTOR_ERROR';
+    public readonly message: string = 'Invalid Second Factor';
   }
 
-  export class Invalid2FAResponse implements Cumulonimbus.Structures.Error {
-    public readonly code: string = 'INVALID_2FA_RESPONSE_ERROR';
-    public readonly message: string = 'Invalid 2FA Response';
+  export class InvalidSecondFactorMethod
+    implements Cumulonimbus.Structures.Error
+  {
+    public readonly code: string = 'INVALID_SECOND_FACTOR_METHOD_ERROR';
+    public readonly message: string = 'Invalid Second Factor Method';
   }
 
-  export class Challenge2FARequired
+  export class InvalidSecondFactorResponse
+    implements Cumulonimbus.Structures.Error
+  {
+    public readonly code: string = 'INVALID_SECOND_FACTOR_RESPONSE_ERROR';
+    public readonly message: string = 'Invalid Second Factor Response';
+  }
+
+  export class SecondFactorChallengeRequired
     implements
       Cumulonimbus.Structures.Error,
       Cumulonimbus.Structures.SecondFactorChallenge
   {
-    public readonly code: string = 'CHALLENGE_2FA_REQUIRED_ERROR';
-    public readonly message: string = 'Challenge 2FA Required';
+    public readonly code: string = 'SECOND_FACTOR_CHALLENGE_REQUIRED_ERROR';
+    public readonly message: string = 'Second Factor Challenge Required';
     constructor(
       public readonly token: string,
       public readonly exp: number,
@@ -236,5 +254,16 @@ export namespace Success {
   export class VerifyEmail implements Cumulonimbus.Structures.Success {
     public readonly code: string = 'VERIFY_EMAIL_SUCCESS';
     public readonly message: string = 'Successfully Verified Email';
+  }
+
+  export class DeleteSecondFactor implements Cumulonimbus.Structures.Success {
+    public readonly code: string = 'DELETE_SECOND_FACTOR_SUCCESS';
+    public readonly message: string = 'Second Factor Successfully Deleted';
+  }
+
+  export class DeleteSecondFactors implements Cumulonimbus.Structures.Success {
+    public readonly code: string = 'DELETE_SECOND_FACTORS_SUCCESS';
+    public readonly message: string = 'Second Factors Successfully Deleted';
+    constructor(public readonly count: number) {}
   }
 }

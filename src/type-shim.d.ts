@@ -106,6 +106,14 @@ declare global {
         exp: number;
       }
 
+      export interface SecondFactor {
+        id: string;
+        name: string;
+        type: SecondFactorType;
+        createdAt: string;
+        updatedAt: string;
+      }
+
       export interface SecondFactorChallenge {
         token: string;
         exp: number;

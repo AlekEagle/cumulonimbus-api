@@ -90,7 +90,7 @@ export default function ReverifyIdentity(
         logger.warn(
           `User ${req.user.username} (${req.user.id}) attempted to access a staff-only endpoint without any second factors. Route: ${req.path}`,
         );
-        return res.status(401).json(new Errors.EndpointRequires2FA());
+        return res.status(401).json(new Errors.EndpointRequiresSecondFactor());
       }
       logger.debug(
         `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their password.`,

@@ -41,6 +41,7 @@ import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import ms from 'ms';
+import SecondFactor from '../DB/SecondFactor.js';
 
 logger.debug('Loading: Account Routes...');
 
@@ -799,6 +800,14 @@ app.put(
 
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      // If the user does not have any second factors, return an Invalid2FAMethod error.
+      const secondFactors = await SecondFactor.findAndCountAll({
+        where: { user: user.id },
+      });
+
+      if (secondFactors.count === 0)
+        return res.status(400).json(new Errors.UserRequiresSecondFactor());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) granted user ${user.username} (${user.id}) staff privileges.`,
