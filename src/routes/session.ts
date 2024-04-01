@@ -588,7 +588,7 @@ app.put(
 app.put(
   // PUT /api/users/:uid/sessions/:sid/permissions
   '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})/permissions',
-  SessionChecker(true),
+  ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   BodyValidator({
     flags: 'number',
