@@ -420,7 +420,6 @@ app.put(
   AutoTrim(),
   BodyValidator({
     email: 'string',
-    password: new ExtendedValidBodyTypes('string', true),
   }),
   async (
     req: Request<{ id: string }, null, { email: string; password?: string }>,
@@ -492,6 +491,13 @@ app.put(
         // If there's no user, return an InvalidVerificationToken error
         if (!user)
           return res.status(400).json(new Errors.InvalidVerificationToken());
+
+        // If the user is banned, return a Banned error
+        if (user.bannedAt) return res.status(403).json(new Errors.Banned());
+
+        // If the user's email is already verified, return an EmailAlreadyVerified error
+        if (user.verifiedAt)
+          return res.status(400).json(new Errors.EmailAlreadyVerified());
 
         // Update the user's email verification status.
         await user.update({
@@ -1053,7 +1059,7 @@ app.delete(
   // DELETE /api/users/me
   '/api/users/me',
   ReverifyIdentity(),
-  SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
+  SessionPermissionChecker(), // Require a standard browser session
   KillSwitch(KillSwitches.ACCOUNT_DELETE),
   async (
     req: Request,
