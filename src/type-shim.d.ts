@@ -134,8 +134,6 @@ declare global {
         digits: number;
         period: number;
       }
-
-      // TODO: Populate this with the correct fields
       export interface SecondFactorWebAuthnRegistration
         extends SecondFactorBaseRegistration,
           PublicKeyCredentialCreationOptionsJSON {
@@ -169,8 +167,8 @@ declare global {
       export interface SecondFactorRegisterSuccess {
         id: string;
         name: string;
-        type: 'totp' | 'webauthn';
-        backupCodes?: string[];
+        type: SecondFactorType;
+        codes?: string[];
       }
 
       export interface SecondFactorBackupRegisterSuccess {

@@ -38,8 +38,8 @@ import SessionPermissionChecker, {
 
 logger.debug('Loading: Second Factor routes...');
 
-app.put(
-  // PUT /api/users/me/2fa/totp
+app.post(
+  // POST /api/users/me/2fa/totp
   '/api/users/me/2fa/totp',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -71,8 +71,8 @@ app.put(
   },
 );
 
-app.put(
-  // PUT /api/users/me/2fa/totp/confirm
+app.post(
+  // POST /api/users/me/2fa/totp/confirm
   '/api/users/me/2fa/totp/confirm',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -93,11 +93,11 @@ app.put(
     const result = await validateToken(req.body.token);
     if (result instanceof Error) {
       if (result instanceof JoseErrors.JWTExpired)
-        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
+        return res.status(400).json(new Errors.InvalidSecondFactorResponse());
     } else {
       // Verify the TOTP code
       if (!(await verifyTOTP(req.body.code, result.payload.secret)))
-        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
+        return res.status(400).json(new Errors.InvalidSecondFactorResponse());
 
       // Store the TOTP secret in the database
       await SecondFactor.create({
@@ -108,12 +108,12 @@ app.put(
         secret: result.payload.secret,
       });
 
-      let backupCodes;
+      let codes;
 
       if (!req.user.twoFactorBackupCodes) {
         // Generate backup codes
-        const { codes, hashed } = await generateBackupCodes();
-        backupCodes = codes;
+        const { codes: unhashedCodes, hashed } = await generateBackupCodes();
+        codes = unhashedCodes;
         await req.user.update({
           twoFactorBackupCodes: hashed,
         });
@@ -123,14 +123,14 @@ app.put(
         id: result.payload.iat.toString(),
         type: 'totp',
         name: req.body.name,
-        backupCodes,
+        codes,
       });
     }
   },
 );
 
-app.put(
-  // PUT /api/users/me/2fa/webauthn
+app.post(
+  // POST /api/users/me/2fa/webauthn
   '/api/users/me/2fa/webauthn',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -159,8 +159,8 @@ app.put(
   },
 );
 
-app.put(
-  // PUT /api/users/me/2fa/webauthn/confirm
+app.post(
+  // POST /api/users/me/2fa/webauthn/confirm
   '/api/users/me/2fa/webauthn/confirm',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -199,12 +199,12 @@ app.put(
         transports: req.body.response.response.transports,
       });
 
-      let backupCodes;
+      let codes;
 
       if (!req.user.twoFactorBackupCodes) {
         // Generate backup codes
-        const { codes, hashed } = await generateBackupCodes();
-        backupCodes = codes;
+        const { codes: unhashedCodes, hashed } = await generateBackupCodes();
+        codes = unhashedCodes;
         await req.user.update({
           twoFactorBackupCodes: hashed,
         });
@@ -214,14 +214,14 @@ app.put(
         id: payload.iat.toString(),
         type: 'webauthn',
         name: req.body.name,
-        backupCodes,
+        codes,
       });
     }
   },
 );
 
-app.put(
-  // PUT /api/users/me/2fa/backup
+app.post(
+  // POST /api/users/me/2fa/backup
   '/api/users/me/2fa/backup',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
