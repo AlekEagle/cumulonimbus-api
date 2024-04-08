@@ -33,13 +33,6 @@ export default function ReverifyIdentity(
         );
     }
 
-    // If the session the user is using is a scoped session, we will skip the reverify process.
-    if (req.session.permissionFlags !== null) return next();
-
-    // Check if the user provided a body. If they didn't, we will send an error response.
-    if (!req.body)
-      return res.status(400).json(new Errors.MissingFields(['password']));
-
     const secondFactors = await SecondFactor.findAll({
         where: {
           user: req.user.id,
@@ -48,6 +41,20 @@ export default function ReverifyIdentity(
       availableFactors = secondFactors
         .map((factor) => factor.type)
         .filter((t, i, a) => a.indexOf(t) === i);
+
+    if (availableFactors.length === 0 && staffRequired) {
+      logger.warn(
+        `User ${req.user.username} (${req.user.id}) attempted to access a staff-only endpoint without any second factors. Route: ${req.path}`,
+      );
+      return res.status(401).json(new Errors.EndpointRequiresSecondFactor());
+    }
+
+    // If the session the user is using is a scoped session, we will skip the reverify process.
+    if (req.session.permissionFlags !== null) return next();
+
+    // Check if the user provided a body. If they didn't, we will send an error response.
+    if (!req.body)
+      return res.status(400).json(new Errors.MissingFields(['password']));
 
     // If they aren't responding to a challenge, check if they provided the correct password.
     if (!req.body['2fa'] || !req.body['2fa'].token) {
@@ -85,13 +92,6 @@ export default function ReverifyIdentity(
     }
     // The user does not have any second factors, but their password is correct. There is no point in issuing a challenge that they would not be able to complete.
     else {
-      // If the endpoint requires staff privileges, but they don't have any second factors, we will send an error response.
-      if (staffRequired) {
-        logger.warn(
-          `User ${req.user.username} (${req.user.id}) attempted to access a staff-only endpoint without any second factors. Route: ${req.path}`,
-        );
-        return res.status(401).json(new Errors.EndpointRequiresSecondFactor());
-      }
       logger.debug(
         `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their password.`,
       );

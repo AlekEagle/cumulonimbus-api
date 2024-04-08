@@ -17,6 +17,11 @@ export default function SessionChecker(
           `A request to a route that requires staff privileges was made without staff privileges. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
         );
         return res.status(403).json(new Errors.InsufficientPermissions());
+      } else if (staffRequired && req.user.twoFactorBackupCodes === null) {
+        logger.warn(
+          `A request to a route that requires staff privileges was made without a second factor enrolled. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
+        );
+        return res.status(401).json(new Errors.EndpointRequiresSecondFactor());
       } else {
         logger.debug(
           `Route: ${req.path} | staff required: ${staffRequired} | User: ${req.user.username} (${req.user.id})`,

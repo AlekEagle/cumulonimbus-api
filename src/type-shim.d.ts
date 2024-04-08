@@ -52,9 +52,7 @@ declare global {
         staff: boolean;
         domain: string;
         subdomain: string | null;
-        emailVerificationToken: string | null;
-        verificationRequestedAt: Date | null;
-        verifiedAt: Date | null;
+        verifiedAt: string | null;
         bannedAt: string | null;
         createdAt: string;
         updatedAt: string;
@@ -65,7 +63,9 @@ declare global {
         exp: number;
         name: string;
         permissionFlags: number;
-        usedAt: number;
+        usedAt: string;
+        createdAt: string;
+        updatedAt: string;
       }
 
       export interface List<T> {

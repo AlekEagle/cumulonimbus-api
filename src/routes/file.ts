@@ -12,23 +12,24 @@ import LimitOffset from '../middleware/LimitOffset.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 import { PermissionFlags } from '../middleware/SessionPermissionChecker.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import Bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
 
 logger.debug('Loading: File Routes...');
 
+// TODO: Try and see if this endpoint can be separated into standard user vs staff user.
 app.get(
   // GET /api/files
   '/api/files',
   SessionChecker(),
   LimitOffset(0, 50),
   async (
-    req: Request<null, null, null, { uid: string }>,
+    req: Request<null, null, null, { user: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
       | Cumulonimbus.Structures.Error
@@ -36,7 +37,7 @@ app.get(
   ) => {
     try {
       // If the user did not provide a user, check if they are staff.
-      if (!req.query.uid) {
+      if (!req.query.user) {
         if (
           !req.user.staff ||
           (req.session.permissionFlags !== null &&
@@ -60,7 +61,7 @@ app.get(
       }
 
       // If the user provided a user that isn't their own id or "me", check if they are staff.
-      if (req.query.uid !== 'me') {
+      if (req.query.user !== 'me') {
         if (
           !req.user.staff ||
           (req.session.permissionFlags !== null &&
@@ -69,7 +70,7 @@ app.get(
           return res.status(403).json(new Errors.InsufficientPermissions());
 
         // Check if the user exists.
-        let user = await User.findByPk(req.query.uid + '');
+        let user = await User.findByPk(req.query.user + '');
 
         // If the user does not exist, return an InvalidUser error.
         if (!user) return res.status(404).json(new Errors.InvalidUser());
@@ -80,7 +81,7 @@ app.get(
           offset: req.offset,
           order: [['createdAt', 'DESC']],
           where: {
-            userID: req.query.uid + '',
+            userID: req.query.user + '',
           },
         });
         let items = files.map((file) =>
@@ -88,11 +89,18 @@ app.get(
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.uid}. (limit: ${req.limit}, offset: ${req.offset})`,
+          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.user}. (limit: ${req.limit}, offset: ${req.offset})`,
         );
 
         return res.status(200).json({ count, items });
       }
+
+      // If the session being used is scoped, check if it has the required scope
+      if (
+        req.session.permissionFlags !== null &&
+        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
+      )
+        return res.status(404).json(new Errors.InsufficientPermissions());
 
       // If the user provided their own id or "me", return their files.
       let { count, rows: files } = await File.findAndCountAll({
@@ -136,20 +144,21 @@ app.get(
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
-        // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
+          // InvalidFile error for scrape resistance via the API.
           return res.status(404).json(new Errors.InvalidFile());
         else if (
           req.session.permissionFlags !== null &&
           !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
         )
-          return res.status(403).json(new Errors.InsufficientPermissions());
+          // InvalidFile error for scrape resistance via the API.
+          return res.status(404).json(new Errors.InvalidFile());
       } else if (
         req.session.permissionFlags !== null &&
         !(req.session.permissionFlags & PermissionFlags.FILE_READ)
-      ) {
-        return res.status(403).json(new Errors.InsufficientPermissions());
-      }
+      )
+        // InvalidFile error for scrape resistance via the API.
+        return res.status(404).json(new Errors.InvalidFile());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested file ${file.id}.`,
@@ -186,20 +195,21 @@ app.put(
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
-        // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
+          // InvalidFile error for scrape resistance via the API.
           return res.status(404).json(new Errors.InvalidFile());
         else if (
           req.session.permissionFlags !== null &&
           !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
         )
-          return res.status(403).json(new Errors.InsufficientPermissions());
+          // InvalidFile error for scrape resistance via the API.
+          return res.status(404).json(new Errors.InvalidFile());
       } else if (
         req.session.permissionFlags !== null &&
         !(req.session.permissionFlags & PermissionFlags.FILE_READ)
-      ) {
-        return res.status(403).json(new Errors.InsufficientPermissions());
-      }
+      )
+        // InvalidFile error for scrape resistance via the API.
+        return res.status(404).json(new Errors.InvalidFile());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) updated the name of file ${file.id}.`,
@@ -223,7 +233,7 @@ app.delete(
   SessionChecker(),
   KillSwitch(KillSwitches.FILE_MODIFY),
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     try {
@@ -235,20 +245,21 @@ app.delete(
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
-        // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
+          // InvalidFile error for scrape resistance via the API.
           return res.status(404).json(new Errors.InvalidFile());
         else if (
           req.session.permissionFlags !== null &&
           !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
         )
-          return res.status(403).json(new Errors.InsufficientPermissions());
+          // InvalidFile error for scrape resistance via the API.
+          return res.status(404).json(new Errors.InvalidFile());
       } else if (
         req.session.permissionFlags !== null &&
         !(req.session.permissionFlags & PermissionFlags.FILE_READ)
-      ) {
-        return res.status(403).json(new Errors.InsufficientPermissions());
-      }
+      )
+        // InvalidFile error for scrape resistance via the API.
+        return res.status(404).json(new Errors.InvalidFile());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) deleted the name of file ${file.id}.`,
@@ -296,20 +307,21 @@ app.put(
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
-        // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
         if (!req.user.staff)
+          // InvalidFile error for scrape resistance via the API.
           return res.status(404).json(new Errors.InvalidFile());
         else if (
           req.session.permissionFlags !== null &&
           !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
         )
-          return res.status(403).json(new Errors.InsufficientPermissions());
+          // InvalidFile error for scrape resistance via the API.
+          return res.status(404).json(new Errors.InvalidFile());
       } else if (
         req.session.permissionFlags !== null &&
         !(req.session.permissionFlags & PermissionFlags.FILE_READ)
-      ) {
-        return res.status(403).json(new Errors.InsufficientPermissions());
-      }
+      )
+        // InvalidFile error for scrape resistance via the API.
+        return res.status(404).json(new Errors.InvalidFile());
 
       // Check if the file has a thumbnail, and delete it if it does.
       if (existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)))
@@ -355,38 +367,37 @@ app.put(
 app.delete(
   // DELETE /api/files/all
   '/api/files/all',
-  SessionChecker(),
-  BodyValidator({
-    password: new ExtendedValidBodyTypes('string', true),
-  }),
+  ReverifyIdentity(),
   KillSwitch(KillSwitches.FILE_DELETE),
   async (
-    req: Request<null, null, { password: string }, { user: string }>,
+    req: Request<null, null, null, { user: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // If the query does not contain the user parameter, return a MissingFields error.
-    if (!req.query.user)
-      return res.status(400).json(new Errors.MissingFields(['user']));
+    // If the user did provide a user, check if they are staff.
+    if (req.query.user && req.query.user !== 'me') {
+      if (
+        !req.user.staff ||
+        (req.session.permissionFlags !== null &&
+          !(req.session.permissionFlags & PermissionFlags.STAFF_MODIFY_FILES))
+      )
+        return res.status(403).json(new Errors.InsufficientPermissions());
 
-    // Check if the user is trying delete their own files.
-    if (req.query.user === 'me') {
-      // Check if the request body contains the password field. (Only for non-scoped sessions.)
-      if (!req.body.password && req.session.permissionFlags === null)
-        return res.status(400).json(new Errors.MissingFields(['password']));
+      // If the user is staff but does not have 2FA enabled, deny the request.
+      if (req.user.twoFactorBackupCodes === null)
+        return res.status(401).json(new Errors.EndpointRequiresSecondFactor());
+
       try {
-        // Check if the password is correct. (Only for non-scoped sessions.)
-        if (
-          req.session.permissionFlags === null &&
-          !(await Bcrypt.compare(req.body.password, req.user.password))
-        )
-          return res.status(401).json(new Errors.InvalidPassword());
+        let user = await User.findByPk(req.query.user);
 
-        // Fetch all files belonging to the user.
+        // Check if a user with that ID exists
+        if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+        // Retrieve all of the user's files.
         let { count, rows: files } = await File.findAndCountAll({
           where: {
-            userID: req.user.id,
+            userID: user.id,
           },
         });
 
@@ -412,7 +423,7 @@ app.delete(
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) deleted all of their files.`,
+          `User ${req.user.username} (${req.user.id}) deleted all files belonging to user ${user.username} (${user.id}). Count: ${count}`,
         );
 
         return res.status(200).json(new Success.DeleteFiles(count));
@@ -422,26 +433,16 @@ app.delete(
       }
     }
 
-    // If the user is not staff, return an InsufficientPermissions error.
-    if (!req.user.staff)
-      return res.status(403).json(new Errors.InsufficientPermissions());
-    else if (
+    if (
       req.session.permissionFlags !== null &&
-      !(req.session.permissionFlags & PermissionFlags.STAFF_MODIFY_FILES)
+      !(req.session.permissionFlags & PermissionFlags.FILE_MODIFY)
     )
       return res.status(403).json(new Errors.InsufficientPermissions());
 
     try {
-      // Check if the user exists.
-      let user = await User.findByPk(req.query.user);
-
-      // If the user does not exist, return an InvalidUser error.
-      if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-      // Fetch all files belonging to the user.
       let { count, rows: files } = await File.findAndCountAll({
         where: {
-          userID: user.id,
+          userID: req.user.id,
         },
       });
 
@@ -465,7 +466,7 @@ app.delete(
       );
 
       logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted ${count} files belonging to user ${user.username} (${user.id}).`,
+        `User ${req.user.username} (${req.user.id}) deleted all of their own files. Count: ${count}`,
       );
 
       return res.status(200).json(new Success.DeleteFiles(count));
@@ -496,20 +497,21 @@ app.delete(
 
       // If the file does not belong to the user, check if they are staff.
       if (file.userID !== req.user.id) {
-        // If they are not staff, return an InvalidFile error. (This is to prevent scraping of files by checking if the response is a 404 or 403.)
+        // InvalidFile error for scrape resistance via the API.
         if (!req.user.staff)
           return res.status(404).json(new Errors.InvalidFile());
         else if (
           req.session.permissionFlags !== null &&
-          !(req.session.permissionFlags & PermissionFlags.STAFF_READ_FILES)
+          !(req.session.permissionFlags & PermissionFlags.STAFF_MODIFY_FILES)
         )
-          return res.status(403).json(new Errors.InsufficientPermissions());
+          // InvalidFile error for scrape resistance via the API.
+          return res.status(404).json(new Errors.InvalidFile());
       } else if (
         req.session.permissionFlags !== null &&
-        !(req.session.permissionFlags & PermissionFlags.FILE_READ)
-      ) {
-        return res.status(403).json(new Errors.InsufficientPermissions());
-      }
+        !(req.session.permissionFlags & PermissionFlags.FILE_MODIFY)
+      )
+        // InvalidFile error for scrape resistance via the API.
+        return res.status(404).json(new Errors.InvalidFile());
 
       // First, delete the thumbnail if it exists.
       if (existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`)))

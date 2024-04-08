@@ -9,6 +9,7 @@ import {
 import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
+import SessionChecker from '../middleware/SessionChecker.js';
 
 import { Request, Response } from 'express';
 
@@ -17,7 +18,7 @@ logger.debug('Loading: Kill switches Route...');
 app.get(
   // GET /api/killswitches
   '/api/killswitches',
-  ReverifyIdentity(true),
+  SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
     req,

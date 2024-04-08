@@ -65,7 +65,10 @@ app.post(
           password: string;
           rememberMe?: boolean;
         }
-      | (SecondFactorChallengeResponse & { rememberMe?: boolean })
+      | {
+          '2fa': SecondFactorChallengeResponse;
+          'rememberMe'?: boolean;
+        }
     >,
     res: Response<
       | Cumulonimbus.Structures.SuccessfulAuth
@@ -138,9 +141,9 @@ app.post(
       }
     } else {
       try {
-        const uid = extractToken(req.body.token).payload.sub,
+        const uid = extractToken(req.body['2fa'].token).payload.sub,
           user = await User.findByPk(uid);
-        if (await verifySecondFactor(req.body, user, res)) {
+        if (await verifySecondFactor(req.body['2fa'], user, res)) {
           // Generate a session name for the new session.
           const sessionName =
             (req.headers['x-session-name'] as string) || nameSession(req);
@@ -186,9 +189,9 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   ReverifyIdentity(),
   AutoTrim(),
-  SessionPermissionChecker(PermissionFlags.SESSION_CREATE),
+  SessionPermissionChecker(), // Require a standard browser session
   BodyValidator({
-    name: new ExtendedValidBodyTypes('string', true),
+    name: 'string',
     permissionFlags: 'number',
     longLived: new ExtendedValidBodyTypes('boolean', true),
   }),
@@ -196,46 +199,30 @@ app.post(
     req: Request<
       null,
       null,
-      { name: string; permissionFlags: number; longLived: boolean }
+      { name: string; permissionFlags: number; longLived?: boolean }
     >,
     res: Response<
       | Cumulonimbus.Structures.ScopedSessionCreate
       | Cumulonimbus.Structures.Error
     >,
   ) => {
-    // Generate a session name for the new session.
-    const sessionName = req.body.name || nameSession(req);
-
-    // If the session creating this new session is a scoped session and not long lasting, do not allow the new session to be long lasting.
-    if (
-      req.session.exp.getDate() <
-      req.session.createdAt.getDate() + ms('1d1m')
-    )
-      req.body.longLived = false;
-
     // Generate a new token for the user.
     const token = await generateSessionToken(
       req.user.id,
       req.body.longLived || false,
     );
 
-    // If the session creating this new session is a scoped session, make sure the new session can at most have the same permissions as the session creating it. (No privilege escalation!!)
-    const neuteredPermissionFlags =
-      req.session.permissionFlags === null
-        ? req.body.permissionFlags
-        : req.session.permissionFlags & req.body.permissionFlags;
-
     // Create a new session for the user.
     const session = await Session.create({
       id: token.data.payload.iat.toString(),
       user: req.user.id,
       exp: new Date(token.data.payload.exp * 1000),
-      name: sessionName,
-      permissionFlags: neuteredPermissionFlags,
+      name: req.body.name,
+      permissionFlags: req.body.permissionFlags,
     });
 
     logger.debug(
-      `User ${req.user.username} (${req.user.id}) created a new session ${sessionName} (${session.id}).`,
+      `User ${req.user.username} (${req.user.id}) created a new session ${req.body.name} (${session.id}).`,
     );
 
     // Return the new session.
@@ -246,6 +233,8 @@ app.post(
       name: session.name,
       permissionFlags: session.permissionFlags,
       usedAt: null,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
     });
   },
 );
@@ -270,14 +259,16 @@ app.get(
       exp: req.session.exp.getTime() / 1000,
       name: req.session.name,
       permissionFlags: req.session.permissionFlags,
-      usedAt: req.session.usedAt.getTime(),
+      usedAt: req.session.usedAt.toISOString(),
+      createdAt: req.session.createdAt.toISOString(),
+      updatedAt: req.session.updatedAt.toISOString(),
     });
   },
 );
 
 app.get(
   // GET /api/users/me/sessions/:sid
-  '/api/users/me/sessions/:sid([0-9]{10}|me)',
+  '/api/users/me/sessions/:sid([0-9]{10})',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
   async (
@@ -307,7 +298,9 @@ app.get(
       exp: session.exp.getTime() / 1000,
       name: session.name,
       permissionFlags: session.permissionFlags,
-      usedAt: session.usedAt.getTime(),
+      usedAt: session.usedAt.toISOString(),
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
     });
   },
 );
@@ -351,7 +344,9 @@ app.get(
         exp: session.exp.getTime() / 1000,
         name: session.name,
         permissionFlags: session.permissionFlags,
-        usedAt: session.usedAt.getTime(),
+        usedAt: session.usedAt.toISOString(),
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
       });
     } catch (error) {
       logger.error(error);
