@@ -93,11 +93,11 @@ app.post(
     const result = await validateToken(req.body.token);
     if (result instanceof Error) {
       if (result instanceof JoseErrors.JWTExpired)
-        return res.status(400).json(new Errors.InvalidSecondFactorResponse());
+        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
     } else {
       // Verify the TOTP code
       if (!(await verifyTOTP(req.body.code, result.payload.secret)))
-        return res.status(400).json(new Errors.InvalidSecondFactorResponse());
+        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
 
       // Store the TOTP secret in the database
       await SecondFactor.create({
@@ -327,6 +327,76 @@ app.get(
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
     }
+  },
+);
+
+app.get(
+  // GET /api/users/me/2fa/:id
+  '/api/users/me/2fa/:id([0-9]{10})',
+  SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
+  async (
+    req: Request<{ id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.SecondFactor | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the second factor
+    const factor = await SecondFactor.findByPk(req.params.id);
+    if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) fetched their second factor ${factor.name} (${factor.id}).`,
+    );
+
+    return res
+      .status(200)
+      .json(
+        KVExtractor(factor.toJSON(), [
+          'id',
+          'type',
+          'name',
+          'createdAt',
+          'updatedAt',
+        ]),
+      );
+  },
+);
+
+app.get(
+  // GET /api/users/:uid/2fa/:id
+  '/api/users/:uid([0-9]{13})/2fa/:id([0-9]{10})',
+  SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_READ_SECOND_FACTORS),
+  async (
+    req: Request<{ uid: string; id: string }>,
+    res: Response<
+      Cumulonimbus.Structures.SecondFactor | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    // Find the user
+    const user = await User.findByPk(req.params.uid);
+    if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+    // Find the second factor
+    const factor = await SecondFactor.findByPk(req.params.id);
+    if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
+
+    logger.debug(
+      `User ${req.user.username} (${req.user.id}) fetched user ${user.username} (${user.id})'s second factor ${factor.name} (${factor.id}).`,
+    );
+
+    return res
+      .status(200)
+      .json(
+        KVExtractor(factor.toJSON(), [
+          'id',
+          'type',
+          'name',
+          'createdAt',
+          'updatedAt',
+        ]),
+      );
   },
 );
 
@@ -592,22 +662,5 @@ app.delete(
     return res
       .status(200)
       .json(new Success.DeleteSecondFactors(factors.length));
-  },
-);
-
-app.put(
-  // PUT /api/users/me/2fa/test
-  '/api/users/me/2fa/test',
-  ReverifyIdentity(),
-  async (
-    req: Request,
-    res: Response<
-      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    return res.status(200).json({
-      code: '2FA_TEST_SUCCESS',
-      message: 'Successfully authenticated with 2FA!',
-    });
   },
 );

@@ -1089,6 +1089,9 @@ app.delete(
         }),
       );
 
+      // Delete the user's sessions.
+      await Session.destroy({ where: { user: req.user.id } });
+
       // Delete the user.
       await req.user.destroy();
 
@@ -1138,6 +1141,9 @@ app.delete(
           await file.destroy();
         }),
       );
+
+      // Delete the user's sessions.
+      await Session.destroy({ where: { user: user.id } });
 
       // Delete the user.
       await user.destroy();
@@ -1203,6 +1209,9 @@ app.delete(
               await file.destroy();
             }),
           );
+
+          // Delete the user's sessions.
+          await Session.destroy({ where: { user: user.id } });
 
           // Delete the user.
           await user.destroy();

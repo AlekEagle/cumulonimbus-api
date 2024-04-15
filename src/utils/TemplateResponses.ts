@@ -235,7 +235,7 @@ export namespace Success {
 
   export class DeleteInstruction implements Cumulonimbus.Structures.Success {
     public readonly code: string = 'DELETE_INSTRUCTION_SUCCESS';
-    public readonly message: string = 'Instruction Successfully Deleted';
+    public readonly message: string = 'Instruction Successfully Dele    ted';
   }
 
   export class DeleteInstructions implements Cumulonimbus.Structures.Success {

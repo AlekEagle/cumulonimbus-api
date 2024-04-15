@@ -196,14 +196,12 @@ export async function generateSecondFactorChallenge(
     challenge?.challenge,
   );
 
-  return {
-    code: 'CHALLENGE_2FA_REQUIRED_ERROR',
-    message: 'Challenge 2FA Required',
-    token: token.token,
-    exp: token.data.payload.exp,
-    types: [...availableFactors, 'backup'],
+  return new Errors.SecondFactorChallengeRequired(
+    token.token,
+    token.data.payload.exp,
+    [...availableFactors, 'backup'],
     challenge,
-  };
+  );
 }
 
 export async function verifyWebAuthnRegistration(

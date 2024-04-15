@@ -29,7 +29,7 @@ app.get(
   SessionChecker(),
   LimitOffset(0, 50),
   async (
-    req: Request<null, null, null, { user: string }>,
+    req: Request<null, null, null, { uid: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
       | Cumulonimbus.Structures.Error
@@ -37,7 +37,7 @@ app.get(
   ) => {
     try {
       // If the user did not provide a user, check if they are staff.
-      if (!req.query.user) {
+      if (!req.query.uid) {
         if (
           !req.user.staff ||
           (req.session.permissionFlags !== null &&
@@ -61,7 +61,7 @@ app.get(
       }
 
       // If the user provided a user that isn't their own id or "me", check if they are staff.
-      if (req.query.user !== 'me') {
+      if (req.query.uid !== 'me') {
         if (
           !req.user.staff ||
           (req.session.permissionFlags !== null &&
@@ -70,7 +70,7 @@ app.get(
           return res.status(403).json(new Errors.InsufficientPermissions());
 
         // Check if the user exists.
-        let user = await User.findByPk(req.query.user + '');
+        let user = await User.findByPk(req.query.uid + '');
 
         // If the user does not exist, return an InvalidUser error.
         if (!user) return res.status(404).json(new Errors.InvalidUser());
@@ -81,7 +81,7 @@ app.get(
           offset: req.offset,
           order: [['createdAt', 'DESC']],
           where: {
-            userID: req.query.user + '',
+            userID: req.query.uid + '',
           },
         });
         let items = files.map((file) =>
@@ -89,7 +89,7 @@ app.get(
         );
 
         logger.debug(
-          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.user}. (limit: ${req.limit}, offset: ${req.offset})`,
+          `User ${req.user.username} (${req.user.id}) requested files for user ${req.query.uid}. (limit: ${req.limit}, offset: ${req.offset})`,
         );
 
         return res.status(200).json({ count, items });

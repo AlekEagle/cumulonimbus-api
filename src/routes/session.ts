@@ -81,7 +81,7 @@ app.post(
     if (
       isType<{ username: string; password: string; rememberMe?: boolean }>(
         req.body,
-        ['username'],
+        ['password'],
       )
     ) {
       try {
@@ -876,7 +876,7 @@ app.delete(
 app.delete(
   // DELETE /api/users/:uid/sessions/all
   '/api/users/:uid([0-9]{13})/sessions/all',
-  SessionChecker(),
+  SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (
     req: Request<{ uid: string }>,
