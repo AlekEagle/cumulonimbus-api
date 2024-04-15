@@ -10,12 +10,20 @@ await init();
 export default async function sendVerificationEmail(
   to: string,
   username: string,
-): Promise<{
-  success: boolean;
-  error?: string;
-  token?: string;
-  tokenData?: TokenStructure;
-}> {
+): Promise<
+  | {
+      success: true;
+      token: string;
+      tokenData: TokenStructure;
+      error: undefined;
+    }
+  | {
+      success: false;
+      error: string;
+      token: undefined;
+      tokenData: undefined;
+    }
+> {
   const { token, data } = await generateEmailVerificationToken(to),
     url = `${
       process.env.ENV === 'development'
@@ -24,7 +32,7 @@ export default async function sendVerificationEmail(
     }/verify?token=${token}`;
 
   try {
-    await transport.sendMail({
+    await transport!.sendMail({
       to,
       subject: 'Verify your Cumulonimbus account email',
       html: `
@@ -74,9 +82,14 @@ export default async function sendVerificationEmail(
   </body>
 </html>`.trim(),
     });
-    return { success: true, token, tokenData: data };
+    return { success: true, token, tokenData: data, error: undefined };
   } catch (err) {
     logger.error(err);
-    return { success: false, error: err.message };
+    return {
+      success: false,
+      error: err.message,
+      token: undefined,
+      tokenData: undefined,
+    };
   }
 }

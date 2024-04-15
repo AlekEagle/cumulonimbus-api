@@ -4,8 +4,14 @@ import { logger } from '../index.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class GlobalKillSwitches extends Model {
-  id: number;
-  state: boolean;
+  id!: number;
+  state!: boolean;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is GlobalKillSwitches {
+    return value instanceof GlobalKillSwitches;
+  }
 }
 
 (async function () {
@@ -25,7 +31,7 @@ export default class GlobalKillSwitches extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       modelName: 'GlobalKillSwitches',
       createdAt: false,
       updatedAt: false,

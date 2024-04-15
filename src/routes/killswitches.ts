@@ -27,6 +27,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       const killSwitches = await getKillSwitches();
 
@@ -57,6 +58,7 @@ app.put(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       const killSwitch = Number(req.params.id);
 
@@ -89,6 +91,7 @@ app.delete(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       const killSwitch = Number(req.params.id);
 
@@ -121,6 +124,7 @@ app.delete(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       logger.info(
         `User ${req.user.username} (${req.user.id}) disabled all kill switches`,

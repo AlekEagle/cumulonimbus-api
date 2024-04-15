@@ -3,7 +3,7 @@ import { logger } from '../index.js';
 import { createTransport } from 'nodemailer';
 
 // Create a SMTP transporter object
-export let transport: ReturnType<typeof createTransport>;
+export let transport: ReturnType<typeof createTransport> | null = null;
 
 export async function init(): Promise<boolean> {
   if (!transport) {

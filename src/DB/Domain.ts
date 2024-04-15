@@ -4,10 +4,14 @@ import { logger } from '../index.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class Domain extends Model {
-  id: string;
-  subdomains: boolean;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  id!: string;
+  subdomains!: boolean;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is Domain {
+    return value instanceof Domain;
+  }
 }
 
 (async function () {
@@ -26,7 +30,7 @@ export default class Domain extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Domains',
     },
   );

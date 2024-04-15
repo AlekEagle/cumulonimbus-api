@@ -35,8 +35,8 @@ declare global {
   namespace Express {
     interface Request {
       useragent: DetectResult;
-      user?: User;
-      session?: Session;
+      user: User | null;
+      session: Session | null;
       limit?: number;
       offset?: number;
     }
@@ -62,8 +62,8 @@ declare global {
         id: string;
         exp: number;
         name: string;
-        permissionFlags: number;
-        usedAt: string;
+        permissionFlags: number | null;
+        usedAt: string | null;
         createdAt: string;
         updatedAt: string;
       }

@@ -30,6 +30,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domains.
       const { count, rows: domains } = await Domain.findAndCountAll({
@@ -66,6 +67,7 @@ app.get(
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -102,6 +104,7 @@ app.post(
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // If the domain already exists, return a DomainExists error.
       if (await Domain.findByPk(req.body.id))
@@ -137,6 +140,7 @@ app.put(
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -173,6 +177,7 @@ app.delete(
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -209,6 +214,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
@@ -263,6 +269,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Check if they're trying to delete more than 50 domains.
     if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());

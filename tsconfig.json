@@ -10,7 +10,8 @@
     "typeRoots": ["node_modules/@types"],
     "alwaysStrict": true,
     "esModuleInterop": true,
-    "moduleResolution": "nodenext"
+    "moduleResolution": "nodenext",
+    "strictNullChecks": true
   },
   "include": ["./src/**/*"],
   "ts-node": {

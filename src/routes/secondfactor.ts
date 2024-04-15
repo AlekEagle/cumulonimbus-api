@@ -51,6 +51,7 @@ app.post(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Generate a TOTP secret
     const secret = await generateTOTPSecret(),
       // Generate a TOTP registration token
@@ -89,6 +90,7 @@ app.post(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Validate the token
     const result = await validateToken(req.body.token);
     if (result instanceof Error) {
@@ -142,6 +144,7 @@ app.post(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Generate a WebAuthn registration challenge
     const challenge = await generateWebAuthnRegistrationObject(req.user),
       // Generate a WebAuthn registration token
@@ -171,12 +174,13 @@ app.post(
     response: 'any',
   }),
   async (
-    req: Request<null, null, { token: string; name: string; response: any }>,
+    req: Request<{}, {}, { token: string; name: string; response: any }>,
     res: Response<
       | Cumulonimbus.Structures.SecondFactorRegisterSuccess
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Verify the registration response
     const result = await verifyWebAuthnRegistration(req, res, req.user);
 
@@ -190,12 +194,12 @@ app.post(
         name: req.body.name,
         user: payload.sub,
         type: 'webauthn',
-        keyId: Buffer.from(result.registrationInfo.credentialID)
+        keyId: Buffer.from(result.registrationInfo!.credentialID)
           .toString('base64url')
           .replace(/=/g, ''), // Obliterate the base64 padding from existence
-        publicKey: Buffer.from(result.registrationInfo.credentialPublicKey),
-        counter: result.registrationInfo.counter,
-        deviceType: result.registrationInfo.credentialDeviceType,
+        publicKey: Buffer.from(result.registrationInfo!.credentialPublicKey),
+        counter: result.registrationInfo!.counter,
+        deviceType: result.registrationInfo!.credentialDeviceType,
         transports: req.body.response.response.transports,
       });
 
@@ -233,6 +237,7 @@ app.post(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Generate backup codes
     const { codes, hashed } = await generateBackupCodes();
     await req.user.update({
@@ -258,6 +263,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user's second factors
       const factors = await SecondFactor.findAndCountAll({
@@ -299,6 +305,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       const user = await User.findByPk(req.params.id);
       if (!user) return res.status(404).json(new Errors.InvalidUser());
@@ -341,6 +348,7 @@ app.get(
       Cumulonimbus.Structures.SecondFactor | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the second factor
     const factor = await SecondFactor.findByPk(req.params.id);
     if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
@@ -374,6 +382,7 @@ app.get(
       Cumulonimbus.Structures.SecondFactor | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the user
     const user = await User.findByPk(req.params.uid);
     if (!user) return res.status(404).json(new Errors.InvalidUser());
@@ -412,6 +421,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the second factor
     const factor = await SecondFactor.findByPk(req.params.id);
     if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
@@ -452,6 +462,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the user
     const user = await User.findByPk(req.params.uid);
     if (!user) return res.status(404).json(new Errors.InvalidUser());
@@ -500,6 +511,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the second factors
     const factors = await SecondFactor.findAll({
       where: {
@@ -549,6 +561,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the user
     const user = await User.findByPk(req.params.uid);
     if (!user) return res.status(404).json(new Errors.InvalidUser());
@@ -600,6 +613,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the second factors
     const factors = await SecondFactor.findAll({
       where: {
@@ -636,6 +650,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the user
     const user = await User.findByPk(req.params.uid);
     if (!user) return res.status(404).json(new Errors.InvalidUser());

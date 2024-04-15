@@ -10,21 +10,24 @@ import type {
 export type SecondFactorType = 'totp' | 'webauthn';
 
 export default class SecondFactor extends Model {
-  id: string;
-  user: string;
-  type: SecondFactorType;
-  name: string;
+  id!: string;
+  user!: string;
+  type!: SecondFactorType;
+  name!: string;
   // Fields used by TOTP
-  secret?: string;
+  secret!: string | null;
   // Fields used by WebAuthn
-  keyId?: string;
-  publicKey?: Buffer;
-  counter?: number;
-  deviceType?: CredentialDeviceType;
-  transports?: AuthenticatorTransportFuture[];
+  keyId!: string | null;
+  publicKey!: Buffer | null;
+  counter!: number | null;
+  deviceType!: CredentialDeviceType | null;
+  transports!: AuthenticatorTransportFuture[] | null;
+  createdAt!: Date;
+  updatedAt!: Date;
 
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  static is(value: any): value is SecondFactor {
+    return value instanceof SecondFactor;
+  }
 }
 
 (async function () {
@@ -73,7 +76,7 @@ export default class SecondFactor extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'SecondFactors',
     },
   );

@@ -5,14 +5,18 @@ import { PermissionFlags } from '../middleware/SessionPermissionChecker.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class Session extends Model {
-  id: string;
-  user: string;
-  exp: Date;
-  name: string;
-  permissionFlags: PermissionFlags | null;
-  usedAt: Date;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  id!: string;
+  user!: string;
+  exp!: Date;
+  name!: string;
+  permissionFlags!: PermissionFlags | null;
+  usedAt!: null | Date; // This is a nullable field
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is Session {
+    return 'id' in value && 'user' in value && 'exp' in value;
+  }
 }
 
 (async function () {
@@ -52,7 +56,7 @@ export default class Session extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Sessions',
     },
   );

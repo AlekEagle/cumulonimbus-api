@@ -3,10 +3,9 @@ import { errors } from 'jose';
 
 import { Errors } from '../utils/TemplateResponses.js';
 import { logger } from '../index.js';
-import { TokenStructure, validateToken } from '../utils/Token.js';
+import { validateToken } from '../utils/Token.js';
 import User from '../DB/User.js';
 import Session from '../DB/Session.js';
-import staleSessionPruner from '../utils/StaleSessionPruner.js';
 
 export default async function AuthProvider(
   req: Request,

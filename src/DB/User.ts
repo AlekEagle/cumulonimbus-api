@@ -4,19 +4,23 @@ import { logger } from '../index.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class User extends Model {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  staff: boolean;
-  domain: string;
-  subdomain: string | null;
-  verificationRequestedAt: Date | null;
-  verifiedAt: Date | null;
-  bannedAt: Date | null;
-  twoFactorBackupCodes: string[] | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  id!: string;
+  username!: string;
+  email!: string;
+  password!: string;
+  staff!: boolean;
+  domain!: string;
+  subdomain!: string | null;
+  verificationRequestedAt!: Date | null;
+  verifiedAt!: Date | null;
+  bannedAt!: Date | null;
+  twoFactorBackupCodes!: string[] | null;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is User {
+    return value instanceof User;
+  }
 }
 
 (async function () {
@@ -73,7 +77,7 @@ export default class User extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Users',
     },
   );

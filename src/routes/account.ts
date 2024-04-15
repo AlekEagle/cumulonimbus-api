@@ -72,8 +72,8 @@ app.post(
   }),
   async (
     req: Request<
-      null,
-      null,
+      {},
+      {},
       {
         username: string;
         email: string;
@@ -192,6 +192,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the users.
       const { count, rows: users } = await User.findAndCountAll({
@@ -227,6 +228,7 @@ app.get(
     req: Request,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     logger.debug(
       `User ${req.user.username} (${req.user.id}) fetched their own user object.`,
     );
@@ -247,6 +249,7 @@ app.get(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     try {
+      if (!req.user) return res.status(401).json(new Errors.InvalidSession());
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
@@ -282,6 +285,7 @@ app.put(
     req: Request<null, null, { username: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Check if the username meets username character requirements
       if (!USERNAME_REGEX.test(req.body.username))
@@ -322,6 +326,7 @@ app.put(
     req: Request<{ id: string }, null, { username: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -370,6 +375,7 @@ app.put(
     req: Request<null, null, { email: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Check if the email is a valid email
       if (!EMAIL_REGEX.test(req.body.email))
@@ -425,6 +431,7 @@ app.put(
     req: Request<{ id: string }, null, { email: string; password?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -523,6 +530,7 @@ app.put(
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -564,6 +572,7 @@ app.delete(
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -611,6 +620,7 @@ app.get(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Check if the user's email is already verified.
       if (req.user.verifiedAt)
@@ -658,6 +668,7 @@ app.get(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -718,6 +729,7 @@ app.put(
     >,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Check if the new password matches the confirmation.
       if (req.body.newPassword !== req.body.confirmNewPassword)
@@ -760,6 +772,7 @@ app.put(
     >,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -800,6 +813,7 @@ app.put(
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -842,6 +856,7 @@ app.delete(
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -880,6 +895,7 @@ app.put(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     try {
+      if (!req.user) return res.status(401).json(new Errors.InvalidSession());
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
@@ -927,6 +943,7 @@ app.delete(
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     try {
+      if (!req.user) return res.status(401).json(new Errors.InvalidSession());
       // Get the user.
       const user = await User.findByPk(req.params.id);
 
@@ -966,6 +983,7 @@ app.put(
     req: Request<null, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Check if the domain is valid.
       let domain = await Domain.findByPk(req.body.domain);
@@ -1067,6 +1085,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Delete the user's files.
       const files = await File.findAll({ where: { userID: req.user.id } });
@@ -1114,6 +1133,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the user.
       const user = await User.findByPk(req.params.id);
@@ -1148,6 +1168,10 @@ app.delete(
       // Delete the user.
       await user.destroy();
 
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted user ${user.username} (${user.id}).`,
+      );
+
       return res.status(200).json(new Success.DeleteUser());
     } catch (error) {
       logger.error(error);
@@ -1171,6 +1195,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Check if they're attempting to delete more than 50 users
       if (req.body.ids.length > 50)
@@ -1216,6 +1241,10 @@ app.delete(
           // Delete the user.
           await user.destroy();
         }),
+      );
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted ${count} users.`,
       );
 
       return res.status(200).json(new Success.DeleteUsers(count));

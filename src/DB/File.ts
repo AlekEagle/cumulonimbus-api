@@ -4,12 +4,16 @@ import { logger } from '../index.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class File extends Model {
-  id: string;
-  userID: string;
-  size: number;
-  name: string;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  id!: string;
+  userID!: string;
+  size!: number;
+  name!: string;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is File {
+    return value instanceof File;
+  }
 }
 
 (async function () {
@@ -40,7 +44,7 @@ export default class File extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Uploads',
     },
   );

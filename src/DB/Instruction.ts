@@ -4,14 +4,18 @@ import { logger } from '../index.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class Instruction extends Model {
-  id: string;
-  name: string;
-  steps: string[];
-  filename: string | null;
-  content: string;
-  description: string;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  id!: string;
+  name!: string;
+  steps!: string[];
+  filename!: string | null;
+  content!: string;
+  description!: string;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is Instruction {
+    return value instanceof Instruction;
+  }
 }
 
 (async function () {
@@ -46,7 +50,7 @@ export default class Instruction extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Instructions',
     },
   );

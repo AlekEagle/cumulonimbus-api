@@ -58,8 +58,8 @@ app.post(
   }),
   async (
     req: Request<
-      null,
-      null,
+      {},
+      {},
       | {
           username: string;
           password: string;
@@ -143,6 +143,7 @@ app.post(
       try {
         const uid = extractToken(req.body['2fa'].token).payload.sub,
           user = await User.findByPk(uid);
+        if (!user) return res.status(404).json(new Errors.InvalidUser());
         if (await verifySecondFactor(req.body['2fa'], user, res)) {
           // Generate a session name for the new session.
           const sessionName =
@@ -206,6 +207,7 @@ app.post(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Generate a new token for the user.
     const token = await generateSessionToken(
       req.user.id,
@@ -250,6 +252,8 @@ app.get(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     logger.debug(
       `User ${req.user.username} (${req.user.id}) requested their current session.`,
     );
@@ -259,7 +263,7 @@ app.get(
       exp: req.session.exp.getTime() / 1000,
       name: req.session.name,
       permissionFlags: req.session.permissionFlags,
-      usedAt: req.session.usedAt.toISOString(),
+      usedAt: req.session.usedAt?.toISOString() || null,
       createdAt: req.session.createdAt.toISOString(),
       updatedAt: req.session.updatedAt.toISOString(),
     });
@@ -277,6 +281,7 @@ app.get(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the session with the given ID.
     const session = await Session.findOne({
       where: {
@@ -298,7 +303,7 @@ app.get(
       exp: session.exp.getTime() / 1000,
       name: session.name,
       permissionFlags: session.permissionFlags,
-      usedAt: session.usedAt.toISOString(),
+      usedAt: session.usedAt?.toISOString() || null,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
     });
@@ -316,6 +321,7 @@ app.get(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -344,7 +350,7 @@ app.get(
         exp: session.exp.getTime() / 1000,
         name: session.name,
         permissionFlags: session.permissionFlags,
-        usedAt: session.usedAt.toISOString(),
+        usedAt: session.usedAt?.toISOString() || null,
         createdAt: session.createdAt.toISOString(),
         updatedAt: session.updatedAt.toISOString(),
       });
@@ -368,6 +374,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     logger.debug(
       `User ${req.user.username} (${req.user.id}) requested their sessions.`,
     );
@@ -405,6 +412,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -455,6 +463,7 @@ app.put(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the session with the given ID.
     const session = await Session.findOne({
       where: {
@@ -494,6 +503,7 @@ app.put(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -546,6 +556,8 @@ app.put(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     // Find the session with the given ID.
     const session = await Session.findOne({
       where: {
@@ -553,6 +565,8 @@ app.put(
         id: req.params.sid,
       },
     });
+
+    if (!session) return res.status(404).json(new Errors.InvalidSession());
 
     // If the session that is being updated is a full session
     // or if the session is the current session, return an InvalidSession error.
@@ -594,6 +608,7 @@ app.put(
       Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -644,6 +659,8 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     try {
       // Delete the current session.
       await req.session.destroy();
@@ -673,6 +690,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the session with the given ID.
     const session = await Session.findOne({
       where: {
@@ -712,6 +730,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);
@@ -760,6 +779,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Check if they are trying to remove more than 50 sessions.
     if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());
@@ -796,6 +816,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Check if they are trying to remove more than 50 sessions.
     if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());
@@ -845,6 +866,8 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     // Find the sessions that belong to the user.
     const { rows, count } = await Session.findAndCountAll({
       where: {
@@ -884,6 +907,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the user with the given ID.
       const user = await User.findByPk(req.params.uid);

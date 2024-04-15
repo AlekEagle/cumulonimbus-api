@@ -68,7 +68,7 @@ export async function setKillSwitch(
 export async function getKillSwitch(
   killSwitch: KillSwitches,
 ): Promise<boolean> {
-  return (await GlobalKillSwitches.findByPk(killSwitch)).state;
+  return (await GlobalKillSwitches.findByPk(killSwitch))!.state;
 }
 
 // Get all the kill switches from the cache

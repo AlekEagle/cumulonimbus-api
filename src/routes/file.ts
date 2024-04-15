@@ -35,6 +35,8 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     try {
       // If the user did not provide a user, check if they are staff.
       if (!req.query.uid) {
@@ -135,6 +137,8 @@ app.get(
     req: Request<{ id: string }, null, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the file.
       let file = await File.findByPk(req.params.id);
@@ -187,6 +191,8 @@ app.put(
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     try {
+      if (!req.user || !req.session)
+        return res.status(401).json(new Errors.InvalidSession());
       // Find the file
       let file = await File.findByPk(req.params.id);
 
@@ -236,6 +242,8 @@ app.delete(
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the file.
       let file = await File.findByPk(req.params.id);
@@ -290,6 +298,8 @@ app.put(
     req: Request<{ id: string }, null, { extension: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     // If the extension the user provided has a leading dot, remove it.
     if (req.body.extension.startsWith('.'))
       req.body.extension = req.body.extension.slice(1);
@@ -375,6 +385,8 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     // If the user did provide a user, check if they are staff.
     if (req.query.user && req.query.user !== 'me') {
       if (
@@ -488,6 +500,8 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     try {
       // Find the file.
       let file = await File.findByPk(req.params.id);
@@ -549,6 +563,8 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     // Check if the user is trying to delete more than 50 files.
     if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());
@@ -565,7 +581,7 @@ app.delete(
 
       // If the user is not staff, remove any files that do not belong to them and change the count accordingly.
       if (!req.user.staff) {
-        files = files.filter((file) => file.userID === req.user.id);
+        files = files.filter((file) => file.userID === req.user!.id);
         count = files.length;
       }
 

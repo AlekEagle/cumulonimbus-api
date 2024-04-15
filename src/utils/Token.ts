@@ -167,7 +167,7 @@ export function nameSession(req: Request): string {
     Object.keys(req.useragent.os).length === 0 &&
     req.useragent.device === undefined
   )
-    return req.headers['user-agent'];
+    return req.headers['user-agent']!;
   let name = '';
   // If only req.useragent.client is empty, call it an "Unknown Browser"
   if (Object.keys(req.useragent.client).length === 0) name += 'Unknown Browser';

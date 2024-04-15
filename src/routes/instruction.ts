@@ -30,6 +30,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instructions.
       const { count, rows: instructions } = await Instruction.findAndCountAll({
@@ -66,6 +67,7 @@ app.get(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -118,6 +120,7 @@ app.post(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // If the ID is invalid, return an InvalidInstruction error.
       if (!INSTRUCTION_REGEX.test(req.body.id))
@@ -168,6 +171,7 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -207,6 +211,7 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -247,6 +252,7 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -289,6 +295,7 @@ app.put(
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -324,6 +331,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the instruction.
       const instruction = await Instruction.findByPk(req.params.id);
@@ -362,6 +370,7 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Check if they are trying to delete more than 50 instructions.
     if (req.body.ids.length > 50)
       return res.status(400).json(new Errors.BodyTooLarge());

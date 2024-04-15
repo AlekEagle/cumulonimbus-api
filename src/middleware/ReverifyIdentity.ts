@@ -6,8 +6,9 @@ import {
   verifySecondFactor,
 } from '../utils/SecondFactor.js';
 
-import { RequestHandler } from 'express';
+import { NextFunction, Request, RequestHandler, Response } from 'express';
 import Bcrypt from 'bcrypt';
+import User from '../DB/User.js';
 
 // A middleware that will reverify the user's identity using their password or second factors.
 // This can be used in place of SessionChecker.
@@ -50,7 +51,7 @@ export default function ReverifyIdentity(
     }
 
     // If the session the user is using is a scoped session, we will skip the reverify process.
-    if (req.session.permissionFlags !== null) return next();
+    if (req.session!.permissionFlags !== null) return next();
 
     // Check if the user provided a body. If they didn't, we will send an error response.
     if (!req.body)

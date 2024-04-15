@@ -58,6 +58,8 @@ export default function SessionPermissionChecker(
   requiredPermissionFlags?: PermissionFlags,
 ): RequestHandler {
   return async function (req, res, next) {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
     if (req.session.permissionFlags === null) {
       logger.debug(
         `User ${req.user.username}'s (${req.user.id}) session ${req.session.name} (${req.session.id}) is a standard browser session and does not have any permissionFlags. Required permissionFlags: ${requiredPermissionFlags}`,

@@ -141,9 +141,9 @@ export async function generateWebAuthnRegistrationObject(user: User) {
     timeout: ms(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY),
     attestationType: 'none',
     excludeCredentials: existingWebAuthnCredentials.map((cred) => ({
-      id: Buffer.from(cred.keyId, 'base64url'),
+      id: Buffer.from(cred.keyId!, 'base64url'),
       type: 'public-key',
-      transports: cred.transports,
+      transports: cred.transports!,
     })),
     authenticatorSelection: {
       userVerification: 'preferred',
@@ -162,11 +162,13 @@ export async function generateWebAuthnChallenge(user: User) {
           type: 'webauthn',
         },
       })
-    ).map((cred) => ({
-      id: Buffer.from(cred.keyId, 'base64'),
-      type: 'public-key',
-      transports: cred.transports,
-    })),
+    )
+      .map((cred) => cred.toJSON())
+      .map((cred) => ({
+        id: Buffer.from(cred.keyId, 'base64'),
+        type: 'public-key',
+        transports: cred.transports,
+      })),
     userVerification: 'preferred',
   });
 }
@@ -218,6 +220,12 @@ export async function verifyWebAuthnRegistration(
       );
       res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return null;
+    } else {
+      logger.error(
+        `User ${user.username} (${user.id}) attempted to use an invalid 2FA WebAuthn registration token: ${result.message}`,
+      );
+      res.status(400).json(new Errors.InvalidSecondFactorResponse());
+      return null;
     }
   } else if (!result.payload.challenge) {
     logger.warn(
@@ -267,6 +275,12 @@ export async function verifyWebAuthnAuthentication(
       );
       res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return false;
+    } else {
+      logger.error(
+        `User ${user.username} (${user.id}) attempted to use an invalid 2FA intermediate token: ${result.message}`,
+      );
+      res.status(400).json(new Errors.InvalidSecondFactorResponse());
+      return false;
     }
   } else if (result.payload.sub !== user.id) {
     logger.warn(
@@ -296,10 +310,10 @@ export async function verifyWebAuthnAuthentication(
 
       const verification = await verifyAuthenticationResponse({
         authenticator: {
-          counter: credential.counter,
-          credentialID: Buffer.from(credential.keyId, 'base64url'),
-          credentialPublicKey: credential.publicKey,
-          transports: credential.transports,
+          counter: credential.counter!,
+          credentialID: Buffer.from(credential.keyId!, 'base64url'),
+          credentialPublicKey: credential.publicKey!,
+          transports: credential.transports!,
         },
         response,
         expectedChallenge: result.payload.challenge,
@@ -342,6 +356,12 @@ export async function verifySecondFactor(
         `User ${user.username} (${user.id}) attempted to use an expired 2FA intermediate token.`,
       );
       res.status(401).json(new Errors.InvalidSecondFactorResponse());
+      return false;
+    } else {
+      logger.error(
+        `User ${user.username} (${user.id}) attempted to use an invalid 2FA intermediate token: ${result.message}`,
+      );
+      res.status(400).json(new Errors.InvalidSecondFactorResponse());
       return false;
     }
   } else if (result.payload.sub !== user.id) {
@@ -418,7 +438,7 @@ export async function verifySecondFactor(
             await Promise.all(
               secondFactors.map(
                 async (factor) =>
-                  await verifyTOTP(challenge.code, factor.secret),
+                  await verifyTOTP(challenge.code, factor.secret!),
               ),
             )
           ).some((result) => result)

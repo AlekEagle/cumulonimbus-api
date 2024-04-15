@@ -26,7 +26,7 @@ export default function AutoTrim(
   omittedKeysFilter: RecursiveFilter = [],
   invertFilter: boolean = false,
 ): RequestHandler {
-  return (req, res, next) => {
+  return (req, _, next) => {
     try {
       recursivelyTrim(req.body, omittedKeysFilter, invertFilter);
       next();
