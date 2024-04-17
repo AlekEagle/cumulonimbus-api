@@ -169,7 +169,7 @@ export async function generateWebAuthnChallenge(user: User) {
         type: 'public-key',
         transports: cred.transports,
       })),
-    userVerification: 'preferred',
+    userVerification: 'discouraged',
   });
 }
 
