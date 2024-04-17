@@ -270,6 +270,7 @@ app.get(
         where: {
           user: req.user.id,
         },
+        order: [['createdAt', 'DESC']],
         limit: req.limit,
         offset: req.offset,
       });
@@ -315,6 +316,7 @@ app.get(
         where: {
           user: req.params.id,
         },
+        order: [['createdAt', 'DESC']],
         limit: req.limit,
         offset: req.offset,
       });

@@ -6,9 +6,8 @@ import {
   verifySecondFactor,
 } from '../utils/SecondFactor.js';
 
-import { NextFunction, Request, RequestHandler, Response } from 'express';
+import { RequestHandler } from 'express';
 import Bcrypt from 'bcrypt';
-import User from '../DB/User.js';
 
 // A middleware that will reverify the user's identity using their password or second factors.
 // This can be used in place of SessionChecker.
@@ -72,6 +71,9 @@ export default function ReverifyIdentity(
       // They are not responding to a challenge, so we will send them one.
       try {
         if (!req.body['2fa'] || !req.body['2fa'].token) {
+          logger.debug(
+            `User ${req.user.username} (${req.user.id}) is being issued a second factor challenge.`,
+          );
           return res
             .status(401)
             .json(await generateSecondFactorChallenge(req.user));

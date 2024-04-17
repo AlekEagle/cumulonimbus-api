@@ -383,7 +383,7 @@ app.get(
       where: {
         user: req.user.id,
       },
-      order: [['exp', 'DESC']],
+      order: [['createdAt', 'DESC']],
       limit: req.limit,
       offset: req.offset,
     });
@@ -424,7 +424,7 @@ app.get(
         where: {
           user: user.id,
         },
-        order: [['exp', 'DESC']],
+        order: [['createdAt', 'DESC']],
         limit: req.limit,
         offset: req.offset,
       });

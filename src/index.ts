@@ -36,15 +36,15 @@ app.disable('x-powered-by');
 
 // Bloat the express instance with middleware
 app.use(
-  DevelopmentCORS,
-  Compression,
-  DeviceDetector,
+  DevelopmentCORS(),
+  Compression(),
+  DeviceDetector(),
   QueryStringParser({
     keyWithNoValueIsBool: true,
     ignoreKeyWithNoValue: false,
   }),
   json(),
-  AuthProvider,
+  AuthProvider(),
   ExpressRateLimit(defaultRateLimitConfig),
   KillSwitch(),
 );
