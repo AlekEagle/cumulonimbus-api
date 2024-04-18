@@ -15,6 +15,7 @@ export default class User extends Model {
   verifiedAt!: Date | null;
   bannedAt!: Date | null;
   twoFactorBackupCodes!: string[] | null;
+  twoFactorBackupCodeUsedAt!: Date | null;
   createdAt!: Date;
   updatedAt!: Date;
 
@@ -74,6 +75,11 @@ export default class User extends Model {
       },
       twoFactorBackupCodes: {
         type: DataTypes.ARRAY(DataTypes.STRING(128)),
+        allowNull: true,
+      },
+      twoFactorBackupCodeUsedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
       },
     },
     {

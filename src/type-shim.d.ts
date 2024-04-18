@@ -54,6 +54,7 @@ declare global {
         subdomain: string | null;
         verifiedAt: string | null;
         bannedAt: string | null;
+        twoFactorBackupCodeUsedAt: string | null;
         createdAt: string;
         updatedAt: string;
       }
@@ -110,6 +111,7 @@ declare global {
         id: string;
         name: string;
         type: SecondFactorType;
+        usedAt: string | null;
         createdAt: string;
         updatedAt: string;
       }

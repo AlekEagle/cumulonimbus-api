@@ -242,6 +242,7 @@ app.post(
     const { codes, hashed } = await generateBackupCodes();
     await req.user.update({
       twoFactorBackupCodes: hashed,
+      twoFactorBackupCodesUsedAt: null,
     });
 
     return res.status(201).json({
@@ -366,6 +367,7 @@ app.get(
           'id',
           'type',
           'name',
+          'usedAt',
           'createdAt',
           'updatedAt',
         ]),
@@ -404,6 +406,7 @@ app.get(
           'id',
           'type',
           'name',
+          'usedAt',
           'createdAt',
           'updatedAt',
         ]),
@@ -439,9 +442,10 @@ app.delete(
     });
 
     if (remainingFactors === 0) {
-      // If the user has no second factors left, delete their backup codes
+      // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await req.user.update({
         twoFactorBackupCodes: null,
+        twoFactorBackupCodesUsedAt: null,
       });
     }
 
@@ -484,9 +488,10 @@ app.delete(
     });
 
     if (remainingFactors === 0) {
-      // If the user has no second factors left, delete their backup codes
+      // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await user.update({
         twoFactorBackupCodes: null,
+        twoFactorBackupCodesUsedAt: null,
       });
     }
 
@@ -533,9 +538,10 @@ app.delete(
     });
 
     if (remainingFactors === 0) {
-      // If the user has no second factors left, delete their backup codes
+      // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await req.user.update({
         twoFactorBackupCodes: null,
+        twoFactorBackupCodesUsedAt: null,
       });
     }
 
@@ -587,9 +593,10 @@ app.delete(
     });
 
     if (remainingFactors === 0) {
-      // If the user has no second factors left, delete their backup codes
+      // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await user.update({
         twoFactorBackupCodes: null,
+        twoFactorBackupCodesUsedAt: null,
       });
     }
 
@@ -626,9 +633,10 @@ app.delete(
     // Delete the second factors
     await Promise.all(factors.map((factor) => factor.destroy()));
 
-    // Delete the user's backup codes
+    // Delete the user's backup codes and reset the backup codes used at date
     await req.user.update({
       twoFactorBackupCodes: null,
+      twoFactorBackupCodesUsedAt: null,
     });
 
     logger.debug(
@@ -667,9 +675,10 @@ app.delete(
     // Delete the second factors
     await Promise.all(factors.map((factor) => factor.destroy()));
 
-    // Delete the user's backup codes
+    // Delete the user's backup codes and reset the backup codes used at date
     await user.update({
       twoFactorBackupCodes: null,
+      twoFactorBackupCodesUsedAt: null,
     });
 
     logger.debug(

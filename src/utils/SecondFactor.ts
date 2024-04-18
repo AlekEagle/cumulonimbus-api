@@ -323,9 +323,11 @@ export async function verifyWebAuthnAuthentication(
       });
 
       if (verification.verified) {
+        // Update the usedAt field of the WebAuthn factor
+        await credential.update({ usedAt: new Date() });
         return true;
       } else {
-        logger.debug(
+        logger.warn(
           `User ${user.username} (${user.id}) attempted to authenticate with a WebAuthn credential, but it was not able to be verified.`,
         );
         res.status(401).json(new Errors.InvalidSecondFactorResponse());
@@ -401,11 +403,12 @@ export async function verifySecondFactor(
           res.status(401).json(new Errors.InvalidSecondFactorResponse());
           return false;
         } else {
-          // Find the backup code that was used and remove it
+          // Find the backup code that was used and remove it, as well as update the twoFactorBackupCodeUsedAt field
           await user.update({
             twoFactorBackupCodes: user.twoFactorBackupCodes.filter(
               (hash) => !verifyBackupCode(challenge.code, hash),
             ),
+            twoFactorBackupCodeUsedAt: new Date(),
           });
           return true;
         }
@@ -433,27 +436,21 @@ export async function verifySecondFactor(
           res.status(400).json(new Errors.InvalidSecondFactorMethod());
           return false;
         }
-        if (
-          (
-            await Promise.all(
-              secondFactors.map(
-                async (factor) =>
-                  await verifyTOTP(challenge.code, factor.secret!),
-              ),
-            )
-          ).some((result) => result)
-        ) {
-          logger.debug(
-            `User ${user.username} (${user.id}) successfully used a TOTP code.`,
-          );
-          return true;
-        } else {
-          logger.debug(
-            `User ${user.username} (${user.id}) attempted to use an invalid TOTP code.`,
-          );
-          res.status(401).json(new Errors.InvalidSecondFactorResponse());
-          return false;
+        for (const factor of secondFactors) {
+          if (await verifyTOTP(challenge.code, factor.secret!)) {
+            // Update the usedAt field of the TOTP factor
+            await factor.update({ usedAt: new Date() });
+            logger.debug(
+              `User ${user.username} (${user.id}) successfully used a TOTP code.`,
+            );
+            return true;
+          }
         }
+        logger.debug(
+          `User ${user.username} (${user.id}) attempted to use an invalid TOTP code.`,
+        );
+        res.status(401).json(new Errors.InvalidSecondFactorResponse());
+        return false;
       case 'webauthn':
         // Check if required fields are present
         if (!challenge.response) {

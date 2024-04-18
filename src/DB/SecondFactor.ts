@@ -22,6 +22,7 @@ export default class SecondFactor extends Model {
   counter!: number | null;
   deviceType!: CredentialDeviceType | null;
   transports!: AuthenticatorTransportFuture[] | null;
+  usedAt!: Date | null;
   createdAt!: Date;
   updatedAt!: Date;
 
@@ -58,21 +59,31 @@ export default class SecondFactor extends Model {
       },
       secret: {
         type: DataTypes.STRING,
+        allowNull: true,
       },
       keyId: {
         type: DataTypes.STRING,
+        allowNull: true,
       },
       publicKey: {
         type: DataTypes.BLOB,
+        allowNull: true,
       },
       counter: {
         type: DataTypes.INTEGER,
+        allowNull: true,
       },
       deviceType: {
         type: DataTypes.STRING,
+        allowNull: true,
       },
       transports: {
         type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+      },
+      usedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
       },
     },
     {
