@@ -1,6 +1,6 @@
 {
   "name": "cumulonimbus-api",
-  "version": "4.2.0",
+  "version": "5.0.0",
   "description": "The API for Cumulonimbus.",
   "type": "module",
   "main": "dist/index.js",
