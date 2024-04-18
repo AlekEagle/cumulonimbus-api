@@ -146,7 +146,7 @@ export async function generateWebAuthnRegistrationObject(user: User) {
       transports: cred.transports!,
     })),
     authenticatorSelection: {
-      userVerification: 'preferred',
+      userVerification: 'discouraged',
     },
   });
 }
