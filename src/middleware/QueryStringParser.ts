@@ -21,7 +21,6 @@ function QueryStringParser(
           queryStrObj[keyVal[0]] = true;
           continue;
         } else {
-          queryStrObj[keyVal[0]] = null;
           continue;
         }
       } else {

@@ -1,26 +1,27 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
+
 import { Model, DataTypes } from 'sequelize';
 
 export default class User extends Model {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  sessions: {
-    iat: number;
-    exp: number;
-    name: string;
-  }[];
-  staff: boolean;
-  domain: string;
-  subdomain: string | null;
-  emailVerificationToken: string | null;
-  verificationRequestedAt: Date | null;
-  verifiedAt: Date | null;
-  bannedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  id!: string;
+  username!: string;
+  email!: string;
+  password!: string;
+  staff!: boolean;
+  domain!: string;
+  subdomain!: string | null;
+  verificationRequestedAt!: Date | null;
+  verifiedAt!: Date | null;
+  bannedAt!: Date | null;
+  twoFactorBackupCodes!: string[] | null;
+  twoFactorBackupCodeUsedAt!: Date | null;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is User {
+    return value instanceof User;
+  }
 }
 
 (async function () {
@@ -47,11 +48,6 @@ export default class User extends Model {
         type: DataTypes.STRING(60),
         allowNull: false,
       },
-      sessions: {
-        type: DataTypes.ARRAY(DataTypes.JSONB),
-        defaultValue: [],
-        allowNull: false,
-      },
       staff: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
@@ -63,10 +59,6 @@ export default class User extends Model {
       },
       subdomain: {
         type: DataTypes.STRING(64),
-        allowNull: true,
-      },
-      emailVerificationToken: {
-        type: DataTypes.STRING(128),
         allowNull: true,
       },
       verificationRequestedAt: {
@@ -81,15 +73,23 @@ export default class User extends Model {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      twoFactorBackupCodes: {
+        type: DataTypes.ARRAY(DataTypes.STRING(128)),
+        allowNull: true,
+      },
+      twoFactorBackupCodeUsedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Users',
     },
   );
   try {
     await User.sync();
-    logger.log('User model synced with DB.');
+    logger.info('User model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync User model. Error: ', error);
   }

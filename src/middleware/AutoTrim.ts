@@ -23,12 +23,12 @@ class RecursiveTypeError extends Error {
 
 // A middleware that will recursively trim values of whitespace, while avoiding specified keys.
 export default function AutoTrim(
-  filteredKeys: RecursiveFilter = [],
+  omittedKeysFilter: RecursiveFilter = [],
   invertFilter: boolean = false,
 ): RequestHandler {
-  return (req, res, next) => {
+  return (req, _, next) => {
     try {
-      recursivelyTrim(req.body, filteredKeys, invertFilter);
+      recursivelyTrim(req.body, omittedKeysFilter, invertFilter);
       next();
     } catch (e) {
       next(e);
@@ -42,7 +42,7 @@ function recursivelyTrim(
   invertFilter: boolean = false,
 ) {
   // Turn all strings in filteredKeys into arrays
-  const nestedKeys = filteredKeys.map(key => {
+  const nestedKeys = filteredKeys.map((key) => {
     if (typeof key === 'string') return key.split('.');
     else return key;
   });
@@ -51,24 +51,26 @@ function recursivelyTrim(
     // Determine the type of the value
     if (typeof obj[key] === 'string') {
       // Check if this key is actually supposed to be an object (if it has keys after the 0th index)
-      if (nestedKeys.some(nestedKey => nestedKey[0] === key && nestedKey[1]))
+      if (nestedKeys.some((nestedKey) => nestedKey[0] === key && nestedKey[1]))
         // If it is, throw an error, I expected an object from filteredKeys value but got a string
         throw new RecursiveTypeError([key], 'string');
       // Check if this key is in the filteredKeys array (or not, if invertFilter is true)
       if (
-        (invertFilter && nestedKeys.some(nestedKey => nestedKey[0] === key)) ||
-        (!invertFilter && !nestedKeys.some(nestedKey => nestedKey[0] === key))
+        (invertFilter &&
+          nestedKeys.some((nestedKey) => nestedKey[0] === key)) ||
+        (!invertFilter && !nestedKeys.some((nestedKey) => nestedKey[0] === key))
       )
         obj[key] = obj[key].trim();
     } else if (Array.isArray(obj[key])) {
       // Check if this key is actually supposed to be an object (if it has keys after the 0th index)
-      if (nestedKeys.some(nestedKey => nestedKey[0] === key && nestedKey[1]))
+      if (nestedKeys.some((nestedKey) => nestedKey[0] === key && nestedKey[1]))
         // If it is, throw an error, I expected an object from filteredKeys value but got an array
         throw new RecursiveTypeError([key], 'array');
       // Check if this key is in the filteredKeys array (or not, if invertFilter is true)
       if (
-        (invertFilter && nestedKeys.some(nestedKey => nestedKey[0] === key)) ||
-        (!invertFilter && !nestedKeys.some(nestedKey => nestedKey[0] === key))
+        (invertFilter &&
+          nestedKeys.some((nestedKey) => nestedKey[0] === key)) ||
+        (!invertFilter && !nestedKeys.some((nestedKey) => nestedKey[0] === key))
       )
         // Recurse the array and trim all strings
         obj[key] = obj[key].map((value: any) => {
@@ -77,19 +79,22 @@ function recursivelyTrim(
         });
     } else if (typeof obj[key] === 'object') {
       // Check if this key has a nested key in filteredKeys (if it has keys after the 0th index)
-      if (!nestedKeys.some(nestedKey => nestedKey[0] === key && nestedKey[1])) {
+      if (
+        !nestedKeys.some((nestedKey) => nestedKey[0] === key && nestedKey[1])
+      ) {
         // if it doesn't, check if this key is in the filteredKeys array (or not, if invertFilter is true)
         if (
           (!invertFilter &&
-            nestedKeys.some(nestedKey => nestedKey[0] === key)) ||
-          (invertFilter && !nestedKeys.some(nestedKey => nestedKey[0] === key))
+            nestedKeys.some((nestedKey) => nestedKey[0] === key)) ||
+          (invertFilter &&
+            !nestedKeys.some((nestedKey) => nestedKey[0] === key))
         )
           // Ignore it and move on
           continue;
       } else {
         // If it does, create a new nested keys array shifted to the left by one (to remove the first key)
         const newNestedKeys = nestedKeys
-          .find(nestedKey => nestedKey[0] === key)!
+          .find((nestedKey) => nestedKey[0] === key)!
           .slice(1);
 
         // Surround this recursion in a try/catch block to catch unexpected type errors

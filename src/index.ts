@@ -12,7 +12,7 @@ import defaultRateLimitConfig from './utils/RateLimitUtils.js';
 import { PORT, API_VERSION } from './utils/Constants.js';
 import { initKillSwitches } from './utils/GlobalKillSwitches.js';
 import KillSwitch from './middleware/KillSwitch.js';
-import { pruneAllStaleSessions } from './utils/StaleSessionPruner.js';
+import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
 
 // Node modules that are huge and stinky and we don't want to look at them
 // (JK we love the developers that made these awesome modules)
@@ -36,15 +36,15 @@ app.disable('x-powered-by');
 
 // Bloat the express instance with middleware
 app.use(
-  DevelopmentCORS,
-  Compression,
-  DeviceDetector,
+  DevelopmentCORS(),
+  Compression(),
+  DeviceDetector(),
   QueryStringParser({
     keyWithNoValueIsBool: true,
     ignoreKeyWithNoValue: false,
   }),
   json(),
-  AuthProvider,
+  AuthProvider(),
   ExpressRateLimit(defaultRateLimitConfig),
   KillSwitch(),
 );
@@ -63,3 +63,5 @@ import('./routes/index.js');
 app.listen(PORT, () => {
   logger.info(`Listening on port ${PORT}.`);
 });
+
+// TODO: Add way cool E2E tests for the API

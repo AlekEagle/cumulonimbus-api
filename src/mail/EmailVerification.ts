@@ -1,14 +1,30 @@
 import { logger } from '../index.js';
 import { transport, init } from './index.js';
-import { generateVerifyEmailToken } from '../utils/Token.js';
+import {
+  generateEmailVerificationToken,
+  TokenStructure,
+} from '../utils/Token.js';
 
 await init();
 
-export async function sendUpdateVerificationEmail(
+export default async function sendVerificationEmail(
   to: string,
   username: string,
-): Promise<{ success: boolean; error?: string; token: string }> {
-  const token = generateVerifyEmailToken(),
+): Promise<
+  | {
+      success: true;
+      token: string;
+      tokenData: TokenStructure;
+      error: undefined;
+    }
+  | {
+      success: false;
+      error: string;
+      token: undefined;
+      tokenData: undefined;
+    }
+> {
+  const { token, data } = await generateEmailVerificationToken(to),
     url = `${
       process.env.ENV === 'development'
         ? 'http://localhost:5173'
@@ -16,9 +32,9 @@ export async function sendUpdateVerificationEmail(
     }/verify?token=${token}`;
 
   try {
-    await transport.sendMail({
+    await transport!.sendMail({
       to,
-      subject: 'Verify your new email address',
+      subject: 'Verify your Cumulonimbus account email',
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -46,7 +62,7 @@ export async function sendUpdateVerificationEmail(
   </head>
   <body>
     <h1>Hi ${username}!</h1>
-    <p>You recently updated your email address for your Cumulonimbus account. Before you can continue uploading files, you'll need to verify your new email address.</p>
+    <p>Before you can start uploading files, you'll need to verify your email address.</p>
 
     <div class="divider"></div>
 
@@ -66,9 +82,14 @@ export async function sendUpdateVerificationEmail(
   </body>
 </html>`.trim(),
     });
-    return { success: true, token };
+    return { success: true, token, tokenData: data, error: undefined };
   } catch (err) {
     logger.error(err);
-    return { success: false, error: err.message, token };
+    return {
+      success: false,
+      error: err.message,
+      token: undefined,
+      tokenData: undefined,
+    };
   }
 }

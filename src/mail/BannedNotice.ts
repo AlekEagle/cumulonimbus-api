@@ -9,7 +9,7 @@ export async function sendBannedNotice(
   reason: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await transport.sendMail({
+    await transport!.sendMail({
       to,
       subject: 'Your Cumulonimbus account has been banned',
       html: `

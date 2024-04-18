@@ -1,10 +1,17 @@
 import { sequelize, init as initDB } from './index.js';
-import { Model, DataTypes } from 'sequelize';
 import { logger } from '../index.js';
 
+import { Model, DataTypes } from 'sequelize';
+
 export default class GlobalKillSwitches extends Model {
-  id: number;
-  state: boolean;
+  id!: number;
+  state!: boolean;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is GlobalKillSwitches {
+    return value instanceof GlobalKillSwitches;
+  }
 }
 
 (async function () {
@@ -24,7 +31,7 @@ export default class GlobalKillSwitches extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       modelName: 'GlobalKillSwitches',
       createdAt: false,
       updatedAt: false,
@@ -32,7 +39,7 @@ export default class GlobalKillSwitches extends Model {
   );
   try {
     await GlobalKillSwitches.sync();
-    logger.log('GlobalKillSwitches model synced with DB.');
+    logger.info('GlobalKillSwitches model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync GlobalKillSwitches model. Error:', error);
   }

@@ -9,6 +9,9 @@ import BodyValidator, {
   ExtendedValidBodyTypes,
 } from '../middleware/BodyValidator.js';
 import LimitOffset from '../middleware/LimitOffset.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
@@ -27,6 +30,7 @@ app.get(
       | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domains.
       const { count, rows: domains } = await Domain.findAndCountAll({
@@ -40,7 +44,7 @@ app.get(
       );
 
       // Return the domains.
-      return res.status(200).send({
+      return res.status(200).json({
         count,
         items: domains.map((d) =>
           KVExtractor(d.toJSON(), ['id', 'subdomains']),
@@ -48,7 +52,7 @@ app.get(
       });
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -63,22 +67,23 @@ app.get(
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
 
       // If the domain doesn't exist, return a InvalidDomain error.
-      if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+      if (!domain) return res.status(404).json(new Errors.InvalidDomain());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) fetched domain ${domain.id}.`,
       );
 
       // Return the domain.
-      return res.status(200).send(domain.toJSON());
+      return res.status(200).json(domain.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -87,6 +92,7 @@ app.post(
   // POST /api/domains
   '/api/domains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   AutoTrim(),
   BodyValidator({
     id: 'string',
@@ -98,10 +104,11 @@ app.post(
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // If the domain already exists, return a DomainExists error.
       if (await Domain.findByPk(req.body.id))
-        return res.status(409).send(new Errors.DomainExists());
+        return res.status(409).json(new Errors.DomainExists());
 
       // Create the domain.
       const domain = await Domain.create({
@@ -114,10 +121,10 @@ app.post(
       );
 
       // Return the domain.
-      return res.status(201).send(domain.toJSON());
+      return res.status(201).json(domain.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -126,18 +133,20 @@ app.put(
   // PUT /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
 
       // If the domain doesn't exist, return a InvalidDomain error.
-      if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+      if (!domain) return res.status(404).json(new Errors.InvalidDomain());
 
       // Update the domain.
       await domain.update({
@@ -149,10 +158,10 @@ app.put(
       );
 
       // Return the domain.
-      return res.status(200).send(domain.toJSON());
+      return res.status(200).json(domain.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -161,18 +170,20 @@ app.delete(
   // DELETE /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
 
       // If the domain doesn't exist, return a InvalidDomain error.
-      if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+      if (!domain) return res.status(404).json(new Errors.InvalidDomain());
 
       // Update the domain.
       await domain.update({
@@ -184,10 +195,10 @@ app.delete(
       );
 
       // Return the domain.
-      return res.status(200).send(domain.toJSON());
+      return res.status(200).json(domain.toJSON());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -196,18 +207,20 @@ app.delete(
   // DELETE /api/domains/:id
   '/api/domains/:id',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   async (
     req: Request<{ id: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
       // Get the domain.
       const domain = await Domain.findByPk(req.params.id);
 
       // If the domain doesn't exist, return a InvalidDomain error.
-      if (!domain) return res.status(404).send(new Errors.InvalidDomain());
+      if (!domain) return res.status(404).json(new Errors.InvalidDomain());
 
       // Find all users using the domain.
       const users = await User.findAll({
@@ -234,10 +247,10 @@ app.delete(
       await domain.destroy();
 
       // Return a success.
-      return res.status(200).send(new Success.DeleteDomain());
+      return res.status(200).json(new Success.DeleteDomain());
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );
@@ -246,6 +259,7 @@ app.delete(
   // DELETE /api/domains
   '/api/domains',
   SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),
@@ -255,9 +269,10 @@ app.delete(
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Check if they're trying to delete more than 50 domains.
     if (req.body.ids.length > 50)
-      return res.status(400).send(new Errors.BodyTooLarge());
+      return res.status(400).json(new Errors.BodyTooLarge());
 
     try {
       // Get the domains.
@@ -270,7 +285,7 @@ app.delete(
       });
 
       // If there are no domains, return a InvalidDomain error.
-      if (count === 0) return res.status(404).send(new Errors.InvalidDomain());
+      if (count === 0) return res.status(404).json(new Errors.InvalidDomain());
 
       // Find all users using the domains.
       const users = await User.findAll({
@@ -299,10 +314,10 @@ app.delete(
       await Promise.all(domains.map((domain) => domain.destroy()));
 
       // Return a success.
-      return res.status(200).send(new Success.DeleteDomains(count));
+      return res.status(200).json(new Success.DeleteDomains(count));
     } catch (e) {
       logger.error(e);
-      return res.status(500).send(new Errors.Internal());
+      return res.status(500).json(new Errors.Internal());
     }
   },
 );

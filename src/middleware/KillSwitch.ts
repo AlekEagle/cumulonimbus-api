@@ -17,7 +17,7 @@ export default function KillSwitch(
 
     if (killSwitchTriggered !== -1) {
       if (req.user?.staff) {
-        logger.log(
+        logger.info(
           `Kill switch ${KillSwitches[killSwitchTriggered]}(${killSwitchTriggered}) triggered but user is staff. Ignoring.`,
         );
         return next();

@@ -1,14 +1,19 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
+
 import { Model, DataTypes } from 'sequelize';
 
 export default class File extends Model {
-  id: string;
-  userID: string;
-  size: number;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id!: string;
+  userID!: string;
+  size!: number;
+  name!: string;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is File {
+    return value instanceof File;
+  }
 }
 
 (async function () {
@@ -24,6 +29,10 @@ export default class File extends Model {
       userID: {
         type: DataTypes.STRING,
         allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
       },
       size: {
         type: DataTypes.INTEGER,
@@ -35,13 +44,13 @@ export default class File extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Uploads',
     },
   );
   try {
     await File.sync();
-    logger.log('Upload model synced with DB.');
+    logger.info('Upload model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Upload model. Error: ', error);
   }

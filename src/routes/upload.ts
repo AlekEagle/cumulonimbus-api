@@ -8,6 +8,9 @@ import {
 } from '../utils/Constants.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
+import SessionPermissionChecker, {
+  PermissionFlags,
+} from '../middleware/SessionPermissionChecker.js';
 
 import Multer from 'multer';
 import { Response } from 'express';
@@ -42,6 +45,7 @@ app.post(
   // POST /api/upload
   '/api/upload',
   SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.UPLOAD_FILE),
   Multer().single('file'),
   KillSwitch(KillSwitches.FILE_CREATE),
   async (
@@ -50,6 +54,7 @@ app.post(
       Cumulonimbus.Structures.SuccessfulUpload | Cumulonimbus.Structures.Error
     >,
   ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Check if the user is verified
     if (!req.user.verifiedAt)
       return res.status(403).json(new Errors.EmailNotVerified());
@@ -75,12 +80,12 @@ app.post(
         // Check if it ends with an extension that file-type fails to properly detect
         if (
           TROUBLESOME_FILE_EXTENSIONS.some((ext) =>
-            req.file.originalname.endsWith(ext),
+            req.file!.originalname.endsWith(ext),
           )
         )
           fileExtension = TROUBLESOME_FILE_EXTENSIONS.find((ext) =>
-            req.file.originalname.endsWith(ext),
-          );
+            req.file!.originalname.endsWith(ext),
+          )!;
         // If it doesn't have a troublesome file extension, go ahead and check if file-type has one for us
         else if (file.fileType)
           fileExtension = file.fileType.ext; // Use the extension from file-type
@@ -113,17 +118,17 @@ app.post(
       // Create a new file in the database
       await File.create({
         id: `${filename}.${fileExtension}`,
-        name: req.file.originalname ? req.file.originalname : null,
+        name: req.file!.originalname ? req.file!.originalname : null,
         userID: req.user.id,
-        size: req.file.size || req.body.file.length,
+        size: req.file!.size || req.body.file.length,
       });
 
       logger.debug(
         `User ${req.user.username} (${
           req.user.id
-        }) uploaded ${filename}.${fileExtension} (${req.file.size} bytes)${
-          req.file.originalname
-            ? ` originally named ${req.file.originalname}`
+        }) uploaded ${filename}.${fileExtension} (${req.file!.size} bytes)${
+          req.file!.originalname
+            ? ` originally named ${req.file!.originalname}`
             : ''
         }`,
       );

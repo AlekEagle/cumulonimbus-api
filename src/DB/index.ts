@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
 
-export let sequelize: Sequelize = null;
+export let sequelize: Sequelize | null = null;
 
 export async function init(): Promise<boolean> {
   if (!sequelize) {

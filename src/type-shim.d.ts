@@ -1,7 +1,10 @@
 // Woah! type definitions for global modules!
-import { DetectResult } from 'node-device-detector';
 import User from './DB/User.ts';
-import { TokenStructure } from './utils/Token.ts';
+import Session from './DB/Session.ts';
+import type { SecondFactorType } from './DB/SecondFactor.ts';
+
+import { DetectResult } from 'node-device-detector';
+import { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/types';
 
 export {};
 declare global {
@@ -18,6 +21,7 @@ declare global {
       BASE_UPLOAD_PATH: string;
       BASE_THUMBNAIL_PATH: string;
       DEFAULT_DOMAIN: string;
+      WEBAUTHN_RPID: string;
       FRONTEND_BASE_URL: string;
       THUMBNAIL_BASE_URL: string;
       SMTP_HOST: string;
@@ -31,8 +35,8 @@ declare global {
   namespace Express {
     interface Request {
       useragent: DetectResult;
-      user?: User;
-      session?: TokenStructure;
+      user: User | null;
+      session: Session | null;
       limit?: number;
       offset?: number;
     }
@@ -48,18 +52,21 @@ declare global {
         staff: boolean;
         domain: string;
         subdomain: string | null;
-        emailVerificationToken: string | null;
-        verificationRequestedAt: Date | null;
-        verifiedAt: Date | null;
+        verifiedAt: string | null;
         bannedAt: string | null;
+        twoFactorBackupCodeUsedAt: string | null;
         createdAt: string;
         updatedAt: string;
       }
 
       export interface Session {
-        id: number;
+        id: string;
         exp: number;
         name: string;
+        permissionFlags: number | null;
+        usedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
       }
 
       export interface List<T> {
@@ -100,6 +107,45 @@ declare global {
         exp: number;
       }
 
+      export interface SecondFactor {
+        id: string;
+        name: string;
+        type: SecondFactorType;
+        usedAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }
+
+      export interface SecondFactorChallenge {
+        token: string;
+        exp: number;
+        types: (SecondFactorType | 'backup')[];
+      }
+
+      export interface SecondFactorBaseRegistration {
+        token: string;
+        exp: number;
+        type: SecondFactorType;
+      }
+
+      export interface SecondFactorTOTPRegistration
+        extends SecondFactorBaseRegistration {
+        type: 'totp';
+        secret: string;
+        algorithm: string;
+        digits: number;
+        period: number;
+      }
+      export interface SecondFactorWebAuthnRegistration
+        extends SecondFactorBaseRegistration,
+          PublicKeyCredentialCreationOptionsJSON {
+        type: 'webauthn';
+      }
+
+      export type SecondFactorRegistration =
+        | SecondFactorTOTPRegistration
+        | SecondFactorWebAuthnRegistration;
+
       export interface File {
         id: string;
         userID: string;
@@ -118,6 +164,21 @@ declare global {
         id: number;
         name: string;
         state: boolean;
+      }
+
+      export interface SecondFactorRegisterSuccess {
+        id: string;
+        name: string;
+        type: SecondFactorType;
+        codes?: string[];
+      }
+
+      export interface SecondFactorBackupRegisterSuccess {
+        codes: string[];
+      }
+
+      export interface ScopedSessionCreate extends Session {
+        token: string;
       }
     }
   }

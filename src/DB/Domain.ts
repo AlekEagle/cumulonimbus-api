@@ -1,12 +1,17 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
+
 import { Model, DataTypes } from 'sequelize';
 
 export default class Domain extends Model {
-  id: string;
-  subdomains: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id!: string;
+  subdomains!: boolean;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is Domain {
+    return value instanceof Domain;
+  }
 }
 
 (async function () {
@@ -25,13 +30,13 @@ export default class Domain extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Domains',
     },
   );
   try {
     await Domain.sync();
-    logger.log('Domain model synced with DB.');
+    logger.info('Domain model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Domain model. Error: ', error);
   }

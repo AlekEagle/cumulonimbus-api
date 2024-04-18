@@ -1,16 +1,21 @@
 import { sequelize, init as initDB } from './index.js';
 import { logger } from '../index.js';
+
 import { Model, DataTypes } from 'sequelize';
 
 export default class Instruction extends Model {
-  id: string;
-  name: string;
-  steps: string[];
-  filename: string | null;
-  content: string;
-  description: string;
-  createdAt: Date;
-  updatedAt: Date;
+  id!: string;
+  name!: string;
+  steps!: string[];
+  filename!: string | null;
+  content!: string;
+  description!: string;
+  createdAt!: Date;
+  updatedAt!: Date;
+
+  static is(value: any): value is Instruction {
+    return value instanceof Instruction;
+  }
 }
 
 (async function () {
@@ -45,13 +50,13 @@ export default class Instruction extends Model {
       },
     },
     {
-      sequelize,
+      sequelize: sequelize!,
       tableName: 'Instructions',
     },
   );
   try {
     await Instruction.sync();
-    logger.log('Instruction model synced with DB.');
+    logger.info('Instruction model synced with DB.');
   } catch (error) {
     logger.error('Unable to sync Instruction model. Error: ', error);
   }
