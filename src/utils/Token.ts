@@ -39,7 +39,7 @@ function generateBaseToken(data: Record<string, string> = {}): SignJWT {
   return new SignJWT(data)
     .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
     .setIssuedAt()
-    .setIssuer(process.env.DEFAULT_DOMAIN);
+    .setIssuer(process.env.WEBAUTHN_RPID);
 }
 
 async function completeToken<T = Record<string, string>>(

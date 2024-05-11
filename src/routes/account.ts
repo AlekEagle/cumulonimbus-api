@@ -12,6 +12,7 @@ import Domain from '../DB/Domain.js';
 import User from '../DB/User.js';
 import File from '../DB/File.js';
 import {
+  extractToken,
   generateSessionToken,
   nameSession,
   validateToken,
@@ -482,6 +483,7 @@ app.put(
     >,
   ) => {
     try {
+      logger.debug('Received email verification request.');
       const result = await validateToken(req.body.token);
 
       if (result instanceof Error) {
@@ -496,21 +498,23 @@ app.put(
           },
         });
         // If there's no user, return an InvalidVerificationToken error
-        if (!user)
+        if (!user) {
+          logger.debug(`Could not find user with email ${result.payload.sub}.`);
           return res.status(400).json(new Errors.InvalidVerificationToken());
+        }
 
         // If the user is banned, return a Banned error
         if (user.bannedAt) return res.status(403).json(new Errors.Banned());
-
-        // If the user's email is already verified, return an EmailAlreadyVerified error
-        if (user.verifiedAt)
-          return res.status(400).json(new Errors.EmailAlreadyVerified());
 
         // Update the user's email verification status.
         await user.update({
           verificationRequestedAt: null,
           verifiedAt: new Date(),
         });
+
+        logger.debug(
+          `User ${user.username} (${user.id}) verified their email.`,
+        );
 
         return res.status(200).json(new Success.VerifyEmail());
       }
@@ -641,7 +645,7 @@ app.get(
 
       // Update the user's email verification status.
       await req.user.update({
-        verificationRequestedAt: new Date(),
+        verificationRequestedAt: extractToken(verifyToken).payload.iat,
       });
 
       logger.debug(
@@ -694,8 +698,8 @@ app.get(
       }
 
       // Update the user's email verification status.
-      await user.update({
-        verificationRequestedAt: new Date(),
+      await req.user.update({
+        verificationRequestedAt: extractToken(verifyToken).payload.iat,
       });
 
       logger.debug(
