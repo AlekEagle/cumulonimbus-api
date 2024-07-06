@@ -11,7 +11,6 @@ export default class User extends Model {
   staff!: boolean;
   domain!: string;
   subdomain!: string | null;
-  verificationRequestedAt!: Date | null;
   verifiedAt!: Date | null;
   bannedAt!: Date | null;
   twoFactorBackupCodes!: string[] | null;
@@ -59,10 +58,6 @@ export default class User extends Model {
       },
       subdomain: {
         type: DataTypes.STRING(64),
-        allowNull: true,
-      },
-      verificationRequestedAt: {
-        type: DataTypes.DATE,
         allowNull: true,
       },
       verifiedAt: {

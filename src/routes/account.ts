@@ -130,7 +130,7 @@ app.post(
       const token = await generateSessionToken(now, req.body.rememberMe);
 
       // Send the verification email.
-      const { success, error, tokenData } = await sendVerificationEmail(
+      const { success, error } = await sendVerificationEmail(
         req.body.email,
         req.body.username,
       );
@@ -149,7 +149,6 @@ app.post(
         email: req.body.email,
         domain: process.env.DEFAULT_DOMAIN,
         subdomain: null,
-        verificationRequestedAt: tokenData.payload.iat,
       });
 
       // Create a corresponding session.
@@ -405,7 +404,6 @@ app.put(
       await req.user.update({
         email: req.body.email,
         verifiedAt: null,
-        verificationRequestedAt: tokenData.payload.iat,
       });
 
       // Send the user object.
@@ -494,7 +492,6 @@ app.put(
         const user = await User.findOne({
           where: {
             email: result.payload.sub,
-            verificationRequestedAt: new Date(result.payload.iat),
           },
         });
         // If there's no user, return an InvalidVerificationToken error
@@ -508,7 +505,6 @@ app.put(
 
         // Update the user's email verification status.
         await user.update({
-          verificationRequestedAt: null,
           verifiedAt: new Date(),
         });
 
@@ -549,7 +545,6 @@ app.put(
       // Verify the user's email.
       await user.update({
         verifiedAt: new Date(),
-        verificationRequestedAt: null,
       });
 
       logger.debug(
@@ -634,7 +629,6 @@ app.get(
       const {
         success,
         error,
-        token: verifyToken,
       } = await sendVerificationEmail(req.user.email, req.user.username);
 
       // If the email failed to send, return an error 500.
@@ -642,11 +636,6 @@ app.get(
         logger.error(error);
         return res.status(500).json(new Errors.Internal());
       }
-
-      // Update the user's email verification status.
-      await req.user.update({
-        verificationRequestedAt: extractToken(verifyToken).payload.iat,
-      });
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested a new verification email.`,
@@ -688,7 +677,6 @@ app.get(
       const {
         success,
         error,
-        token: verifyToken,
       } = await sendVerificationEmail(user.email, user.username);
 
       // If the email failed to send, return an error 500.
@@ -696,11 +684,6 @@ app.get(
         logger.error(error);
         return res.status(500).json(new Errors.Internal());
       }
-
-      // Update the user's email verification status.
-      await req.user.update({
-        verificationRequestedAt: extractToken(verifyToken).payload.iat,
-      });
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested a new verification email for user ${user.username} (${user.id}).`,

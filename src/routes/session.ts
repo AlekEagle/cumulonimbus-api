@@ -26,7 +26,6 @@ import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
-import isType from '../utils/TypeAsserter.js';
 import KVExtractor from '../utils/KVExtractor.js';
 
 import { Request, Response } from 'express';
@@ -78,12 +77,7 @@ app.post(
   ) => {
     // If the user is already logged in, return an InvalidSession error.
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
-    if (
-      isType<{ username: string; password: string; rememberMe?: boolean }>(
-        req.body,
-        ['password'],
-      )
-    ) {
+    if ('password' in req.body) {
       try {
         // Find a user with the given username.
         const user = await User.findOne({

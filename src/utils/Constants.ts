@@ -19,7 +19,6 @@ export const PASSWORD_HASH_ROUNDS = 15;
 export const OMITTED_USER_FIELDS = [
   'password',
   'sessions',
-  'verificationRequestedAt',
   'twoFactorBackupCodes',
 ];
 
