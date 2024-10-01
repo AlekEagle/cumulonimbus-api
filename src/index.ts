@@ -6,18 +6,18 @@ import AuthProvider from './middleware/AuthProvider.js';
 import Compression from './middleware/Compression.js';
 import DevelopmentCORS from './middleware/DevelopmentCORS.js';
 import DeviceDetector from './middleware/DeviceDetector.js';
+import KillSwitch from './middleware/KillSwitch.js';
 import Logger, { Level } from './utils/Logger.js';
 import QueryStringParser from './middleware/QueryStringParser.js';
-import defaultRateLimitConfig from './utils/RateLimitUtils.js';
+import Ratelimit from './middleware/Ratelimit.js';
+import RatelimitStorage from './utils/RatelimitStorage.js';
+import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
 import { PORT, API_VERSION } from './utils/Constants.js';
 import { initKillSwitches } from './utils/GlobalKillSwitches.js';
-import KillSwitch from './middleware/KillSwitch.js';
-import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
 
 // Node modules that are huge and stinky and we don't want to look at them
 // (JK we love the developers that made these awesome modules)
 import Express, { json } from 'express';
-import ExpressRateLimit from 'express-rate-limit';
 import ms from 'ms';
 
 // Create a new logger instance
@@ -30,6 +30,9 @@ await initKillSwitches();
 
 // Create a new express instance
 export const app = Express();
+
+// Create a new RatelimitStorage Object
+export const ratelimitStore = new RatelimitStorage();
 
 // Remove the X-Powered-By header because it's stinky and we don't like it
 app.disable('x-powered-by');
@@ -45,7 +48,13 @@ app.use(
   }),
   json(),
   AuthProvider(),
-  ExpressRateLimit(defaultRateLimitConfig),
+  Ratelimit({
+    storage: ratelimitStore,
+    burst: {
+      max: 2,
+      window: 10e3,
+    },
+  }),
   KillSwitch(),
 );
 

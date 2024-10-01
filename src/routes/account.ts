@@ -1,4 +1,4 @@
-import { logger, app } from '../index.js';
+import { logger, app, ratelimitStore } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import {
   USERNAME_REGEX,
@@ -12,7 +12,6 @@ import Domain from '../DB/Domain.js';
 import User from '../DB/User.js';
 import File from '../DB/File.js';
 import {
-  extractToken,
   generateSessionToken,
   nameSession,
   validateToken,
@@ -33,6 +32,7 @@ import Session from '../DB/Session.js';
 import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
+import Ratelimit from '../middleware/Ratelimit.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -61,15 +61,11 @@ app.post(
     confirmPassword: 'string',
     rememberMe: new ExtendedValidBodyTypes('boolean', true),
   }),
-  ExpressRateLimit({
-    ...defaultRateLimitConfig,
-    windowMs: ms('1h'), // 1 hour
+  Ratelimit({
     max: 1,
-    // Skip responses that result in 409 Conflict (UserExists)
-    // FIXME: This does NOT work, skip is processed before the response is sent.
-    skip(_, res) {
-      return res.statusCode === 409;
-    },
+    window: ms('1h'),
+    ignoreStatusCodes: [429, 500, 503, 409],
+    storage: ratelimitStore,
   }),
   async (
     req: Request<
@@ -174,6 +170,7 @@ app.post(
 app.get(
   // GET /api/users
   '/api/users',
+  Ratelimit(),
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
   LimitOffset(0, 50),
@@ -626,10 +623,10 @@ app.get(
         return res.status(400).json(new Errors.EmailAlreadyVerified());
 
       // Send the verification email.
-      const {
-        success,
-        error,
-      } = await sendVerificationEmail(req.user.email, req.user.username);
+      const { success, error } = await sendVerificationEmail(
+        req.user.email,
+        req.user.username,
+      );
 
       // If the email failed to send, return an error 500.
       if (!success) {
@@ -674,10 +671,10 @@ app.get(
         return res.status(400).json(new Errors.EmailAlreadyVerified());
 
       // Send the verification email.
-      const {
-        success,
-        error,
-      } = await sendVerificationEmail(user.email, user.username);
+      const { success, error } = await sendVerificationEmail(
+        user.email,
+        user.username,
+      );
 
       // If the email failed to send, return an error 500.
       if (!success) {

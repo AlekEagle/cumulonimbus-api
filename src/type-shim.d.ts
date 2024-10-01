@@ -2,9 +2,14 @@
 import User from './DB/User.ts';
 import Session from './DB/Session.ts';
 import type { SecondFactorType } from './DB/SecondFactor.ts';
+import type {
+  RatelimitSubject,
+  RatelimitData,
+} from './utils/RatelimitStorage.ts';
 
 import { DetectResult } from 'node-device-detector';
 import { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/types';
+import { Send } from 'express';
 
 export {};
 declare global {
@@ -39,6 +44,16 @@ declare global {
       session: Session | null;
       limit?: number;
       offset?: number;
+    }
+
+    interface Response {
+      _originalSend?: Send;
+      ratelimit?: {
+        skipped: boolean;
+        requestTime: number;
+        subject: RatelimitSubject;
+        data: RatelimitData;
+      };
     }
   }
 
@@ -180,6 +195,13 @@ declare global {
       export interface ScopedSessionCreate extends Session {
         token: string;
       }
+    }
+
+    namespace Utilities {
+      export type ValueDeterminingMiddleware<T> = (
+        request: Express.Request,
+        response: Express.Response,
+      ) => T | Promise<T>;
     }
   }
 }
