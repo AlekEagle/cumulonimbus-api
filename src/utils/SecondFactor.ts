@@ -27,6 +27,7 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
+import { isoUint8Array } from '@simplewebauthn/server/helpers';
 import { AuthenticationResponseJSON } from '@simplewebauthn/types';
 import ms from 'ms';
 
@@ -127,24 +128,28 @@ export function verifyBackupCode(code: string, hashed: string): boolean {
 }
 
 export async function generateWebAuthnRegistrationObject(user: User) {
-  const existingWebAuthnCredentials = await SecondFactor.findAll({
-    where: {
-      user: user.id,
-      type: 'webauthn',
-    },
-  });
+  const excludeCredentials = (
+    await SecondFactor.findAll({
+      where: {
+        user: user.id,
+        type: 'webauthn',
+      },
+    })
+  )
+    .map((cred) => cred.toJSON())
+    .map((cred) => ({
+      id: cred.keyId,
+      type: 'public-key',
+      transports: cred.transports,
+    }));
   return await generateRegistrationOptions({
     rpName: 'Cumulonimbus',
     rpID: process.env.WEBAUTHN_RPID,
-    userID: user.id,
+    userID: isoUint8Array.fromUTF8String(user.id),
     userName: user.username,
     timeout: ms(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY),
     attestationType: 'none',
-    excludeCredentials: existingWebAuthnCredentials.map((cred) => ({
-      id: Buffer.from(cred.keyId!, 'base64url'),
-      type: 'public-key',
-      transports: cred.transports!,
-    })),
+    excludeCredentials,
     authenticatorSelection: {
       userVerification: 'discouraged',
     },
@@ -152,23 +157,24 @@ export async function generateWebAuthnRegistrationObject(user: User) {
 }
 
 export async function generateWebAuthnChallenge(user: User) {
+  const allowCredentials = (
+    await SecondFactor.findAll({
+      where: {
+        user: user.id,
+        type: 'webauthn',
+      },
+    })
+  )
+    .map((cred) => cred.toJSON())
+    .map((cred) => ({
+      id: cred.keyId,
+      type: 'public-key',
+      transports: cred.transports,
+    }));
   return await generateAuthenticationOptions({
     rpID: process.env.WEBAUTHN_RPID,
     timeout: ms(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY),
-    allowCredentials: (
-      await SecondFactor.findAll({
-        where: {
-          user: user.id,
-          type: 'webauthn',
-        },
-      })
-    )
-      .map((cred) => cred.toJSON())
-      .map((cred) => ({
-        id: Buffer.from(cred.keyId, 'base64'),
-        type: 'public-key',
-        transports: cred.transports,
-      })),
+    allowCredentials,
     userVerification: 'discouraged',
   });
 }
@@ -309,12 +315,7 @@ export async function verifyWebAuthnAuthentication(
       }
 
       const verification = await verifyAuthenticationResponse({
-        authenticator: {
-          counter: credential.counter!,
-          credentialID: Buffer.from(credential.keyId!, 'base64url'),
-          credentialPublicKey: credential.publicKey!,
-          transports: credential.transports!,
-        },
+        credential: credential.toJSON(),
         response,
         expectedChallenge: result.payload.challenge,
         expectedOrigin: process.env.FRONTEND_BASE_URL,
