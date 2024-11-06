@@ -194,11 +194,9 @@ app.post(
         name: req.body.name,
         user: payload.sub,
         type: 'webauthn',
-        keyId: Buffer.from(result.registrationInfo!.credentialID)
-          .toString('base64url')
-          .replace(/=/g, ''), // Obliterate the base64 padding from existence
-        publicKey: Buffer.from(result.registrationInfo!.credentialPublicKey),
-        counter: result.registrationInfo!.counter,
+        keyId: result.registrationInfo!.credential.id.replace(/=/g, ''), // Obliterate the base64 padding from existence
+        publicKey: Buffer.from(result.registrationInfo!.credential.publicKey),
+        counter: result.registrationInfo!.credential.counter,
         deviceType: result.registrationInfo!.credentialDeviceType,
         transports: req.body.response.response.transports,
       });
