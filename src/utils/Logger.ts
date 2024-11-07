@@ -1,5 +1,5 @@
 import Chalk from 'chalk';
-import * as InternalConsole from 'node:console';
+import { Console } from 'node:console';
 import * as NodeUtil from 'node:util';
 export enum Level {
   NONE = 0,
@@ -29,7 +29,7 @@ function date(): string {
 
 type LoggerConstructor = Level | 'none' | 'error' | 'warn' | 'info' | 'debug';
 
-export default class Logger {
+export default class Logger extends Console {
   private __logLevel: Level;
   private timestamp: boolean;
   get logLevel(): Level {
@@ -37,6 +37,10 @@ export default class Logger {
   }
 
   constructor(logLevel: LoggerConstructor, timestamps: boolean = true) {
+    super({
+      stdout: process.stdout,
+      stderr: process.stderr,
+    });
     this.timestamp = timestamps;
     if (typeof logLevel === 'string') {
       switch (logLevel as string) {
@@ -61,7 +65,7 @@ export default class Logger {
 
   error(message: any, ...optionalParams: any[]) {
     if (this.logLevel < Level.ERROR) return;
-    InternalConsole.log(
+    super.error(
       `${this.timestamp ? `${Chalk.bgBlue(date())} ` : ''}${Chalk.rgb(
         214,
         78,
@@ -71,7 +75,7 @@ export default class Logger {
       )}`,
       optionalParams.length > 0
         ? optionalParams
-            .map(p => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
+            .map((p) => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
             .join(' ')
         : '',
     );
@@ -79,7 +83,7 @@ export default class Logger {
 
   warn(message: any, ...optionalParams: any[]) {
     if (this.logLevel < Level.WARN) return;
-    InternalConsole.log(
+    super.log(
       `${this.timestamp ? `${Chalk.bgBlue(date())} ` : ''}${Chalk.rgb(
         177,
         170,
@@ -89,7 +93,7 @@ export default class Logger {
       )}`,
       optionalParams.length > 0
         ? optionalParams
-            .map(p => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
+            .map((p) => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
             .join(' ')
         : '',
     );
@@ -97,7 +101,7 @@ export default class Logger {
 
   log(message: any, ...optionalParams: any[]) {
     if (this.logLevel < Level.INFO) return;
-    InternalConsole.log(
+    super.log(
       `${this.timestamp ? `${Chalk.bgBlue(date())} ` : ''}${Chalk.rgb(
         47,
         184,
@@ -107,7 +111,7 @@ export default class Logger {
       )}`,
       optionalParams.length > 0
         ? optionalParams
-            .map(p => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
+            .map((p) => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
             .join(' ')
         : '',
     );
@@ -119,7 +123,7 @@ export default class Logger {
 
   debug(message: any, ...optionalParams: any[]) {
     if (this.logLevel < Level.DEBUG) return;
-    InternalConsole.log(
+    super.log(
       `${this.timestamp ? `${Chalk.bgBlue(date())} ` : ''}${Chalk.rgb(
         74,
         69,
@@ -129,7 +133,7 @@ export default class Logger {
       )}`,
       optionalParams.length > 0
         ? optionalParams
-            .map(p => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
+            .map((p) => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
             .join(' ')
         : '',
     );
@@ -137,7 +141,7 @@ export default class Logger {
 
   trace(message: any, ...optionalParams: any[]) {
     if (this.logLevel > Level.DEBUG) return;
-    InternalConsole.trace(
+    super.trace(
       `${this.timestamp ? `${Chalk.bgBlue(date())} ` : ''}${Chalk.rgb(
         30,
         186,
@@ -147,7 +151,7 @@ export default class Logger {
       )}`,
       optionalParams.length > 0
         ? optionalParams
-            .map(p => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
+            .map((p) => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
             .join(' ')
         : '',
     );

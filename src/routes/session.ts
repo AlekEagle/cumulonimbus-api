@@ -20,6 +20,7 @@ import {
   SecondFactorChallengeResponse,
   verifySecondFactor,
 } from '../utils/SecondFactor.js';
+import Ratelimit from '../middleware/Ratelimit.js';
 import SecondFactor from '../DB/SecondFactor.js';
 import Session from '../DB/Session.js';
 import SessionPermissionChecker, {
@@ -31,8 +32,6 @@ import KVExtractor from '../utils/KVExtractor.js';
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { fn, col, where, Op } from 'sequelize';
-import ExpressRateLimit from 'express-rate-limit';
-import ms from 'ms';
 
 logger.debug('Loading: Session Routes...');
 
@@ -50,10 +49,9 @@ app.post(
     code: new ExtendedValidBodyTypes('string', true),
     response: new ExtendedValidBodyTypes('any', true),
   }),
-  ExpressRateLimit({
-    ...defaultRateLimitConfig,
-    windowMs: 60 * 1000, // 1 minute
-    max: 3,
+  Ratelimit({
+    max: 4,
+    window: 60e3 * 5, // 5 minutes
   }),
   async (
     req: Request<
@@ -95,13 +93,15 @@ app.post(
 
         // Compare the given password with the user's password.
         if (!(await Bcrypt.compare(req.body.password, user.password)))
-          return res.status(401).json(new Errors.InvalidPassword());
+          return res.status(404).json(new Errors.InvalidUser()); // Return InvalidUser if the password is incorrect to prevent user enumeration.
 
         if (
           (await SecondFactor.findAll({ where: { user: user.id } })).length !==
           0
         ) {
           // If the user has second factors, generate a second factor challenge.
+          // Skip the ratelimit for this request to prevent the user from being ratelimited for their second factor.
+          res.ratelimit!.skipped = true;
           return res
             .status(401)
             .json(await generateSecondFactorChallenge(user));
@@ -189,6 +189,10 @@ app.post(
     name: 'string',
     permissionFlags: 'number',
     longLived: new ExtendedValidBodyTypes('boolean', true),
+  }),
+  Ratelimit({
+    max: 4,
+    window: 60e3 * 5, // 5 minutes
   }),
   async (
     req: Request<

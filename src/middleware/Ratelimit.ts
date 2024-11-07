@@ -42,12 +42,12 @@ export interface RatelimitOptions {
 }
 
 export const defaultRatelimitOptions: Omit<RatelimitOptions, 'storage'> = {
-  window: 60000,
+  window: 60e3, // 1 minute
   max: 100,
-  ignoreStatusCodes: [501, 503],
+  ignoreStatusCodes: [500, 501, 503],
   burst: {
     max: 3,
-    window: 1000,
+    window: 1e3, // 1 second
   },
 };
 
@@ -61,9 +61,21 @@ function IPResolver(req: Request): string {
 
 function appendRatelimitHeaders(res: Response): void {
   if (!res.ratelimit)
+    // We can't append ratelimit headers if there's no ratelimit object. This shouldn't happen but better safe than sorry.
     throw new Error(
       'Tried to add ratelimit headers when no ratelimit object was present!',
     );
+  // Have we already set the headers?
+  if (res.ratelimit.headersSet) {
+    // If we have, we don't need to do anything.
+    logger.debug(
+      `Ratelimit headers already set for request: ${res.ratelimit.requestTime}`,
+      res.ratelimit.subject,
+    );
+    return;
+  }
+  // If we haven't already set the headers, set them now.
+  // Append our standard ratelimit headers.
   res.header('RateLimit-Limit', res.ratelimit.data.max.toString());
   res.header(
     'RateLimit-Remaining',
@@ -78,6 +90,8 @@ function appendRatelimitHeaders(res: Response): void {
       (res.ratelimit.data.expiresAt.getTime() - Date.now()) / 1000,
     ).toString(),
   );
+  // Mark the headers as set.
+  res.ratelimit.headersSet = true;
 }
 
 export default function Ratelimit(
@@ -118,6 +132,7 @@ export default function Ratelimit(
       });
     } else ratelimit = options.storage.get(subject)!;
     res.ratelimit = {
+      headersSet: false,
       skipped: false,
       get requestTime() {
         return requestTime;
@@ -161,12 +176,40 @@ export default function Ratelimit(
     if (standardQuotaExceeded || burstQuotaExceeded) {
       appendRatelimitHeaders(res);
       if (standardQuotaExceeded) {
+        logger.debug(
+          `Standard Ratelimit exceeded for request: ${requestTime}`,
+          subject,
+        );
         res.header('RateLimit-Reason', 'standard');
       } else if (burstQuotaExceeded) {
+        logger.debug(
+          `Burst Ratelimit exceeded for request: ${requestTime}`,
+          subject,
+        );
         res.header('RateLimit-Reason', 'burst');
-        // TODO: Add RateLimit-Burst-Reset header
+        // Identify which requests are within the burst window.
+        const burstRequests = Object.entries(ratelimit.data.requests).filter(
+          ([a]) => now - Number(a) <= options.burst.window,
+        );
+        // Find the earliest request that when out of the burst window, will allow the burst ratelimit to be lifted.
+        // We sort by the timestamp, and then select the most recent request that when moved out of the burst window, will allow the burst ratelimit to be lifted.
+        const earliestRequest = burstRequests.sort(
+          ([a], [b]) => Number(a) - Number(b),
+        )[burstRequests.length - options.burst.max];
+        // Override RateLimit-Reset with the time until the burst ratelimit is lifted in seconds if it's sooner than the standard ratelimit.
+        if (
+          Number(earliestRequest[0]) + options.burst.window - now <
+          ratelimit.data.expiresAt.getTime() - now
+        ) {
+          res.header(
+            'RateLimit-Reset',
+            Math.ceil(
+              (Number(earliestRequest[0]) + options.burst.window - now) / 1000,
+            ).toString(),
+          );
+        }
       }
-      res.status(429).json(new Errors.RateLimited());
+      res.status(429)._originalSend!(new Errors.RateLimited());
       return;
     } else next();
   };
