@@ -50,10 +50,6 @@ app.use(
   AuthProvider(),
   Ratelimit({
     storage: ratelimitStore,
-    burst: {
-      max: 2,
-      window: 10e3,
-    },
   }),
   KillSwitch(),
 );

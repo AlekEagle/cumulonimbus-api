@@ -49,6 +49,7 @@ declare global {
     interface Response {
       _originalSend?: Send;
       ratelimit?: {
+        headersSet: boolean;
         skipped: boolean;
         requestTime: number;
         subject: RatelimitSubject;

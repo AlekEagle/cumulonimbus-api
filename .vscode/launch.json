@@ -14,7 +14,8 @@
         "INSTANCE": "0"
       },
       "sourceMaps": true,
-      "preLaunchTask": "tsc: build - tsconfig.json"
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "console": "integratedTerminal"
     },
     {
       "type": "node",
@@ -26,7 +27,8 @@
         "INSTANCE": "0"
       },
       "sourceMaps": true,
-      "preLaunchTask": "tsc: build - tsconfig.json"
+      "preLaunchTask": "tsc: build - tsconfig.json",
+      "console": "integratedTerminal"
     }
   ]
 }

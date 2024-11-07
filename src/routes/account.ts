@@ -63,7 +63,7 @@ app.post(
   }),
   Ratelimit({
     max: 1,
-    window: ms('1h'),
+    window: ms('6h'),
     ignoreStatusCodes: [429, 500, 503, 409],
     storage: ratelimitStore,
   }),
