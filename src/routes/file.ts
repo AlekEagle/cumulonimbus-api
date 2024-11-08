@@ -1,4 +1,4 @@
-import { logger, app } from '../index.js';
+import { logger, app, ratelimitStore } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import File from '../DB/File.js';
 import KVExtractor from '../utils/KVExtractor.js';
@@ -13,12 +13,14 @@ import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 import { PermissionFlags } from '../middleware/SessionPermissionChecker.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
+import Ratelimit from '../middleware/Ratelimit.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Request, Response } from 'express';
+import ms from 'ms';
 
 logger.debug('Loading: File Routes...');
 
@@ -186,6 +188,12 @@ app.put(
     name: 'string',
   }),
   KillSwitch(KillSwitches.FILE_MODIFY),
+  Ratelimit({
+    max: 5,
+    window: ms('6h'),
+    ignoreStatusCodes: [500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ id: string }, null, { name: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -238,6 +246,12 @@ app.delete(
   '/api/files/:id/name',
   SessionChecker(),
   KillSwitch(KillSwitches.FILE_MODIFY),
+  Ratelimit({
+    max: 5,
+    window: ms('6h'),
+    ignoreStatusCodes: [500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ id: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -294,6 +308,12 @@ app.put(
     extension: 'string',
   }),
   KillSwitch(KillSwitches.FILE_MODIFY),
+  Ratelimit({
+    max: 2,
+    window: ms('12h'),
+    ignoreStatusCodes: [500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ id: string }, null, { extension: string }>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
@@ -379,6 +399,12 @@ app.delete(
   '/api/files/all',
   ReverifyIdentity(),
   KillSwitch(KillSwitches.FILE_DELETE),
+  Ratelimit({
+    max: 1,
+    window: ms('3d'),
+    ignoreStatusCodes: [404, 500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<null, null, null, { user: string }>,
     res: Response<
@@ -557,6 +583,12 @@ app.delete(
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),
   KillSwitch(KillSwitches.FILE_DELETE),
+  Ratelimit({
+    max: 20,
+    window: ms('6h'),
+    ignoreStatusCodes: [400, 404, 500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<

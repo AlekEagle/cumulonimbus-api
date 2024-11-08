@@ -16,7 +16,6 @@ import {
   nameSession,
   validateToken,
 } from '../utils/Token.js';
-import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
 import KVExtractor from '../utils/KVExtractor.js';
 import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
@@ -37,7 +36,6 @@ import Ratelimit from '../middleware/Ratelimit.js';
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
-import ExpressRateLimit from 'express-rate-limit';
 import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -64,7 +62,7 @@ app.post(
   Ratelimit({
     max: 1,
     window: ms('6h'),
-    ignoreStatusCodes: [429, 500, 503, 409],
+    ignoreStatusCodes: [500, 409],
     storage: ratelimitStore,
   }),
   async (
@@ -273,10 +271,15 @@ app.put(
   '/api/users/me/username',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
-
   AutoTrim(),
   BodyValidator({
     username: 'string',
+  }),
+  Ratelimit({
+    max: 3,
+    window: ms('1d'),
+    ignoreStatusCodes: [409, 500],
+    storage: ratelimitStore,
   }),
   async (
     req: Request<null, null, { username: string }>,
@@ -367,6 +370,12 @@ app.put(
   AutoTrim(),
   BodyValidator({
     email: 'string',
+  }),
+  Ratelimit({
+    max: 3,
+    window: ms('1d'),
+    ignoreStatusCodes: [409, 500],
+    storage: ratelimitStore,
   }),
   async (
     req: Request<null, null, { email: string }>,
@@ -605,10 +614,11 @@ app.get(
   KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
   SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
   SessionChecker(),
-  ExpressRateLimit({
-    ...defaultRateLimitConfig,
-    windowMs: ms('5m'),
+  Ratelimit({
     max: 1,
+    window: ms('1h'),
+    ignoreStatusCodes: [500],
+    storage: ratelimitStore,
   }),
   async (
     req: Request,
@@ -705,6 +715,12 @@ app.put(
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
+  Ratelimit({
+    max: 5,
+    window: ms('1d'),
+    ignoreStatusCodes: [500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<
       null,

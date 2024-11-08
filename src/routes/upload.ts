@@ -1,4 +1,4 @@
-import { logger, app } from '../index.js';
+import { logger, app, ratelimitStore } from '../index.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import File from '../DB/File.js';
 import SessionChecker from '../middleware/SessionChecker.js';
@@ -11,6 +11,7 @@ import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
+import Ratelimit from '../middleware/Ratelimit.js';
 
 import Multer from 'multer';
 import { Response } from 'express';
@@ -19,6 +20,7 @@ import { createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { randomInt } from 'node:crypto';
 import { ReadableStreamWithFileType, fileTypeStream } from 'file-type';
+import ms from 'ms';
 
 logger.debug('Loading: Upload Route...');
 
@@ -48,6 +50,16 @@ app.post(
   SessionPermissionChecker(PermissionFlags.UPLOAD_FILE),
   Multer().single('file'),
   KillSwitch(KillSwitches.FILE_CREATE),
+  Ratelimit({
+    max: 100,
+    window: ms('5m'),
+    ignoreStatusCodes: [400, 500],
+    burst: {
+      max: 5,
+      window: ms('10s'),
+    },
+    storage: ratelimitStore,
+  }),
   async (
     req,
     res: Response<
