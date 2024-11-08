@@ -1,8 +1,7 @@
-import { logger, app } from '../index.js';
+import { logger, app, ratelimitStore } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import User from '../DB/User.js';
 import AutoTrim from '../middleware/AutoTrim.js';
-import defaultRateLimitConfig from '../utils/RateLimitUtils.js';
 import {
   extractToken,
   generateSessionToken,
@@ -32,6 +31,7 @@ import KVExtractor from '../utils/KVExtractor.js';
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { fn, col, where, Op } from 'sequelize';
+import ms from 'ms';
 
 logger.debug('Loading: Session Routes...');
 
@@ -51,7 +51,8 @@ app.post(
   }),
   Ratelimit({
     max: 4,
-    window: 60e3 * 5, // 5 minutes
+    window: ms('5m'),
+    ignoreStatusCodes: [404],
   }),
   async (
     req: Request<
@@ -192,7 +193,7 @@ app.post(
   }),
   Ratelimit({
     max: 4,
-    window: 60e3 * 5, // 5 minutes
+    window: ms('5m'),
   }),
   async (
     req: Request<
@@ -455,6 +456,11 @@ app.put(
   BodyValidator({
     name: 'string',
   }),
+  Ratelimit({
+    max: 3,
+    window: ms('30m'),
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ sid: string }, null, { name: string }>,
     res: Response<
@@ -547,6 +553,11 @@ app.put(
   ReverifyIdentity(),
   BodyValidator({
     flags: 'number',
+  }),
+  Ratelimit({
+    max: 3,
+    window: ms('30m'),
+    storage: ratelimitStore,
   }),
   async (
     req: Request<{ sid: string }, null, { flags: number }>,

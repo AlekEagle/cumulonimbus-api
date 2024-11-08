@@ -1,4 +1,4 @@
-import { app, logger } from '../index.js';
+import { app, logger, ratelimitStore } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import KillSwitch from '../middleware/KillSwitch.js';
 import SessionChecker from '../middleware/SessionChecker.js';
@@ -26,15 +26,17 @@ import {
 } from '../utils/Constants.js';
 import SecondFactor from '../DB/SecondFactor.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
-
-import { Request, Response } from 'express';
-import { errors as JoseErrors } from 'jose';
+import Ratelimit from '../middleware/Ratelimit.js';
 import LimitOffset from '../middleware/LimitOffset.js';
 import KVExtractor from '../utils/KVExtractor.js';
 import User from '../DB/User.js';
 import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
+
+import { Request, Response } from 'express';
+import { errors as JoseErrors } from 'jose';
+import ms from 'ms';
 
 logger.debug('Loading: Second Factor routes...');
 
@@ -44,6 +46,11 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
+  Ratelimit({
+    max: 3,
+    window: ms('1d'),
+    storage: ratelimitStore,
+  }),
   async (
     req,
     res: Response<
@@ -137,6 +144,11 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
+  Ratelimit({
+    max: 3,
+    window: ms('1d'),
+    storage: ratelimitStore,
+  }),
   async (
     req,
     res: Response<
@@ -228,6 +240,11 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
+  Ratelimit({
+    max: 1,
+    window: ms('1d'),
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<
@@ -240,7 +257,7 @@ app.post(
     const { codes, hashed } = await generateBackupCodes();
     await req.user.update({
       twoFactorBackupCodes: hashed,
-      twoFactorBackupCodesUsedAt: null,
+      twoFactorBackupCodeUsedAt: null,
     });
 
     return res.status(201).json({
@@ -418,6 +435,11 @@ app.delete(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
+  Ratelimit({
+    max: 3,
+    window: ms('1d'),
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -443,7 +465,7 @@ app.delete(
       // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await req.user.update({
         twoFactorBackupCodes: null,
-        twoFactorBackupCodesUsedAt: null,
+        twoFactorBackupCodeUsedAt: null,
       });
     }
 
@@ -489,7 +511,7 @@ app.delete(
       // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await user.update({
         twoFactorBackupCodes: null,
-        twoFactorBackupCodesUsedAt: null,
+        twoFactorBackupCodeUsedAt: null,
       });
     }
 
@@ -509,6 +531,11 @@ app.delete(
   SessionPermissionChecker(), // Require a standard browser session
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
+  }),
+  Ratelimit({
+    max: 1,
+    window: ms('1d'),
+    storage: ratelimitStore,
   }),
   async (
     req: Request<null, null, { ids: string[] }>,
@@ -539,7 +566,7 @@ app.delete(
       // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await req.user.update({
         twoFactorBackupCodes: null,
-        twoFactorBackupCodesUsedAt: null,
+        twoFactorBackupCodeUsedAt: null,
       });
     }
 
@@ -594,7 +621,7 @@ app.delete(
       // If the user has no second factors left, delete their backup codes and reset the backup codes used at date
       await user.update({
         twoFactorBackupCodes: null,
-        twoFactorBackupCodesUsedAt: null,
+        twoFactorBackupCodeUsedAt: null,
       });
     }
 
@@ -614,6 +641,11 @@ app.delete(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
+  Ratelimit({
+    max: 1,
+    window: ms('1d'),
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<
@@ -634,7 +666,7 @@ app.delete(
     // Delete the user's backup codes and reset the backup codes used at date
     await req.user.update({
       twoFactorBackupCodes: null,
-      twoFactorBackupCodesUsedAt: null,
+      twoFactorBackupCodeUsedAt: null,
     });
 
     logger.debug(
@@ -676,7 +708,7 @@ app.delete(
     // Delete the user's backup codes and reset the backup codes used at date
     await user.update({
       twoFactorBackupCodes: null,
-      twoFactorBackupCodesUsedAt: null,
+      twoFactorBackupCodeUsedAt: null,
     });
 
     logger.debug(
