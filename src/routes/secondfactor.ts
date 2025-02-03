@@ -272,6 +272,9 @@ app.get(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
   LimitOffset(0, 50),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<
@@ -360,6 +363,9 @@ app.get(
   '/api/users/me/2fa/:id([0-9]{10})',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -436,7 +442,7 @@ app.delete(
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
   Ratelimit({
-    max: 3,
+    max: 10,
     window: ms('1d'),
     storage: ratelimitStore,
   }),
@@ -533,7 +539,7 @@ app.delete(
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),
   Ratelimit({
-    max: 1,
+    max: 5,
     window: ms('1d'),
     storage: ratelimitStore,
   }),
@@ -642,7 +648,7 @@ app.delete(
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
   Ratelimit({
-    max: 1,
+    max: 5,
     window: ms('1d'),
     storage: ratelimitStore,
   }),
