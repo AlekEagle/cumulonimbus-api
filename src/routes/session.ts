@@ -53,6 +53,7 @@ app.post(
     max: 4,
     window: ms('5m'),
     ignoreStatusCodes: [404],
+    storage: ratelimitStore,
   }),
   async (
     req: Request<
@@ -194,6 +195,7 @@ app.post(
   Ratelimit({
     max: 4,
     window: ms('5m'),
+    storage: ratelimitStore,
   }),
   async (
     req: Request<
@@ -245,6 +247,9 @@ app.get(
   '/api/users/me/sessions/me',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<
@@ -274,6 +279,9 @@ app.get(
   '/api/users/me/sessions/:sid([0-9]{10})',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ sid: string }>,
     res: Response<
@@ -366,6 +374,9 @@ app.get(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
   LimitOffset(0, 50),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<
@@ -447,221 +458,15 @@ app.get(
   },
 );
 
-app.put(
-  // PUT /api/users/me/sessions/:sid/name
-  '/api/users/me/sessions/:sid([0-9]{10})/name',
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
-  SessionChecker(),
-  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
-  BodyValidator({
-    name: 'string',
-  }),
-  Ratelimit({
-    max: 3,
-    window: ms('30m'),
-    storage: ratelimitStore,
-  }),
-  async (
-    req: Request<{ sid: string }, null, { name: string }>,
-    res: Response<
-      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-    // Find the session with the given ID.
-    const session = await Session.findOne({
-      where: {
-        user: req.user.id,
-        id: req.params.sid,
-      },
-    });
-
-    // If no session was found, return an InvalidSession error.
-    if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-    // Update the session's name.
-    await session.update({
-      name: req.body.name,
-    });
-
-    logger.debug(
-      `User ${req.user.username} (${req.user.id}) requested to rename their session ${session.id} to ${req.body.name}.`,
-    );
-
-    // Return a success.
-    return res.status(200).json(KVExtractor(session.toJSON(), ['user'], true));
-  },
-);
-
-app.put(
-  // PUT /api/users/:uid/sessions/:sid/name
-  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})/name',
-  SessionChecker(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
-  BodyValidator({
-    name: 'string',
-  }),
-  async (
-    req: Request<{ uid: string; sid: string }, null, { name: string }>,
-    res: Response<
-      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-    try {
-      // Find the user with the given ID.
-      const user = await User.findByPk(req.params.uid);
-
-      // If no user was found, return an InvalidUser error.
-      if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-      // Find the session with the given ID.
-      const session = await Session.findOne({
-        where: {
-          user: user.id,
-          id: req.params.sid,
-        },
-      });
-
-      // If no session was found, return an InvalidSession error.
-      if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-      // Update the session's name.
-      await session.update({
-        name: req.body.name,
-      });
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to rename user ${user.username} (${user.id})'s session ${session.id} to ${req.body.name}.`,
-      );
-
-      // Return a success.
-      return res
-        .status(200)
-        .json(KVExtractor(session.toJSON(), ['user'], true));
-    } catch (error) {
-      logger.error(error);
-      return res.status(500).json(new Errors.Internal());
-    }
-  },
-);
-
-app.put(
-  // PUT /api/users/me/sessions/:sid/permissions
-  '/api/users/me/sessions/:sid([0-9]{10})/permissions',
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
-  ReverifyIdentity(),
-  BodyValidator({
-    flags: 'number',
-  }),
-  Ratelimit({
-    max: 3,
-    window: ms('30m'),
-    storage: ratelimitStore,
-  }),
-  async (
-    req: Request<{ sid: string }, null, { flags: number }>,
-    res: Response<
-      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user || !req.session)
-      return res.status(401).json(new Errors.InvalidSession());
-    // Find the session with the given ID.
-    const session = await Session.findOne({
-      where: {
-        user: req.user.id,
-        id: req.params.sid,
-      },
-    });
-
-    if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-    // If the session that is being updated is a full session
-    // or if the session is the current session, return an InvalidSession error.
-    if (session.permissionFlags === null || session.id === req.session.id)
-      return res.status(400).json(new Errors.InvalidSession());
-
-    // If no session was found, return an InvalidSession error.
-    if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-    // If the session updating this session is a scoped session, do not allow the new session to have more permissions than the session creating it. (No privilege escalation!!)
-    if (req.session.permissionFlags !== null)
-      req.body.flags &= req.session.permissionFlags;
-
-    // Update the session's permission flags.
-    await session.update({
-      permissionFlags: req.body.flags,
-    });
-
-    logger.debug(
-      `User ${req.user.username} (${req.user.id}) requested to update their session ${session.id}'s permissions to ${req.body.flags}. (Previously ${session.permissionFlags})`,
-    );
-
-    // Return a success.
-    return res.status(200).json(KVExtractor(session.toJSON(), ['user'], true));
-  },
-);
-
-app.put(
-  // PUT /api/users/:uid/sessions/:sid/permissions
-  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})/permissions',
-  ReverifyIdentity(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
-  BodyValidator({
-    flags: 'number',
-  }),
-  async (
-    req: Request<{ uid: string; sid: string }, null, { flags: number }>,
-    res: Response<
-      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-    try {
-      // Find the user with the given ID.
-      const user = await User.findByPk(req.params.uid);
-
-      // If no user was found, return an InvalidUser error.
-      if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-      // Find the session with the given ID.
-      const session = await Session.findOne({
-        where: {
-          user: user.id,
-          id: req.params.sid,
-        },
-      });
-
-      // If no session was found, return an InvalidSession error.
-      if (!session) return res.status(404).json(new Errors.InvalidSession());
-
-      // Update the session's permission flags.
-      await session.update({
-        permissionFlags: req.body.flags,
-      });
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to update user ${user.username} (${user.id})'s session ${session.id}'s permissions to ${req.body.flags}. (Previously ${session.permissionFlags})`,
-      );
-
-      // Return a success.
-      return res
-        .status(200)
-        .json(KVExtractor(session.toJSON(), ['user'], true));
-    } catch (error) {
-      logger.error(error);
-      return res.status(500).json(new Errors.Internal());
-    }
-  },
-);
-
 app.delete(
   // DELETE /api/users/me/sessions/me
   '/api/users/me/sessions/me',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<
@@ -693,6 +498,9 @@ app.delete(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ sid: string }>,
     res: Response<
@@ -782,6 +590,9 @@ app.delete(
   BodyValidator({
     ids: new ExtendedValidBodyTypes('array', false, 'string'),
   }),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<null, null, { ids: string[] }>,
     res: Response<
@@ -869,6 +680,9 @@ app.delete(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request,
     res: Response<

@@ -168,7 +168,9 @@ app.post(
 app.get(
   // GET /api/users
   '/api/users',
-  Ratelimit(),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
   LimitOffset(0, 50),
@@ -217,6 +219,9 @@ app.get(
 app.get(
   // GET /api/users/me
   '/api/users/me',
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.ACCOUNT_READ),
   async (
@@ -979,6 +984,12 @@ app.put(
     subdomain: new ExtendedValidBodyTypes('string', true),
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  Ratelimit({
+    max: 20,
+    window: ms('1h'),
+    ignoreStatusCodes: [400, 500],
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<null, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
