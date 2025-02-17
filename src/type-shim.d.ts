@@ -196,6 +196,10 @@ declare global {
       export interface ScopedSessionCreate extends Session {
         token: string;
       }
+
+      export interface LogLevel {
+        name: string;
+      }
     }
 
     namespace Utilities {
