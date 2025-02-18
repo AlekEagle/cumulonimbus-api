@@ -458,6 +458,9 @@ app.put(
     if (req.body.extension.endsWith('.'))
       req.body.extension = req.body.extension.slice(0, -1);
 
+    // Sanitize the extension. (Make sure we don't do a directory traversal attack.)
+    req.body.extension = req.body.extension.replace(/\//g, '');
+
     try {
       // Find the file.
       let file = await File.findOne({
