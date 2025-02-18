@@ -125,6 +125,9 @@ app.post(
         .replace(/ /g, '-') // Replace spaces with dashes.
         .replace(/[^a-z0-9_\-\.]/g, ''); // Remove any characters that aren't a-z, 0-9, _, -, or ..
 
+      // If resulting ID is empty, return an InvalidInstruction error.
+      if (!id) return res.status(400).json(new Errors.InvalidInstruction());
+
       // Check if the instruction already exists.
       const instruction = await Instruction.findByPk(id);
 

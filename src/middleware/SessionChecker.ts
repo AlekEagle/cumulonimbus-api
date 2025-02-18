@@ -6,7 +6,7 @@ export default function SessionChecker(
   staffRequired: boolean = false,
 ): RequestHandler {
   return (req, res, next) => {
-    if (!req.user) {
+    if (!req.user || !req.session) {
       logger.warn(
         `A request to a route that requires a session was made without a session. Route: ${req.path}`,
       );

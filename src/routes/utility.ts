@@ -3,9 +3,7 @@ import { Level } from '../utils/Logger.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import SessionChecker from '../middleware/SessionChecker.js';
-import BodyValidator, {
-  ExtendedValidBodyTypes,
-} from '../middleware/BodyValidator.js';
+import BodyValidator from '../middleware/BodyValidator.js';
 import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
@@ -25,8 +23,6 @@ app.get(
     >,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-
-    console.log(logger.logLevel, Level.DEBUG, Level[Level.DEBUG]);
 
     // Return the log level.
     return res.status(200).json({
