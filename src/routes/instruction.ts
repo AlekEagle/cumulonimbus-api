@@ -97,9 +97,9 @@ app.post(
   BodyValidator({
     name: 'string',
     description: 'string',
-    filename: new ExtendedValidBodyTypes('string', true),
+    filename: new ExtendedValidBodyTypes().string().notRequired(),
     content: 'string',
-    steps: new ExtendedValidBodyTypes('array', false, 'string'),
+    steps: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<
@@ -245,7 +245,7 @@ app.put(
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
-    filename: new ExtendedValidBodyTypes('string', true),
+    filename: new ExtendedValidBodyTypes().string().notRequired(),
     content: 'string',
   }),
   async (
@@ -289,7 +289,7 @@ app.put(
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
-    steps: new ExtendedValidBodyTypes('array', false, 'string'),
+    steps: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<{ id: string }, null, { steps: string[] }>,
@@ -364,7 +364,7 @@ app.delete(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<null, null, { ids: string[] }>,

@@ -592,8 +592,8 @@ app.put(
 app.delete(
   // DELETE /api/users/me/files/all
   '/api/users/me/files/all',
-  SessionPermissionChecker(),
   ReverifyIdentity(),
+  SessionPermissionChecker(),
   KillSwitch(KillSwitches.FILE_DELETE),
   Ratelimit({
     max: 1,
@@ -803,7 +803,7 @@ app.delete(
   SessionPermissionChecker(PermissionFlags.FILE_MODIFY),
   KillSwitch(KillSwitches.FILE_DELETE),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   Ratelimit({
     max: 20,
@@ -874,7 +874,7 @@ app.delete(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<{ uid: string }, null, { ids: string[] }>,
@@ -922,6 +922,69 @@ app.delete(
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) deleted ${count} files belonging to user ${req.params.uid}.`,
+      );
+
+      return res.status(200).json(new Success.DeleteFiles(count));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.delete(
+  // DELETE /api/files
+  '/api/files',
+  SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
+  BodyValidator({
+    ids: new ExtendedValidBodyTypes().array('string'),
+  }),
+  async (
+    req: Request<null, null, { ids: string[] }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    // Check if the user is trying to delete more than 50 files.
+    if (req.body.ids.length > 50)
+      return res.status(400).json(new Errors.BodyTooLarge());
+
+    try {
+      // Find all files specified in the request body.
+      let { count, rows: files } = await File.findAndCountAll({
+        where: {
+          id: {
+            [Op.in]: req.body.ids,
+          },
+        },
+      });
+
+      // If the count is 0, return an InvalidFile error.
+      if (count === 0) return res.status(404).json(new Errors.InvalidFile());
+
+      // Delete all files.
+      await Promise.all(
+        files.map(async (file) => {
+          // First, delete the thumbnail if it exists.
+          if (
+            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
+          )
+            await unlink(
+              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
+            );
+
+          // Delete the file from the disk.
+          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
+
+          // Delete the file from the database.
+          await file.destroy();
+        }),
+      );
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) deleted ${count} files.`,
       );
 
       return res.status(200).json(new Success.DeleteFiles(count));

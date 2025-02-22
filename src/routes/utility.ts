@@ -3,6 +3,7 @@ import { Level } from '../utils/Logger.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import SessionChecker from '../middleware/SessionChecker.js';
+import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 import BodyValidator from '../middleware/BodyValidator.js';
 import SessionPermissionChecker, {
   PermissionFlags,
@@ -35,7 +36,7 @@ app.patch(
   // PATCH /api/loglevel
   '/api/loglevel',
   AutoTrim(),
-  SessionChecker(true),
+  ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_LOGLEVEL),
   BodyValidator({
     name: 'string',
