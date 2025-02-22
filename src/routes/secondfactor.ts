@@ -536,7 +536,7 @@ app.delete(
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   Ratelimit({
     max: 5,
@@ -592,7 +592,7 @@ app.delete(
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<{ uid: string }, null, { ids: string[] }>,

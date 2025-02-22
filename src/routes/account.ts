@@ -57,7 +57,7 @@ app.post(
     email: 'string',
     password: 'string',
     confirmPassword: 'string',
-    rememberMe: new ExtendedValidBodyTypes('boolean', true),
+    rememberMe: new ExtendedValidBodyTypes().boolean().notRequired(),
   }),
   Ratelimit({
     max: 1,
@@ -981,7 +981,7 @@ app.put(
   AutoTrim(),
   BodyValidator({
     domain: 'string',
-    subdomain: new ExtendedValidBodyTypes('string', true),
+    subdomain: new ExtendedValidBodyTypes().string().notRequired(),
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   Ratelimit({
@@ -1039,7 +1039,7 @@ app.put(
   AutoTrim(),
   BodyValidator({
     domain: 'string',
-    subdomain: new ExtendedValidBodyTypes('string', true),
+    subdomain: new ExtendedValidBodyTypes().string().notRequired(),
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
@@ -1198,7 +1198,7 @@ app.delete(
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<null, null, { ids: string[] }>,

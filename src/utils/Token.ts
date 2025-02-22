@@ -2,6 +2,8 @@
 import { importX509, importPKCS8, KeyLike, SignJWT, jwtVerify } from 'jose';
 // We need this to read the JWT public and private keypair
 import { readFile } from 'node:fs/promises';
+// We need this to see if the keypair files exist
+import { existsSync } from 'node:fs';
 // Those Constants that are constant that we need
 import {
   TOKEN_ALGORITHM,
@@ -53,12 +55,25 @@ async function completeToken<T = Record<string, string>>(
 export async function importCertificates() {
   // Do not re-import certificates if we already have them
   if (pubKey && privKey) return;
-  pubKey = await importX509(await readFile('./certs/jwt.crt', 'utf8'), 'ES256');
+  // Check if the certificates exist
+  if (!existsSync('./certs/jwt.crt') || !existsSync('./certs/jwt.pem')) {
+    throw new Error(
+      'Certificates not found. Please run "npm run generate-certificates" or run "gencerts.sh" in the root directory of the project.',
+    );
+  }
+  try {
+    pubKey = await importX509(
+      await readFile('./certs/jwt.crt', 'utf8'),
+      'ES256',
+    );
 
-  privKey = await importPKCS8(
-    await readFile('./certs/jwt.pem', 'utf8'),
-    'ES256',
-  );
+    privKey = await importPKCS8(
+      await readFile('./certs/jwt.pem', 'utf8'),
+      'ES256',
+    );
+  } catch (e) {
+    throw new Error('Failed to import certificates: ' + e);
+  }
   return;
 }
 
@@ -193,3 +208,6 @@ export function nameSession(req: Request): string {
 
   return name;
 }
+
+// Import the certificates when the module is loaded
+importCertificates();

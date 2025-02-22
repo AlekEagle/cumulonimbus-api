@@ -41,13 +41,13 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   AutoTrim(),
   BodyValidator({
-    username: new ExtendedValidBodyTypes('string', true),
-    password: new ExtendedValidBodyTypes('string', true),
-    rememberMe: new ExtendedValidBodyTypes('boolean', true),
-    token: new ExtendedValidBodyTypes('string', true),
-    type: new ExtendedValidBodyTypes('string', true),
-    code: new ExtendedValidBodyTypes('string', true),
-    response: new ExtendedValidBodyTypes('any', true),
+    username: new ExtendedValidBodyTypes().string().notRequired(),
+    password: new ExtendedValidBodyTypes().string().notRequired(),
+    rememberMe: new ExtendedValidBodyTypes().boolean().notRequired(),
+    token: new ExtendedValidBodyTypes().string().notRequired(),
+    type: new ExtendedValidBodyTypes().string().notRequired(),
+    code: new ExtendedValidBodyTypes().string().notRequired(),
+    response: new ExtendedValidBodyTypes().any().notRequired(),
   }),
   Ratelimit({
     max: 4,
@@ -190,7 +190,7 @@ app.post(
   BodyValidator({
     name: 'string',
     permissionFlags: 'number',
-    longLived: new ExtendedValidBodyTypes('boolean', true),
+    longLived: new ExtendedValidBodyTypes().boolean().notRequired(),
   }),
   Ratelimit({
     max: 4,
@@ -588,7 +588,7 @@ app.delete(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   Ratelimit({
     storage: ratelimitStore,

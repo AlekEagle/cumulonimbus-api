@@ -2,7 +2,6 @@ import { logger, app } from '../index.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import Instruction from '../DB/Instruction.js';
-import { INSTRUCTION_REGEX } from '../utils/Constants.js';
 import KVExtractor from '../utils/KVExtractor.js';
 import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
@@ -96,19 +95,17 @@ app.post(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   BodyValidator({
-    id: 'string',
     name: 'string',
     description: 'string',
-    filename: new ExtendedValidBodyTypes('string', true),
+    filename: new ExtendedValidBodyTypes().string().notRequired(),
     content: 'string',
-    steps: new ExtendedValidBodyTypes('array', false, 'string'),
+    steps: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<
       null,
       null,
       {
-        id: string;
         name: string;
         description: string;
         filename: string;
@@ -122,12 +119,17 @@ app.post(
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
-      // If the ID is invalid, return an InvalidInstruction error.
-      if (!INSTRUCTION_REGEX.test(req.body.id))
-        return res.status(400).json(new Errors.InvalidInstruction());
+      // Generate the instruction ID based off of the name.
+      const id = req.body.name
+        .toLowerCase() // Lowercase the name.
+        .replace(/ /g, '-') // Replace spaces with dashes.
+        .replace(/[^a-z0-9_\-\.]/g, ''); // Remove any characters that aren't a-z, 0-9, _, -, or ..
+
+      // If resulting ID is empty, return an InvalidInstruction error.
+      if (!id) return res.status(400).json(new Errors.InvalidInstruction());
 
       // Check if the instruction already exists.
-      const instruction = await Instruction.findByPk(req.body.id);
+      const instruction = await Instruction.findByPk(id);
 
       // If the instruction already exists, return an InstructionExists error.
       if (instruction)
@@ -135,7 +137,7 @@ app.post(
 
       // Create the instruction.
       const newInstruction = await Instruction.create({
-        id: req.body.id,
+        id,
         name: req.body.name,
         description: req.body.description,
         filename: req.body.filename,
@@ -243,7 +245,7 @@ app.put(
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
-    filename: new ExtendedValidBodyTypes('string', true),
+    filename: new ExtendedValidBodyTypes().string().notRequired(),
     content: 'string',
   }),
   async (
@@ -287,7 +289,7 @@ app.put(
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
-    steps: new ExtendedValidBodyTypes('array', false, 'string'),
+    steps: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<{ id: string }, null, { steps: string[] }>,
@@ -362,7 +364,7 @@ app.delete(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<null, null, { ids: string[] }>,

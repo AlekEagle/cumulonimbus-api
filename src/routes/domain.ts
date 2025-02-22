@@ -96,7 +96,7 @@ app.post(
   AutoTrim(),
   BodyValidator({
     id: 'string',
-    subdomains: new ExtendedValidBodyTypes('boolean', true),
+    subdomains: new ExtendedValidBodyTypes().boolean().notRequired(),
   }),
   async (
     req: Request<null, null, { id: string; subdomains?: boolean }>,
@@ -261,7 +261,7 @@ app.delete(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
     req: Request<null, null, { ids: string[] }>,

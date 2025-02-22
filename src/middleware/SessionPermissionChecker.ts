@@ -24,6 +24,7 @@ export enum PermissionFlags {
   STAFF_MODIFY_DOMAINS = 1 << 17,
   STAFF_MODIFY_INSTRUCTIONS = 1 << 18,
   STAFF_MODIFY_KILLSWITCHES = 1 << 19,
+  STAFF_MODIFY_LOGLEVEL = 1 << 20,
 }
 
 export enum PermissionGroups {
@@ -40,7 +41,8 @@ export enum PermissionGroups {
     PermissionFlags.STAFF_MODIFY_FILES |
     PermissionFlags.STAFF_MODIFY_DOMAINS |
     PermissionFlags.STAFF_MODIFY_INSTRUCTIONS |
-    PermissionFlags.STAFF_MODIFY_KILLSWITCHES,
+    PermissionFlags.STAFF_MODIFY_KILLSWITCHES |
+    PermissionFlags.STAFF_MODIFY_LOGLEVEL,
   STAFF_ACCOUNTS = PermissionFlags.STAFF_READ_ACCOUNTS |
     PermissionFlags.STAFF_MODIFY_ACCOUNTS,
   STAFF_SECOND_FACTORS = PermissionFlags.STAFF_READ_SECOND_FACTORS |
@@ -51,7 +53,8 @@ export enum PermissionGroups {
     PermissionFlags.STAFF_MODIFY_FILES,
   STAFF_ONLY = PermissionFlags.STAFF_MODIFY_DOMAINS |
     PermissionFlags.STAFF_MODIFY_INSTRUCTIONS |
-    PermissionFlags.STAFF_MODIFY_KILLSWITCHES,
+    PermissionFlags.STAFF_MODIFY_KILLSWITCHES |
+    PermissionFlags.STAFF_MODIFY_LOGLEVEL,
 }
 
 export default function SessionPermissionChecker(
