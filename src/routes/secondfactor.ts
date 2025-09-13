@@ -314,7 +314,7 @@ app.get(
 
 app.get(
   // GET /api/users/:id/2fa
-  '/api/users/:id([0-9]{13})/2fa',
+  '/api/users/:id/2fa',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SECOND_FACTORS),
   LimitOffset(0, 50),
@@ -360,7 +360,7 @@ app.get(
 
 app.get(
   // GET /api/users/me/2fa/:id
-  '/api/users/me/2fa/:id([0-9]{10})',
+  '/api/users/me/2fa/:id',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
   Ratelimit({
@@ -398,7 +398,7 @@ app.get(
 
 app.get(
   // GET /api/users/:uid/2fa/:id
-  '/api/users/:uid([0-9]{13})/2fa/:id([0-9]{10})',
+  '/api/users/:uid/2fa/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SECOND_FACTORS),
   async (
@@ -437,7 +437,7 @@ app.get(
 
 app.delete(
   // DELETE /api/users/me/2fa/:id
-  '/api/users/me/2fa/:id([0-9]{10})',
+  '/api/users/me/2fa/:id',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
@@ -485,7 +485,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/2fa/:id
-  '/api/users/:uid([0-9]{13})/2fa/:id([0-9]{10})',
+  '/api/users/:uid/2fa/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
   async (
@@ -588,7 +588,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/2fa
-  '/api/users/:uid([0-9]{13})/2fa',
+  '/api/users/:uid/2fa',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
   BodyValidator({
@@ -687,7 +687,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/2fa/all
-  '/api/users/:uid([0-9]{13})/2fa/all',
+  '/api/users/:uid/2fa/all',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
   async (

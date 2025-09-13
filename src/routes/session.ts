@@ -276,7 +276,7 @@ app.get(
 
 app.get(
   // GET /api/users/me/sessions/:sid
-  '/api/users/me/sessions/:sid([0-9]{10})',
+  '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
   Ratelimit({
@@ -319,7 +319,7 @@ app.get(
 
 app.get(
   // GET /api/users/:uid/sessions/:sid
-  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
+  '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
   async (
@@ -411,7 +411,7 @@ app.get(
 
 app.get(
   // GET /api/users/:uid/sessions
-  '/api/users/:uid([0-9]{13})/sessions',
+  '/api/users/:uid/sessions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
   LimitOffset(0, 50),
@@ -494,7 +494,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/me/sessions/:sid
-  '/api/users/me/sessions/:sid([0-9]{10})',
+  '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
@@ -538,7 +538,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
-  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
+  '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (
@@ -627,7 +627,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/sessions
-  '/api/users/:uid([0-9]{13})/sessions',
+  '/api/users/:uid/sessions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (
@@ -721,7 +721,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/sessions/all
-  '/api/users/:uid([0-9]{13})/sessions/all',
+  '/api/users/:uid/sessions/all',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (

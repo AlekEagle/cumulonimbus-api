@@ -35,8 +35,7 @@ export default async function sendVerificationEmail(
     await transport!.sendMail({
       to,
       subject: 'Verify your Cumulonimbus account email',
-      html: `
-<!DOCTYPE html>
+      html: `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -80,7 +79,7 @@ export default async function sendVerificationEmail(
       important system message can not be unsubscribed from.
     </footer>
   </body>
-</html>`.trim(),
+</html>`,
     });
     return { success: true, token, tokenData: data, error: undefined };
   } catch (err) {

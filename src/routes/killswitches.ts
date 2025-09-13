@@ -48,7 +48,7 @@ app.get(
 
 app.put(
   // PUT /api/killswitches/:id
-  '/api/killswitches/:id(\\d+)',
+  '/api/killswitches/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
@@ -81,7 +81,7 @@ app.put(
 
 app.delete(
   // DELETE /api/killswitches/:id
-  '/api/killswitches/:id(\\d+)',
+  '/api/killswitches/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (

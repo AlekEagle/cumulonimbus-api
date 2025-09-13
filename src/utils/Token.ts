@@ -1,5 +1,5 @@
 // All of the cool JWT stuffs
-import { importX509, importPKCS8, KeyLike, SignJWT, jwtVerify } from 'jose';
+import { importX509, importPKCS8, KeyObject, SignJWT, jwtVerify } from 'jose';
 // We need this to read the JWT public and private keypair
 import { readFile } from 'node:fs/promises';
 // We need this to see if the keypair files exist
@@ -35,7 +35,7 @@ export declare interface TokenGenerationResult<T = Record<string, string>> {
 }
 
 // After we import the keys, store them to reduce disk activity
-let pubKey: KeyLike, privKey: KeyLike;
+let pubKey: KeyObject, privKey: KeyObject;
 
 function generateBaseToken(data: Record<string, string> = {}): SignJWT {
   return new SignJWT(data)

@@ -241,7 +241,7 @@ app.get(
 
 app.get(
   // GET /api/users/:id
-  '/api/users/:id([0-9]{13})',
+  '/api/users/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
   async (
@@ -320,7 +320,7 @@ app.put(
 
 app.put(
   // PUT /api/users/:id/username
-  '/api/users/:id([0-9]{13})/username',
+  '/api/users/:id/username',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
@@ -430,7 +430,7 @@ app.put(
 
 app.put(
   // PUT /api/users/:id/email
-  '/api/users/:id([0-9]{13})/email',
+  '/api/users/:id/email',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
@@ -534,7 +534,7 @@ app.put(
 
 app.put(
   // PUT /api/users/:id/verify
-  '/api/users/:id([0-9]{13})/verify',
+  '/api/users/:id/verify',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
@@ -575,7 +575,7 @@ app.put(
 
 app.delete(
   // DELETE /api/users/:id/verify
-  '/api/users/:id([0-9]{13})/verify',
+  '/api/users/:id/verify',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
@@ -664,7 +664,7 @@ app.get(
 
 app.get(
   // GET /api/users/:id/verify
-  '/api/users/:id([0-9]{13})/verify',
+  '/api/users/:id/verify',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
@@ -762,7 +762,7 @@ app.put(
 
 app.put(
   // PUT /api/users/:id/password
-  '/api/users/:id([0-9]{13})/password',
+  '/api/users/:id/password',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   BodyValidator({
@@ -811,7 +811,7 @@ app.put(
 
 app.put(
   // PUT /api/users/:id/staff
-  '/api/users/:id([0-9]{13})/staff',
+  '/api/users/:id/staff',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
@@ -854,7 +854,7 @@ app.put(
 
 app.delete(
   // DELETE /api/users/:id/staff
-  '/api/users/:id([0-9]{13})/staff',
+  '/api/users/:id/staff',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
@@ -889,7 +889,7 @@ app.delete(
 
 app.put(
   // PUT /api/users/:id/ban
-  '/api/users/:id([0-9]{13})/ban',
+  '/api/users/:id/ban',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   BodyValidator({
@@ -940,7 +940,7 @@ app.put(
 
 app.delete(
   // DELETE /api/users/:id/ban
-  '/api/users/:id([0-9]{13})/ban',
+  '/api/users/:id/ban',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
@@ -1033,7 +1033,7 @@ app.put(
 
 app.put(
   // PUT /api/users/:id/domain
-  '/api/users/:id([0-9]{13})/domain',
+  '/api/users/:id/domain',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   AutoTrim(),
@@ -1135,7 +1135,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:id
-  '/api/users/:id([0-9]{13})',
+  '/api/users/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   async (
