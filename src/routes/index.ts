@@ -12,8 +12,9 @@ await import('./killswitches.js');
 await import('./secondfactor.js');
 await import('./session.js');
 await import('./upload.js');
+await import('./utility.js');
 
-app.all('*', (req, res) => {
+app.all('/*splat', (req, res) => {
   logger.warn(`A request was made to an invalid endpoint: ${req.path}`);
   res.status(404).json(new Errors.InvalidEndpoint());
 });

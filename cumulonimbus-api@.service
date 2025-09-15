@@ -14,7 +14,7 @@ User=cumulonimbus
 Group=cumulonimbus
 WorkingDirectory=/opt/cumulonimbus/api
 # END OF TO BE FILLED BY OEM
-ExecStart=/usr/bin/node ./
+ExecStart=/usr/bin/node --use-system-ca ./
 
 [Install]
 WantedBy=multi-user.target

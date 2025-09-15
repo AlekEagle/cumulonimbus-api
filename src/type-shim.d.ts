@@ -33,6 +33,7 @@ declare global {
       SMTP_PORT: string;
       SMTP_USER: string;
       SMTP_PASS: string;
+      SMTP_SECURE: string;
     }
   }
 
@@ -195,6 +196,10 @@ declare global {
 
       export interface ScopedSessionCreate extends Session {
         token: string;
+      }
+
+      export interface LogLevel {
+        name: string;
       }
     }
 

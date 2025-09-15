@@ -8,7 +8,6 @@ import DevelopmentCORS from './middleware/DevelopmentCORS.js';
 import DeviceDetector from './middleware/DeviceDetector.js';
 import KillSwitch from './middleware/KillSwitch.js';
 import Logger, { Level } from './utils/Logger.js';
-import QueryStringParser from './middleware/QueryStringParser.js';
 import Ratelimit from './middleware/Ratelimit.js';
 import RatelimitStorage from './utils/RatelimitStorage.js';
 import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
@@ -42,10 +41,6 @@ app.use(
   DevelopmentCORS(),
   Compression(),
   DeviceDetector(),
-  QueryStringParser({
-    keyWithNoValueIsBool: true,
-    ignoreKeyWithNoValue: false,
-  }),
   json(),
   AuthProvider(),
   Ratelimit({

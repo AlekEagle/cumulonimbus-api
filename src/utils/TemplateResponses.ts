@@ -124,6 +124,11 @@ export namespace Errors {
     public readonly message: string = 'Invalid Instruction';
   }
 
+  export class InvalidLogLevel implements Cumulonimbus.Structures.Error {
+    public readonly code: string = 'INVALID_LOGLEVEL_ERROR';
+    public readonly message: string = 'Invalid LogLevel';
+  }
+
   export class InvalidEndpoint implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_ENDPOINT_ERROR';
     public readonly message: string = 'Invalid Endpoint';

@@ -41,13 +41,13 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   AutoTrim(),
   BodyValidator({
-    username: new ExtendedValidBodyTypes('string', true),
-    password: new ExtendedValidBodyTypes('string', true),
-    rememberMe: new ExtendedValidBodyTypes('boolean', true),
-    token: new ExtendedValidBodyTypes('string', true),
-    type: new ExtendedValidBodyTypes('string', true),
-    code: new ExtendedValidBodyTypes('string', true),
-    response: new ExtendedValidBodyTypes('any', true),
+    username: new ExtendedValidBodyTypes().string().notRequired(),
+    password: new ExtendedValidBodyTypes().string().notRequired(),
+    rememberMe: new ExtendedValidBodyTypes().boolean().notRequired(),
+    token: new ExtendedValidBodyTypes().string().notRequired(),
+    type: new ExtendedValidBodyTypes().string().notRequired(),
+    code: new ExtendedValidBodyTypes().string().notRequired(),
+    response: new ExtendedValidBodyTypes().any().notRequired(),
   }),
   Ratelimit({
     max: 4,
@@ -190,7 +190,7 @@ app.post(
   BodyValidator({
     name: 'string',
     permissionFlags: 'number',
-    longLived: new ExtendedValidBodyTypes('boolean', true),
+    longLived: new ExtendedValidBodyTypes().boolean().notRequired(),
   }),
   Ratelimit({
     max: 4,
@@ -276,7 +276,7 @@ app.get(
 
 app.get(
   // GET /api/users/me/sessions/:sid
-  '/api/users/me/sessions/:sid([0-9]{10})',
+  '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
   Ratelimit({
@@ -319,7 +319,7 @@ app.get(
 
 app.get(
   // GET /api/users/:uid/sessions/:sid
-  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
+  '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
   async (
@@ -411,7 +411,7 @@ app.get(
 
 app.get(
   // GET /api/users/:uid/sessions
-  '/api/users/:uid([0-9]{13})/sessions',
+  '/api/users/:uid/sessions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
   LimitOffset(0, 50),
@@ -494,7 +494,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/me/sessions/:sid
-  '/api/users/me/sessions/:sid([0-9]{10})',
+  '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
@@ -538,7 +538,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/sessions/:sid
-  '/api/users/:uid([0-9]{13})/sessions/:sid([0-9]{10})',
+  '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (
@@ -588,7 +588,7 @@ app.delete(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   BodyValidator({
-    ids: new ExtendedValidBodyTypes('array', false, 'string'),
+    ids: new ExtendedValidBodyTypes().array('string'),
   }),
   Ratelimit({
     storage: ratelimitStore,
@@ -627,7 +627,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/sessions
-  '/api/users/:uid([0-9]{13})/sessions',
+  '/api/users/:uid/sessions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (
@@ -721,7 +721,7 @@ app.delete(
 
 app.delete(
   // DELETE /api/users/:uid/sessions/all
-  '/api/users/:uid([0-9]{13})/sessions/all',
+  '/api/users/:uid/sessions/all',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
   async (

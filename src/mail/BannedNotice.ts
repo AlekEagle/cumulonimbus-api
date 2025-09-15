@@ -12,8 +12,7 @@ export async function sendBannedNotice(
     await transport!.sendMail({
       to,
       subject: 'Your Cumulonimbus account has been banned',
-      html: `
-<!DOCTYPE html>
+      html: `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -76,7 +75,7 @@ export async function sendBannedNotice(
       important system message can not be unsubscribed from.
     </footer>
   </body>
-</html>`.trim(),
+</html>`,
     });
     return { success: true };
   } catch (err) {
