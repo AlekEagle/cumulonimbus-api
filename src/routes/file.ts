@@ -112,7 +112,7 @@ app.get(
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
   LimitOffset(0, 50),
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ id: string }, null, null>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.File>
       | Cumulonimbus.Structures.Error
@@ -156,7 +156,7 @@ app.get(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_READ),
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ id: string }, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user || !req.session)
@@ -192,7 +192,7 @@ app.get(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
   async (
-    req: Request<{ uid: string; id: string }, null, null, null>,
+    req: Request<{ uid: string; id: string }, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -227,7 +227,7 @@ app.get(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ id: string }, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user || !req.session)
@@ -357,7 +357,7 @@ app.delete(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ id: string }, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user || !req.session)
@@ -396,7 +396,7 @@ app.delete(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
   async (
-    req: Request<{ uid: string; id: string }, null, null, null>,
+    req: Request<{ uid: string; id: string }, null, null>,
     res: Response<Cumulonimbus.Structures.File | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -653,7 +653,7 @@ app.delete(
   ReverifyIdentity(true),
   SessionPermissionChecker(),
   async (
-    req: Request<{ uid: string }, null, null, null>,
+    req: Request<{ uid: string }, null, null>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
@@ -709,7 +709,7 @@ app.delete(
   SessionPermissionChecker(PermissionFlags.FILE_MODIFY),
   KillSwitch(KillSwitches.FILE_DELETE),
   async (
-    req: Request<{ id: string }, null, null, null>,
+    req: Request<{ id: string }, null, null>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
@@ -756,7 +756,7 @@ app.delete(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
   async (
-    req: Request<{ uid: string; id: string }, null, null, null>,
+    req: Request<{ uid: string; id: string }, null, null>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
@@ -812,7 +812,7 @@ app.delete(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<null, null, { ids: string[] }>,
+    req: Request<{}, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
@@ -941,7 +941,7 @@ app.delete(
     ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
-    req: Request<null, null, { ids: string[] }>,
+    req: Request<{}, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,

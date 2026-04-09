@@ -23,7 +23,7 @@ app.get(
   SessionChecker(),
   LimitOffset(0, 50),
   async (
-    req: Request<null, null, null, { limit?: string; offset?: string }>,
+    req: Request<{}, null, null, { limit?: string; offset?: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Instruction>
       | Cumulonimbus.Structures.Error
@@ -103,7 +103,7 @@ app.post(
   }),
   async (
     req: Request<
-      null,
+      {},
       null,
       {
         name: string;
@@ -367,7 +367,7 @@ app.delete(
     ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
-    req: Request<null, null, { ids: string[] }>,
+    req: Request<{}, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,

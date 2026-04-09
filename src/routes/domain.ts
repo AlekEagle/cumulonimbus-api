@@ -24,7 +24,7 @@ app.get(
   LimitOffset(-1, 50),
   SessionChecker(),
   async (
-    req: Request<null, null, null, { limit: string; offset: string }>,
+    req: Request<{}, null, null, { limit: string; offset: string }>,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.Domain>
       | Cumulonimbus.Structures.Error
@@ -99,7 +99,7 @@ app.post(
     subdomains: new ExtendedValidBodyTypes().boolean().notRequired(),
   }),
   async (
-    req: Request<null, null, { id: string; subdomains?: boolean }>,
+    req: Request<{}, null, { id: string; subdomains?: boolean }>,
     res: Response<
       Cumulonimbus.Structures.Domain | Cumulonimbus.Structures.Error
     >,
@@ -264,7 +264,7 @@ app.delete(
     ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
-    req: Request<null, null, { ids: string[] }>,
+    req: Request<{}, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,

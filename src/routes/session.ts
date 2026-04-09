@@ -199,7 +199,7 @@ app.post(
   }),
   async (
     req: Request<
-      null,
+      {},
       null,
       { name: string; permissionFlags: number; longLived?: boolean }
     >,
@@ -594,7 +594,7 @@ app.delete(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<null, null, { ids: string[] }>,
+    req: Request<{}, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,

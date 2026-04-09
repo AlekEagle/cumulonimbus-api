@@ -176,7 +176,7 @@ app.get(
   LimitOffset(0, 50),
   async (
     req: Request<
-      null,
+      {},
       null,
       null,
       {
@@ -287,7 +287,7 @@ app.put(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<null, null, { username: string }>,
+    req: Request<{}, null, { username: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -383,7 +383,7 @@ app.put(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<null, null, { email: string }>,
+    req: Request<{}, null, { email: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -486,7 +486,7 @@ app.put(
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   async (
-    req: Request<null, null, { token: string }>,
+    req: Request<{}, null, { token: string }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,
@@ -727,11 +727,7 @@ app.put(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<
-      null,
-      null,
-      { newPassword: string; confirmNewPassword: string }
-    >,
+    req: Request<{}, null, { newPassword: string; confirmNewPassword: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -991,7 +987,7 @@ app.put(
     storage: ratelimitStore,
   }),
   async (
-    req: Request<null, null, { domain: string; subdomain?: string }>,
+    req: Request<{}, null, { domain: string; subdomain?: string }>,
     res: Response<Cumulonimbus.Structures.User | Cumulonimbus.Structures.Error>,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
@@ -1201,7 +1197,7 @@ app.delete(
     ids: new ExtendedValidBodyTypes().array('string'),
   }),
   async (
-    req: Request<null, null, { ids: string[] }>,
+    req: Request<{}, null, { ids: string[] }>,
     res: Response<
       Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
     >,

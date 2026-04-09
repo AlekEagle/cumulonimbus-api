@@ -21,7 +21,7 @@ app.get(
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
-    req,
+    req: Request,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.KillSwitch>
       | Cumulonimbus.Structures.Error
@@ -118,7 +118,7 @@ app.delete(
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
   async (
-    req,
+    req: Request,
     res: Response<
       | Cumulonimbus.Structures.List<Cumulonimbus.Structures.KillSwitch>
       | Cumulonimbus.Structures.Error

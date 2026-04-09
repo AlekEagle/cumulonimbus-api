@@ -42,7 +42,7 @@ app.patch(
     name: 'string',
   }),
   async (
-    req: Request<null, null, { name: string }>,
+    req: Request<{}, null, { name: string }>,
     res: Response<
       Cumulonimbus.Structures.LogLevel | Cumulonimbus.Structures.Error
     >,

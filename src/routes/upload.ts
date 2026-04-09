@@ -14,7 +14,7 @@ import SessionPermissionChecker, {
 import Ratelimit from '../middleware/Ratelimit.js';
 
 import Multer from 'multer';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { Readable } from 'node:stream';
 import { createWriteStream } from 'node:fs';
 import { join } from 'node:path';
@@ -61,7 +61,7 @@ app.post(
     storage: ratelimitStore,
   }),
   async (
-    req,
+    req: Request,
     res: Response<
       Cumulonimbus.Structures.SuccessfulUpload | Cumulonimbus.Structures.Error
     >,
