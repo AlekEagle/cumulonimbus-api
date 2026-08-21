@@ -6,6 +6,7 @@ import AuthProvider from './middleware/AuthProvider.js';
 import Compression from './middleware/Compression.js';
 import DevelopmentCORS from './middleware/DevelopmentCORS.js';
 import DeviceDetector from './middleware/DeviceDetector.js';
+import Domain from './DB/Domain.js';
 import KillSwitch from './middleware/KillSwitch.js';
 import Logger, { Level } from './utils/Logger.js';
 import Ratelimit from './middleware/Ratelimit.js';
@@ -63,5 +64,17 @@ import('./routes/index.js');
 app.listen(PORT, () => {
   logger.info(`Listening on port ${PORT}.`);
 });
+
+// Check if the default Domain exists, if not create it
+const defaultDomain = await Domain.findByPk(process.env.DEFAULT_DOMAIN);
+if (!defaultDomain) {
+  await Domain.create({
+    id: process.env.DEFAULT_DOMAIN,
+    subdomains: false,
+  });
+  logger.info(
+    `Default domain ${process.env.DEFAULT_DOMAIN} created in database.`,
+  );
+}
 
 // TODO: Add way cool E2E tests for the API

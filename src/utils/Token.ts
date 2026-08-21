@@ -159,7 +159,7 @@ export async function validateToken(
     const { protectedHeader, payload } = await jwtVerify(token, pubKey);
     return { payload: payload as any, header: protectedHeader as any };
   } catch (error) {
-    return error;
+    return error as Error;
   }
 }
 

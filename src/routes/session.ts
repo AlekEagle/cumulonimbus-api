@@ -95,7 +95,7 @@ app.post(
 
         // Compare the given password with the user's password.
         if (!(await Bcrypt.compare(req.body.password, user.password)))
-          return res.status(404).json(new Errors.InvalidUser()); // Return InvalidUser if the password is incorrect to prevent user enumeration.
+          return res.status(401).json(new Errors.InvalidPassword());
 
         if (
           (await SecondFactor.findAll({ where: { user: user.id } })).length !==
