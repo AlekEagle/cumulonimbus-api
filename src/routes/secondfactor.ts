@@ -253,6 +253,19 @@ app.post(
     >,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    // Check if the user has any second factors
+    const factors = await SecondFactor.count({
+      where: {
+        user: req.user.id,
+      },
+    });
+
+    if (factors === 0) {
+      logger.warn(
+        `User ${req.user.username} (${req.user.id}) attempted to generate backup codes without having any second factors.`,
+      );
+      return res.status(400).json(new Errors.EndpointRequiresSecondFactor());
+    }
     // Generate backup codes
     const { codes, hashed } = await generateBackupCodes();
     await req.user.update({
