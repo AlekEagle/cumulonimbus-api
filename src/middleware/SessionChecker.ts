@@ -12,21 +12,30 @@ export default function SessionChecker(
       );
       return res.status(401).json(new Errors.InvalidSession());
     } else {
-      if (staffRequired && !req.user.staff) {
+      if (req.user.bannedAt !== null) {
         logger.warn(
-          `A request to a route that requires staff privileges was made without staff privileges. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
+          `A request to a route that requires a session was made by a banned user. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
         );
-        return res.status(403).json(new Errors.InsufficientPermissions());
-      } else if (staffRequired && req.user.twoFactorBackupCodes === null) {
-        logger.warn(
-          `A request to a route that requires staff privileges was made without a second factor enrolled. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
-        );
-        return res.status(401).json(new Errors.EndpointRequiresSecondFactor());
+        return res.status(403).json(new Errors.Banned());
       } else {
-        logger.debug(
-          `Route: ${req.path} | staff required: ${staffRequired} | User: ${req.user.username} (${req.user.id})`,
-        );
-        next();
+        if (staffRequired && !req.user.staff) {
+          logger.warn(
+            `A request to a route that requires staff privileges was made without staff privileges. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
+          );
+          return res.status(403).json(new Errors.InsufficientPermissions());
+        } else if (staffRequired && req.user.twoFactorBackupCodes === null) {
+          logger.warn(
+            `A request to a route that requires staff privileges was made without a second factor enrolled. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
+          );
+          return res
+            .status(401)
+            .json(new Errors.EndpointRequiresSecondFactor());
+        } else {
+          logger.debug(
+            `Route: ${req.path} | staff required: ${staffRequired} | User: ${req.user.username} (${req.user.id})`,
+          );
+          next();
+        }
       }
     }
   };

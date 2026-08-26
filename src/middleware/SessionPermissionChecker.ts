@@ -63,6 +63,12 @@ export default function SessionPermissionChecker(
   return async function (req, res, next) {
     if (!req.user || !req.session)
       return res.status(401).json(new Errors.InvalidSession());
+    if (req.user.bannedAt !== null) {
+      logger.warn(
+        `A request to a route that requires a session was made by a banned user. Route: ${req.path} | User: ${req.user.username} (${req.user.id})`,
+      );
+      return res.status(403).json(new Errors.Banned());
+    }
     if (req.session.permissionFlags === null) {
       logger.debug(
         `User ${req.user.username}'s (${req.user.id}) session ${req.session.name} (${req.session.id}) is a standard browser session and does not have any permissionFlags. Required permissionFlags: ${requiredPermissionFlags}`,
