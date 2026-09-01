@@ -2,6 +2,7 @@
 .vscode/settings.json
 node_modules/
 dist/
+.DS_Store
 
 # Sensitive data which should not be committed
 production.env

@@ -41,13 +41,17 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   AutoTrim(),
   BodyValidator({
-    username: new ExtendedValidBodyTypes().string().notRequired(),
-    password: new ExtendedValidBodyTypes().string().notRequired(),
-    rememberMe: new ExtendedValidBodyTypes().boolean().notRequired(),
-    token: new ExtendedValidBodyTypes().string().notRequired(),
-    type: new ExtendedValidBodyTypes().string().notRequired(),
-    code: new ExtendedValidBodyTypes().string().notRequired(),
-    response: new ExtendedValidBodyTypes().any().notRequired(),
+    'username': new ExtendedValidBodyTypes().string().notRequired(),
+    'password': new ExtendedValidBodyTypes().string().notRequired(),
+    'rememberMe': new ExtendedValidBodyTypes().boolean().notRequired(),
+    '2fa': new ExtendedValidBodyTypes()
+      .object({
+        token: new ExtendedValidBodyTypes().string(),
+        type: new ExtendedValidBodyTypes().string().notRequired(),
+        code: new ExtendedValidBodyTypes().string().notRequired(),
+        response: new ExtendedValidBodyTypes().object().notRequired(),
+      })
+      .notRequired(),
   }),
   Ratelimit({
     max: 4,

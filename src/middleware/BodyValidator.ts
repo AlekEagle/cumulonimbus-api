@@ -1,12 +1,19 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Errors } from '../utils/TemplateResponses.js';
 
-export type ValidBodyTypes = 'any' | 'array' | 'number' | 'boolean' | 'string';
+export type ValidBodyTypes =
+  | 'any'
+  | 'array'
+  | 'number'
+  | 'boolean'
+  | 'string'
+  | 'object';
 
 export class ExtendedValidBodyTypes {
-  private _type: ValidBodyTypes;
-  private _optional: boolean;
-  private _arrayType: ValidBodyTypes;
+  private _type: ValidBodyTypes = 'any';
+  private _optional: boolean = false;
+  private _arrayType: ValidBodyTypes = 'any';
+  private _objectTemplate: ValidBodyTemplate | null = null;
 
   public get type(): typeof this._type {
     return this._type;
@@ -18,6 +25,16 @@ export class ExtendedValidBodyTypes {
 
   public get arrayType(): typeof this._arrayType {
     return this._arrayType;
+  }
+
+  public get objectTemplate(): typeof this._objectTemplate {
+    return this._objectTemplate;
+  }
+
+  public object(template?: ValidBodyTemplate): this {
+    this._type = 'object';
+    this._objectTemplate = template ?? null;
+    return this;
   }
 
   constructor() {}
@@ -75,6 +92,14 @@ function fieldTester(
       if (!Array.isArray(field)) return false;
       if (templateType.arrayType === 'any') return true;
       return field.every((item) => fieldTester(templateType.arrayType, item));
+    }
+    if (templateType.type === 'object') {
+      if (typeof field !== 'object' || field === null) return false;
+      if (!templateType.objectTemplate) return true;
+      for (const [key, value] of Object.entries(templateType.objectTemplate)) {
+        if (!fieldTester(value, field[key])) return false;
+      }
+      return true;
     }
     return typeof field === templateType.type;
   }
