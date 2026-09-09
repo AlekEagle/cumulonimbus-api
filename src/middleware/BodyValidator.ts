@@ -84,10 +84,10 @@ function fieldTester(
   templateType: ValidBodyOptions | null,
   field: any,
 ): boolean {
+  // Test extended fields
   if (templateType instanceof ExtendedValidBodyTypes) {
-    if (typeof templateType.type === 'undefined')
-      throw new Error('Type not set.');
-    if (templateType.optional && field === undefined) return true;
+    if (templateType.optional && (field === undefined || field === null))
+      return true;
     if (templateType.type === 'array') {
       if (!Array.isArray(field)) return false;
       if (templateType.arrayType === 'any') return true;

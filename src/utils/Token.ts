@@ -189,9 +189,15 @@ export function nameSession(req: Request): string {
   else {
     // Use the name of the browser
     name += req.useragent.client.name;
-    // If the browser version is available, use the major version
-    if (req.useragent.client.version !== '')
-      name += ' v' + req.useragent.client.version.split('.')[0];
+
+    // Don't bother including the browser version, it will change with updates and is not crucial for identifying the session
+    // If the browser version is available, use the major version depending on the browser]
+    /* switch (req.useragent.client.name.toLowerCase()) {
+      case 'mobile safari':
+      case 'safari':
+        // The version of Safari is both the browser version and the OS version, so we will just display it later as the OS version
+        break;
+    } */
   }
 
   name += ' on ';
@@ -201,9 +207,20 @@ export function nameSession(req: Request): string {
   else {
     // Use the name of the OS
     name += req.useragent.os.name;
-    // If the OS version is available, use the major version
+    // If the OS version is available, use the major version unless it is an OS that provides an older version to confuse everyone
     if (req.useragent.os.version !== '')
-      name += ' v' + req.useragent.os.version.split('.')[0];
+      switch (req.useragent.os.name.toLowerCase()) {
+        case 'android':
+          // Android always reports Android 10, so its better to omit it than to include it and confuse the user
+          break;
+        case 'ios':
+          // iOS always reports the major version as 18, but the browser version happens to correspond with the OS version, so we will use that
+          name += ' v' + req.useragent.client.version.split('.')[0];
+          break;
+        default:
+          name += ' v' + req.useragent.os.version.split('.')[0];
+          break;
+      }
   }
 
   return name;

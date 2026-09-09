@@ -16,7 +16,7 @@ import KillSwitch from '../middleware/KillSwitch.js';
 import { KillSwitches } from '../utils/GlobalKillSwitches.js';
 import {
   generateSecondFactorChallenge,
-  SecondFactorChallengeResponse,
+  type SecondFactorChallengeResponse,
   verifySecondFactor,
 } from '../utils/SecondFactor.js';
 import Ratelimit from '../middleware/Ratelimit.js';
@@ -81,6 +81,8 @@ app.post(
   ) => {
     // If the user is already logged in, return an InvalidSession error.
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
+    const sessionName =
+      (req.headers['x-session-name'] as string) || nameSession(req);
     if ('password' in req.body) {
       try {
         // Find a user with the given username.
@@ -113,10 +115,6 @@ app.post(
             .json(await generateSecondFactorChallenge(user));
         }
 
-        // Generate a session name for the new session.
-        const sessionName =
-          (req.headers['x-session-name'] as string) || nameSession(req);
-
         // Generate a new token for the user.
         const token = await generateSessionToken(user.id, req.body.rememberMe);
 
@@ -145,10 +143,6 @@ app.post(
           user = await User.findByPk(uid);
         if (!user) return res.status(404).json(new Errors.InvalidUser());
         if (await verifySecondFactor(req.body['2fa'], user, res)) {
-          // Generate a session name for the new session.
-          const sessionName =
-            (req.headers['x-session-name'] as string) || nameSession(req);
-
           // Generate a new token for the user.
           const token = await generateSessionToken(
             user.id,
@@ -321,11 +315,67 @@ app.get(
   },
 );
 
+app.patch(
+  // PATCH /api/users/me/sessions/:sid
+  '/api/users/me/sessions/:sid',
+  SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
+  BodyValidator({
+    name: 'string',
+  }),
+  async (
+    req: Request<{ sid: string }, null, { name: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    if (req.body.name.length > 255)
+      return res.status(400).json(new Errors.BodyTooLarge());
+    try {
+      const session = await Session.findOne({
+        where: {
+          user: req.user.id,
+          id: req.params.sid,
+        },
+      });
+
+      if (!session) return res.status(404).json(new Errors.InvalidSession());
+
+      session.name = req.body.name;
+      await session.save();
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) updated their session ${session.name} (${session.id}).`,
+      );
+
+      return res.status(200).json({
+        id: session.id,
+        exp: session.exp.getTime() / 1000,
+        name: session.name,
+        permissionFlags: session.permissionFlags,
+        usedAt: session.usedAt?.toISOString() || null,
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
 app.get(
   // GET /api/users/:uid/sessions/:sid
   '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -356,6 +406,67 @@ app.get(
       );
 
       // Return the session.
+      return res.status(200).json({
+        id: session.id,
+        exp: session.exp.getTime() / 1000,
+        name: session.name,
+        permissionFlags: session.permissionFlags,
+        usedAt: session.usedAt?.toISOString() || null,
+        createdAt: session.createdAt.toISOString(),
+        updatedAt: session.updatedAt.toISOString(),
+      });
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.patch(
+  // PATCH /api/users/:uid/sessions/:sid
+  '/api/users/:uid/sessions/:sid',
+  SessionChecker(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
+  Ratelimit({
+    storage: ratelimitStore,
+  }),
+  BodyValidator({
+    name: 'string',
+  }),
+  async (
+    req: Request<{ uid: string; sid: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Session | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    try {
+      // Find the user with the given ID.
+      const user = await User.findByPk(req.params.uid);
+
+      // If no user was found, return an InvalidUser error.
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      // Find the session with the given ID.
+      const session = await Session.findOne({
+        where: {
+          user: user.id,
+          id: req.params.sid,
+        },
+      });
+
+      // If no session was found, return an InvalidSession error.
+      if (!session) return res.status(404).json(new Errors.InvalidSession());
+
+      // Update the session's name.
+      session.name = req.body.name;
+      await session.save();
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) updated user ${user.username} (${user.id})'s session ${session.name} (${session.id}).`,
+      );
+
+      // Return the updated session.
       return res.status(200).json({
         id: session.id,
         exp: session.exp.getTime() / 1000,
