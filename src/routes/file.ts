@@ -1,4 +1,5 @@
-import { logger, app, ratelimitStore } from '../index.js';
+import { app, ratelimitStore } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import File from '../DB/File.js';
 import KVExtractor from '../utils/KVExtractor.js';
@@ -16,6 +17,7 @@ import SessionPermissionChecker, {
 } from '../middleware/SessionPermissionChecker.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 import Ratelimit from '../middleware/Ratelimit.js';
+import startFilesDeletionWorker from '../workers/FilesDeletion.js';
 
 import { Op } from 'sequelize';
 import { unlink, rename } from 'node:fs/promises';
@@ -610,30 +612,13 @@ app.delete(
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
 
     try {
-      let { count, rows: files } = await File.findAndCountAll({
+      let count = await File.count({
         where: {
           userID: req.user.id,
         },
       });
 
-      // Delete all files.
-      await Promise.all(
-        files.map(async (file) => {
-          // First, delete the thumbnail if it exists.
-          if (
-            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
-          )
-            await unlink(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-            );
-
-          // Delete the file from the disk.
-          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
-
-          // Delete the file from the database.
-          await file.destroy();
-        }),
-      );
+      await startFilesDeletionWorker(req.user);
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) deleted all of their own files. Count: ${count}`,
@@ -665,30 +650,13 @@ app.delete(
 
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
-      let { count, rows: files } = await File.findAndCountAll({
+      let count = await File.count({
         where: {
           userID: user.id,
         },
       });
 
-      // Delete all files.
-      await Promise.all(
-        files.map(async (file) => {
-          // First, delete the thumbnail if it exists.
-          if (
-            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
-          )
-            await unlink(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-            );
-
-          // Delete the file from the disk.
-          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
-
-          // Delete the file from the database.
-          await file.destroy();
-        }),
-      );
+      await startFilesDeletionWorker(user, req.user);
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) deleted all files belonging to user ${user.username} (${user.id}). Count: ${count}`,

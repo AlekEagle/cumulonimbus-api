@@ -1,5 +1,5 @@
 import GlobalKillSwitches from '../DB/GlobalKillSwitches.js';
-import { logger } from '../index.js';
+import logger from './LogMachine.js';
 
 // These Switches will not affect staff accounts
 export enum KillSwitches {

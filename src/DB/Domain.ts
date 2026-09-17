@@ -1,5 +1,5 @@
 import { sequelize, init as initDB } from './index.js';
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 
 import { Model, DataTypes } from 'sequelize';
 

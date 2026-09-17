@@ -1,6 +1,6 @@
 import SecondFactor from '../DB/SecondFactor.js';
 import { Errors } from '../utils/TemplateResponses.js';
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import {
   generateSecondFactorChallenge,
   verifySecondFactor,

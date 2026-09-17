@@ -11,7 +11,8 @@
     "alwaysStrict": true,
     "esModuleInterop": true,
     "moduleResolution": "nodenext",
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "skipLibCheck": true
   },
   "include": ["./src/**/*"],
   "ts-node": {

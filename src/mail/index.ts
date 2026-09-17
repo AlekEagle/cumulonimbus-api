@@ -1,4 +1,4 @@
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 
 import { createTransport } from 'nodemailer';
 
@@ -28,8 +28,8 @@ export async function init(): Promise<boolean> {
     try {
       await transport.verify();
     } catch (err) {
-      console.error(err);
-      return false;
+      logger.error('FATAL: Failed to verify SMTP transport', err);
+      process.exit(1);
     }
 
     logger.info('SMTP connection established successfully.');

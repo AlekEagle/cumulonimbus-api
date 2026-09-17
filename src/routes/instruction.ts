@@ -1,4 +1,5 @@
-import { logger, app } from '../index.js';
+import { app } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import Instruction from '../DB/Instruction.js';

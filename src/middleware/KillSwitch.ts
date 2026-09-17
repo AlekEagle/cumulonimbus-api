@@ -1,5 +1,5 @@
 import { getKillSwitch, KillSwitches } from '../utils/GlobalKillSwitches.js';
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import type { RequestHandler } from 'express';
 

@@ -8,7 +8,7 @@ import DevelopmentCORS from './middleware/DevelopmentCORS.js';
 import DeviceDetector from './middleware/DeviceDetector.js';
 import Domain from './DB/Domain.js';
 import KillSwitch from './middleware/KillSwitch.js';
-import Logger, { Level } from './utils/Logger.js';
+import logger from './utils/LogMachine.js';
 import Ratelimit from './middleware/Ratelimit.js';
 import RatelimitStorage from './utils/RatelimitStorage.js';
 import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
@@ -19,11 +19,6 @@ import { initKillSwitches } from './utils/GlobalKillSwitches.js';
 // (JK we love the developers that made these awesome modules)
 import Express, { json } from 'express';
 import ms from 'ms';
-
-// Create a new logger instance
-export const logger = new Logger(
-  process.env.ENV === 'development' ? Level.DEBUG : Level.INFO,
-);
 
 // Initialize the kill switches
 await initKillSwitches();

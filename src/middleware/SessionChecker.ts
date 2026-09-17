@@ -1,4 +1,4 @@
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import type { RequestHandler } from 'express';
 import { Errors } from '../utils/TemplateResponses.js';
 

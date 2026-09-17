@@ -1,6 +1,6 @@
 import User from '../DB/User.js';
 import Session from '../DB/Session.js';
-import { logger } from '../index.js';
+import logger from './LogMachine.js';
 
 import { Op } from 'sequelize';
 

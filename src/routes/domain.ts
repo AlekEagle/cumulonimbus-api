@@ -1,4 +1,5 @@
-import { logger, app } from '../index.js';
+import { app } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import Domain from '../DB/Domain.js';
 import User from '../DB/User.js';

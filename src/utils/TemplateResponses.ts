@@ -72,11 +72,6 @@ export namespace Errors {
     public readonly message: string = 'Invalid Password';
   }
 
-  export class PasswordsDoNotMatch implements Cumulonimbus.Structures.Error {
-    public readonly code: string = 'PASSWORDS_DO_NOT_MATCH_ERROR';
-    public readonly message: string = 'Passwords Do Not Match';
-  }
-
   export class InvalidEmail implements Cumulonimbus.Structures.Error {
     public readonly code: string = 'INVALID_EMAIL_ERROR';
     public readonly message: string = 'Invalid Email';

@@ -9,7 +9,7 @@ import {
 import User from '../DB/User.js';
 import SecondFactor from '../DB/SecondFactor.js';
 import { Errors } from './TemplateResponses.js';
-import { logger } from '../index.js';
+import logger from './LogMachine.js';
 import {
   generateSecondFactorIntermediateToken,
   validateToken,
@@ -43,20 +43,17 @@ export interface BaseSecondFactorChallengeResponse {
   type: string;
 }
 
-export interface TOTPSecondFactorChallengeResponse
-  extends BaseSecondFactorChallengeResponse {
+export interface TOTPSecondFactorChallengeResponse extends BaseSecondFactorChallengeResponse {
   type: 'totp';
   code: string;
 }
 
-export interface BackupCodeSecondFactorChallengeResponse
-  extends BaseSecondFactorChallengeResponse {
+export interface BackupCodeSecondFactorChallengeResponse extends BaseSecondFactorChallengeResponse {
   type: 'backup';
   code: string;
 }
 
-export interface WebAuthnSecondFactorChallengeResponse
-  extends BaseSecondFactorChallengeResponse {
+export interface WebAuthnSecondFactorChallengeResponse extends BaseSecondFactorChallengeResponse {
   type: 'webauthn';
   response: AuthenticationResponseJSON;
 }

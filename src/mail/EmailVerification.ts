@@ -1,4 +1,4 @@
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { transport, init } from './index.js';
 import {
   generateEmailVerificationToken,
@@ -19,17 +19,13 @@ export default async function sendVerificationEmail(
     }
   | {
       success: false;
-      error: string;
+      error: Error;
       token: undefined;
       tokenData: undefined;
     }
 > {
   const { token, data } = await generateEmailVerificationToken(to),
-    url = `${
-      process.env.ENV === 'development'
-        ? 'http://localhost:5173'
-        : 'https://alekeagle.me'
-    }/verify?token=${token}`;
+    url = `${process.env.FRONTEND_BASE_URL}/verify?token=${token}`;
 
   try {
     await transport!.sendMail({
@@ -83,10 +79,10 @@ export default async function sendVerificationEmail(
     });
     return { success: true, token, tokenData: data, error: undefined };
   } catch (err) {
-    logger.error(err);
+    logger.error('Failed to send verification email', err);
     return {
       success: false,
-      error: err.message,
+      error: err as Error,
       token: undefined,
       tokenData: undefined,
     };

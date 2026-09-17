@@ -214,7 +214,8 @@ export function nameSession(req: Request): string {
           // Android always reports Android 10, so its better to omit it than to include it and confuse the user
           break;
         case 'ios':
-          // iOS always reports the major version as 18, but the browser version happens to correspond with the OS version, so we will use that
+        case 'mac':
+          // iOS and macOS always reports the major version as 18 and 10 respectively, but the browser version happens to correspond with the OS version, so we will use that
           name += ' v' + req.useragent.client.version.split('.')[0];
           break;
         default:

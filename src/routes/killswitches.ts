@@ -1,4 +1,5 @@
-import { logger, app } from '../index.js';
+import { app } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
 import {

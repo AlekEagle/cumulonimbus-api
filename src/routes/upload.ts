@@ -1,4 +1,5 @@
-import { logger, app, ratelimitStore } from '../index.js';
+import { app, ratelimitStore } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors } from '../utils/TemplateResponses.js';
 import File from '../DB/File.js';
 import SessionChecker from '../middleware/SessionChecker.js';

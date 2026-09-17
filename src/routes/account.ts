@@ -1,4 +1,5 @@
-import { logger, app, ratelimitStore } from '../index.js';
+import { app, ratelimitStore } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import {
   USERNAME_REGEX,
@@ -10,7 +11,6 @@ import SubdomainFormatter from '../utils/SubdomainFormatter.js';
 import AutoTrim from '../middleware/AutoTrim.js';
 import Domain from '../DB/Domain.js';
 import User from '../DB/User.js';
-import File from '../DB/File.js';
 import {
   generateSessionToken,
   nameSession,
@@ -32,6 +32,7 @@ import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
 import Ratelimit from '../middleware/Ratelimit.js';
+import startAccountDeletionWorker from '../workers/AccountDeletion.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -56,7 +57,6 @@ app.post(
     username: 'string',
     email: 'string',
     password: 'string',
-    confirmPassword: 'string',
     rememberMe: new ExtendedValidBodyTypes().boolean().notRequired(),
   }),
   Ratelimit({
@@ -73,7 +73,6 @@ app.post(
         username: string;
         email: string;
         password: string;
-        confirmPassword: string;
         rememberMe?: boolean;
       }
     >,
@@ -83,10 +82,6 @@ app.post(
   ) => {
     // If someone attempts to register while logged in, return an InvalidSession error.
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
-
-    // If the password and confirmPassword fields do not match, return a PasswordsDoNotMatch error.
-    if (req.body.password !== req.body.confirmPassword)
-      return res.status(400).json(new Errors.PasswordsDoNotMatch());
 
     // If the username or email do not match their respective RegExp, return an InvalidUsername or InvalidEmail error.
     if (!USERNAME_REGEX.test(req.body.username))
@@ -716,7 +711,6 @@ app.put(
   ReverifyIdentity(),
   BodyValidator({
     newPassword: 'string',
-    confirmNewPassword: 'string',
   }),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
@@ -732,10 +726,6 @@ app.put(
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
-      // Check if the new password matches the confirmation.
-      if (req.body.newPassword !== req.body.confirmNewPassword)
-        return res.status(400).json(new Errors.PasswordsDoNotMatch());
-
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed their password.`,
       );
@@ -763,7 +753,6 @@ app.put(
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
   BodyValidator({
     newPassword: 'string',
-    confirmNewPassword: 'string',
   }),
   async (
     req: Request<
@@ -780,10 +769,6 @@ app.put(
 
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-      // Check if the new password matches the confirmation.
-      if (req.body.newPassword !== req.body.confirmNewPassword)
-        return res.status(400).json(new Errors.PasswordsDoNotMatch());
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) changed user ${user.username} (${user.id})'s password.`,
@@ -1094,33 +1079,7 @@ app.delete(
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
-      // Delete the user's files.
-      const files = await File.findAll({ where: { userID: req.user.id } });
-
-      await Promise.all(
-        files.map(async (file) => {
-          // First, delete the thumbnail if it exists.
-          if (
-            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
-          )
-            await unlink(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-            );
-
-          // Delete the file from the disk.
-          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
-
-          // Delete the file from the database.
-          await file.destroy();
-        }),
-      );
-
-      // Delete the user's sessions.
-      await Session.destroy({ where: { user: req.user.id } });
-
-      // Delete the user.
-      await req.user.destroy();
-
+      await startAccountDeletionWorker(req.user);
       return res.status(200).json(new Success.DeleteUser());
     } catch (error) {
       logger.error(error);
@@ -1148,36 +1107,7 @@ app.delete(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
-      // Delete the user's files.
-      const files = await File.findAll({ where: { userID: user.id } });
-
-      await Promise.all(
-        files.map(async (file) => {
-          // First, delete the thumbnail if it exists.
-          if (
-            existsSync(join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`))
-          )
-            await unlink(
-              join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-            );
-
-          // Delete the file from the disk.
-          await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
-
-          // Delete the file from the database.
-          await file.destroy();
-        }),
-      );
-
-      // Delete the user's sessions.
-      await Session.destroy({ where: { user: user.id } });
-
-      // Delete the user.
-      await user.destroy();
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) deleted user ${user.username} (${user.id}).`,
-      );
+      await startAccountDeletionWorker(user, req.user);
 
       return res.status(200).json(new Success.DeleteUser());
     } catch (error) {
@@ -1219,34 +1149,7 @@ app.delete(
       // Delete the users.
       await Promise.all(
         users.map(async (user) => {
-          // Delete the user's files.
-          const files = await File.findAll({ where: { userID: user.id } });
-
-          await Promise.all(
-            files.map(async (file) => {
-              // First, delete the thumbnail if it exists.
-              if (
-                existsSync(
-                  join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-                )
-              )
-                await unlink(
-                  join(process.env.BASE_THUMBNAIL_PATH, `${file.id}.webp`),
-                );
-
-              // Delete the file from the disk.
-              await unlink(join(process.env.BASE_UPLOAD_PATH, file.id));
-
-              // Delete the file from the database.
-              await file.destroy();
-            }),
-          );
-
-          // Delete the user's sessions.
-          await Session.destroy({ where: { user: user.id } });
-
-          // Delete the user.
-          await user.destroy();
+          await startAccountDeletionWorker(user, req.user!);
         }),
       );
 

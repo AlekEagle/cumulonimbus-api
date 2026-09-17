@@ -101,7 +101,10 @@ function recursivelyTrim(
         try {
           recursivelyTrim(obj[key], newNestedKeys, invertFilter);
         } catch (err) {
-          throw new RecursiveTypeError([key, ...err.rawPath], err.typeReceived);
+          throw new RecursiveTypeError(
+            [key, ...(err as RecursiveTypeError).rawPath],
+            (err as RecursiveTypeError).typeReceived,
+          );
         }
       }
     }

@@ -1,4 +1,4 @@
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { transport, init } from './index.js';
 
 await init();
@@ -7,7 +7,7 @@ export async function sendBannedNotice(
   to: string,
   username: string,
   reason: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: Error }> {
   try {
     await transport!.sendMail({
       to,
@@ -79,7 +79,7 @@ export async function sendBannedNotice(
     });
     return { success: true };
   } catch (err) {
-    logger.error(err);
-    return { success: false, error: err.message };
+    logger.error('Failed to send banned notice email', err);
+    return { success: false, error: err as Error };
   }
 }

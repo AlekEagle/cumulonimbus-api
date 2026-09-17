@@ -1,4 +1,5 @@
-import { logger, app, ratelimitStore } from '../index.js';
+import { app, ratelimitStore } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import User from '../DB/User.js';
 import AutoTrim from '../middleware/AutoTrim.js';

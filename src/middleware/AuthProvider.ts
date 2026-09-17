@@ -1,5 +1,5 @@
 import { Errors } from '../utils/TemplateResponses.js';
-import { logger } from '../index.js';
+import logger from '../utils/LogMachine.js';
 import { validateToken } from '../utils/Token.js';
 import User from '../DB/User.js';
 import Session from '../DB/Session.js';

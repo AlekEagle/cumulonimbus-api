@@ -30,7 +30,7 @@ function date(): string {
 type LoggerConstructor = Level | 'none' | 'error' | 'warn' | 'info' | 'debug';
 
 export default class Logger extends Console {
-  private __logLevel: Level;
+  private __logLevel: Level = Level.INFO;
   private timestamp: boolean;
   get logLevel(): Level {
     return this.__logLevel;
