@@ -27,7 +27,6 @@ import SessionPermissionChecker, {
   PermissionFlags,
 } from '../middleware/SessionPermissionChecker.js';
 import ReverifyIdentity from '../middleware/ReverifyIdentity.js';
-import KVExtractor from '../utils/KVExtractor.js';
 
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
@@ -57,7 +56,6 @@ app.post(
   Ratelimit({
     max: 4,
     window: ms('5m'),
-    ignoreStatusCodes: [404],
     storage: ratelimitStore,
   }),
   async (
@@ -108,9 +106,6 @@ app.post(
           (await SecondFactor.findAll({ where: { user: user.id } })).length !==
           0
         ) {
-          // If the user has second factors, generate a second factor challenge.
-          // Skip the ratelimit for this request to prevent the user from being ratelimited for their second factor.
-          res.ratelimit!.skipped = true;
           return res
             .status(401)
             .json(await generateSecondFactorChallenge(user));

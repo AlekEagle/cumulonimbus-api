@@ -24,21 +24,30 @@ export const OMITTED_USER_FIELDS = [
 // ========= FILE RELATED CONSTANTS =========
 export const FILENAME_LENGTH = 10;
 
-// File extensions that the FileType library struggles with.
-// If we encounter one of these, we'll just use the file extension
-// from the original file name instead of whatever FileType gives us.
-export const TROUBLESOME_FILE_EXTENSIONS = [
-  'tar.gz',
-  'tar.xz',
-  'tar.bz2',
-  'tar.lz',
-  'tar.lzma',
-  'tar.lzo',
-  'tar.z',
-  'tar.Z',
-  'tar.sz',
-  'apk',
-  'jar',
+export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+
+// The compression-following pass only needs the container headers (the ustar
+// magic sits at offset 257 of the decompressed stream), so scan at most 1 MB.
+export const MAX_LIBMAGIC_SCAN_BYTES = 1024 * 1024; // 1 MB
+
+// A list of possible nested container file extensions that require further inspection.
+export const NESTED_CONTAINERS = new Set([
+  'xz',
+  'zst',
+  'bz2',
+  'lz4',
+  'lz',
+  'lzma',
+]);
+
+// libmagic description prefixes for the containers above. Unmapped containers
+// fall back to the bare extension.
+export const LIBMAGIC_CONTAINERS: [RegExp, string][] = [
+  [/^gzip compressed data/i, 'gz'],
+  [/^XZ compressed data/i, 'xz'],
+  [/^bzip2 compressed data/i, 'bz2'],
+  [/^Zstandard compressed data/i, 'zst'],
+  [/^LZMA compressed data/i, 'lzma'],
 ];
 
 // ========= TOKEN RELATED CONSTANTS =========

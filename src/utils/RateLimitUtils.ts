@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import { Errors } from './TemplateResponses.js';
 
+function IPResolver(req: Request): string {
+  return (req.headers['cf-connecting-ip'] as string) || req.ip!;
+}
+
 export function keyGenerator(req: Request): string {
-  return req.user
-    ? req.user.id
-    : (Array.isArray(req.headers['x-forwarded-for'])
-        ? req.headers['x-forwarded-for'][0]
-        : req.headers['x-forwarded-for']) || req.ip!;
+  return req.user ? req.user.id : IPResolver(req);
 }
 
 export function handler(_: Request, res: Response) {

@@ -554,7 +554,12 @@ app.delete(
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Find the second factor
-    const factor = await SecondFactor.findByPk(req.params.id);
+    const factor = await SecondFactor.findOne({
+      where: {
+        id: req.params.id,
+        user: req.user.id,
+      },
+    });
     if (!factor) return res.status(404).json(new Errors.InvalidSecondFactor());
 
     // Delete the second factor
