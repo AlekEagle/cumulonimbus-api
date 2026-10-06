@@ -29,7 +29,7 @@ import ms from 'ms';
 logger.debug('Loading: File Routes...');
 
 app.get(
-  // GET /api/files
+  // MARK: GET /api/files
   '/api/files',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
@@ -67,7 +67,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/me/files
+  // MARK: GET /api/users/me/files
   '/api/users/me/files',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_READ),
@@ -108,7 +108,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:id/files
+  // MARK: GET /api/users/:id/files
   '/api/users/:id/files',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
@@ -153,7 +153,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/me/files/:id
+  // MARK: GET /api/users/me/files/:id
   '/api/users/me/files/:id',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_READ),
@@ -189,7 +189,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:uid/files/:id
+  // MARK: GET /api/users/:uid/files/:id
   '/api/users/:uid/files/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
@@ -224,7 +224,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/files/:id
+  // MARK: GET /api/files/:id
   '/api/files/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_FILES),
@@ -255,7 +255,7 @@ app.get(
 );
 
 app.put(
-  // PUT /api/users/me/files/:id/name
+  // MARK: PUT /api/users/me/files/:id/name
   '/api/users/me/files/:id/name',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_MODIFY),
@@ -305,7 +305,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:uid/files/:id/name
+  // MARK: PUT /api/users/:uid/files/:id/name
   '/api/users/:uid/files/:id/name',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
@@ -347,7 +347,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/me/files/:id/name
+  // MARK: DELETE /api/users/me/files/:id/name
   '/api/users/me/files/:id/name',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_MODIFY),
@@ -393,7 +393,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/files/:id/name
+  // MARK: DELETE /api/users/:uid/files/:id/name
   '/api/users/:uid/files/:id/name',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
@@ -431,7 +431,7 @@ app.delete(
 );
 
 app.put(
-  // PUT /api/users/me/files/:id/extension
+  // MARK: PUT /api/users/me/files/:id/extension
   '/api/users/me/files/:id/extension',
   SessionChecker(),
   AutoTrim(),
@@ -462,6 +462,9 @@ app.put(
 
     // Sanitize the extension. (Make sure we don't do a directory traversal attack.)
     req.body.extension = req.body.extension.replace(/\//g, '');
+
+    if (!/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/.test(req.body.extension))
+      return res.status(400).json(new Errors.InvalidFile());
 
     try {
       // Find the file.
@@ -517,7 +520,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:uid/files/:id/extension
+  // MARK: PUT /api/users/:uid/files/:id/extension
   '/api/users/:uid/files/:id/extension',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
@@ -540,6 +543,9 @@ app.put(
 
     // Sanitize the extension. (Make sure we don't do a directory traversal attack.)
     req.body.extension = req.body.extension.replace(/\//g, '');
+
+    if (!/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/.test(req.body.extension))
+      return res.status(400).json(new Errors.InvalidFile());
 
     try {
       // Find the file.
@@ -595,7 +601,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/me/files/all
+  // MARK: DELETE /api/users/me/files/all
   '/api/users/me/files/all',
   ReverifyIdentity(),
   SessionPermissionChecker(),
@@ -636,7 +642,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/files/all
+  // MARK: DELETE /api/users/:uid/files/all
   '/api/users/:uid/files/all',
   ReverifyIdentity(true),
   SessionPermissionChecker(),
@@ -674,7 +680,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/me/files/:id
+  // MARK: DELETE /api/users/me/files/:id
   '/api/users/me/files/:id',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_MODIFY),
@@ -722,7 +728,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/files/:id
+  // MARK: DELETE /api/users/:uid/files/:id
   '/api/users/:uid/files/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
@@ -768,7 +774,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/me/files
+  // MARK: DELETE /api/users/me/files
   '/api/users/me/files',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.FILE_MODIFY),
@@ -840,7 +846,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/files
+  // MARK: DELETE /api/users/:uid/files
   '/api/users/:uid/files',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),
@@ -904,7 +910,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/files
+  // MARK: DELETE /api/files
   '/api/files',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_FILES),

@@ -15,7 +15,7 @@ import { Request, Response } from 'express';
 logger.debug('Loading: Utility Routes...');
 
 app.get(
-  // GET /api/loglevel
+  // MARK: GET /api/loglevel
   '/api/loglevel',
   SessionChecker(true),
   async (
@@ -34,7 +34,7 @@ app.get(
 );
 
 app.patch(
-  // PATCH /api/loglevel
+  // MARK: PATCH /api/loglevel
   '/api/loglevel',
   AutoTrim(),
   ReverifyIdentity(true),

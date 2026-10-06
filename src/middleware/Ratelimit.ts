@@ -52,11 +52,7 @@ export const defaultRatelimitOptions: Omit<RatelimitOptions, 'storage'> = {
 };
 
 function IPResolver(req: Request): string {
-  return (
-    (Array.isArray(req.headers['x-forwarded-for'])
-      ? req.headers['x-forwarded-for'][0]
-      : req.headers['x-forwarded-for']) || req.ip!
-  );
+  return (req.headers['cf-connecting-ip'] as string) || req.ip!;
 }
 
 function appendRatelimitHeaders(res: Response): void {

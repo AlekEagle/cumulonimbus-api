@@ -130,7 +130,7 @@ function saveFile(buffer: Buffer, path: string): Promise<void> {
 }
 
 app.post(
-  // POST /api/upload
+  // MARK: POST /api/upload
   '/api/upload',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.UPLOAD_FILE),

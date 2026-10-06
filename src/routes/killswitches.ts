@@ -17,7 +17,7 @@ import { Request, Response } from 'express';
 logger.debug('Loading: Kill switches Route...');
 
 app.get(
-  // GET /api/killswitches
+  // MARK: GET /api/killswitches
   '/api/killswitches',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
@@ -48,7 +48,7 @@ app.get(
 );
 
 app.put(
-  // PUT /api/killswitches/:id
+  // MARK: PUT /api/killswitches/:id
   '/api/killswitches/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
@@ -81,7 +81,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/killswitches/:id
+  // MARK: DELETE /api/killswitches/:id
   '/api/killswitches/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),
@@ -114,7 +114,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/killswitches
+  // MARK: DELETE /api/killswitches
   '/api/killswitches',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_KILLSWITCHES),

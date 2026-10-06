@@ -36,7 +36,7 @@ import ms from 'ms';
 logger.debug('Loading: Session Routes...');
 
 app.post(
-  // POST /api/login
+  // MARK: POST /api/login
   '/api/login',
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   AutoTrim(),
@@ -174,7 +174,7 @@ app.post(
 );
 
 app.post(
-  // POST /api/users/me/sessions
+  // MARK: POST /api/users/me/sessions
   '/api/users/me/sessions',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
@@ -237,7 +237,7 @@ app.post(
 );
 
 app.get(
-  // GET /api/users/me/sessions/me
+  // MARK: GET /api/users/me/sessions/me
   '/api/users/me/sessions/me',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
@@ -269,7 +269,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/me/sessions/:sid
+  // MARK: GET /api/users/me/sessions/:sid
   '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
@@ -312,7 +312,7 @@ app.get(
 );
 
 app.patch(
-  // PATCH /api/users/me/sessions/:sid
+  // MARK: PATCH /api/users/me/sessions/:sid
   '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
@@ -365,7 +365,7 @@ app.patch(
 );
 
 app.get(
-  // GET /api/users/:uid/sessions/:sid
+  // MARK: GET /api/users/:uid/sessions/:sid
   '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
@@ -419,7 +419,7 @@ app.get(
 );
 
 app.patch(
-  // PATCH /api/users/:uid/sessions/:sid
+  // MARK: PATCH /api/users/:uid/sessions/:sid
   '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
@@ -480,7 +480,7 @@ app.patch(
 );
 
 app.get(
-  // GET /api/users/me/sessions
+  // MARK: GET /api/users/me/sessions
   '/api/users/me/sessions',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
@@ -521,7 +521,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:uid/sessions
+  // MARK: GET /api/users/:uid/sessions
   '/api/users/:uid/sessions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
@@ -570,7 +570,7 @@ app.get(
 );
 
 app.delete(
-  // DELETE /api/users/me/sessions/me
+  // MARK: DELETE /api/users/me/sessions/me
   '/api/users/me/sessions/me',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -604,7 +604,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/me/sessions/:sid
+  // MARK: DELETE /api/users/me/sessions/:sid
   '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
@@ -648,7 +648,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/sessions/:sid
+  // MARK: DELETE /api/users/:uid/sessions/:sid
   '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
@@ -693,7 +693,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/me/sessions
+  // MARK: DELETE /api/users/me/sessions
   '/api/users/me/sessions',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -737,7 +737,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/sessions
+  // MARK: DELETE /api/users/:uid/sessions
   '/api/users/:uid/sessions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
@@ -786,7 +786,7 @@ app.delete(
 );
 
 app.delete(
-  // Delete /api/users/me/sessions/all
+  // MARK: DELETE /api/users/me/sessions/all
   '/api/users/me/sessions/all',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -831,7 +831,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/sessions/all
+  // MARK: DELETE /api/users/:uid/sessions/all
   '/api/users/:uid/sessions/all',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),

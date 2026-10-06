@@ -20,7 +20,7 @@ import { Op } from 'sequelize';
 logger.debug('Loading: Domain Routes...');
 
 app.get(
-  // GET /api/domains
+  // MARK: GET /api/domains
   '/api/domains',
   LimitOffset(-1, 50),
   SessionChecker(),
@@ -59,7 +59,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/domains/:id
+  // MARK: GET /api/domains/:id
   '/api/domains/:id',
   SessionChecker(),
   async (
@@ -90,7 +90,7 @@ app.get(
 );
 
 app.post(
-  // POST /api/domains
+  // MARK: POST /api/domains
   '/api/domains',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
@@ -131,7 +131,7 @@ app.post(
 );
 
 app.put(
-  // PUT /api/domains/:id/subdomains
+  // MARK: PUT /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
@@ -168,7 +168,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/domains/:id/subdomains
+  // MARK: DELETE /api/domains/:id/subdomains
   '/api/domains/:id/subdomains',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
@@ -205,7 +205,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/domains/:id
+  // MARK: DELETE /api/domains/:id
   '/api/domains/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),
@@ -257,7 +257,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/domains
+  // MARK: DELETE /api/domains
   '/api/domains',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_DOMAINS),

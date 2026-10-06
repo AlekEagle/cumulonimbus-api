@@ -42,7 +42,7 @@ import ms from 'ms';
 logger.debug('Loading: Second Factor routes...');
 
 app.post(
-  // POST /api/users/me/2fa/totp
+  // MARK: POST /api/users/me/2fa/totp
   '/api/users/me/2fa/totp',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -81,7 +81,7 @@ app.post(
 );
 
 app.post(
-  // POST /api/users/me/2fa/totp/confirm
+  // MARK: POST /api/users/me/2fa/totp/confirm
   '/api/users/me/2fa/totp/confirm',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -140,7 +140,7 @@ app.post(
 );
 
 app.post(
-  // POST /api/users/me/2fa/webauthn
+  // MARK: POST /api/users/me/2fa/webauthn
   '/api/users/me/2fa/webauthn',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -176,7 +176,7 @@ app.post(
 );
 
 app.post(
-  // POST /api/users/me/2fa/webauthn/confirm
+  // MARK: POST /api/users/me/2fa/webauthn/confirm
   '/api/users/me/2fa/webauthn/confirm',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
@@ -236,7 +236,7 @@ app.post(
 );
 
 app.post(
-  // POST /api/users/me/2fa/backup
+  // MARK: POST /api/users/me/2fa/backup
   '/api/users/me/2fa/backup',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -281,7 +281,7 @@ app.post(
 );
 
 app.get(
-  // GET /api/users/me/2fa
+  // MARK: GET /api/users/me/2fa
   '/api/users/me/2fa',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
@@ -327,7 +327,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:id/2fa
+  // MARK: GET /api/users/:id/2fa
   '/api/users/:id/2fa',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SECOND_FACTORS),
@@ -373,7 +373,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/me/2fa/:id
+  // MARK: GET /api/users/me/2fa/:id
   '/api/users/me/2fa/:id',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
@@ -411,7 +411,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:uid/2fa/:id
+  // MARK: GET /api/users/:uid/2fa/:id
   '/api/users/:uid/2fa/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SECOND_FACTORS),
@@ -450,7 +450,7 @@ app.get(
 );
 
 app.delete(
-  // DELETE /api/users/me/2fa/all
+  // MARK: DELETE /api/users/me/2fa/all
   '/api/users/me/2fa/all',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -494,7 +494,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/2fa/all
+  // MARK: DELETE /api/users/:uid/2fa/all
   '/api/users/:uid/2fa/all',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
@@ -536,7 +536,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/me/2fa/:id
+  // MARK: DELETE /api/users/me/2fa/:id
   '/api/users/me/2fa/:id',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -589,7 +589,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/2fa/:id
+  // MARK: DELETE /api/users/:uid/2fa/:id
   '/api/users/:uid/2fa/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),
@@ -635,7 +635,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/me/2fa
+  // MARK: DELETE /api/users/me/2fa
   '/api/users/me/2fa',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -692,7 +692,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:uid/2fa
+  // MARK: DELETE /api/users/:uid/2fa
   '/api/users/:uid/2fa',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SECOND_FACTORS),

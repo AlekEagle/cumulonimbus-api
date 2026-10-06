@@ -48,7 +48,7 @@ logger.debug('Loading: Account Routes...');
 // TODO: add a way for users to undo unauthorized account changes
 
 app.post(
-  // POST /api/register
+  // MARK: POST /api/register
   '/api/register',
   KillSwitch(KillSwitches.ACCOUNT_CREATE),
   KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
@@ -161,7 +161,7 @@ app.post(
 );
 
 app.get(
-  // GET /api/users
+  // MARK: GET /api/users
   '/api/users',
   Ratelimit({
     storage: ratelimitStore,
@@ -212,7 +212,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/me
+  // MARK: GET /api/users/me
   '/api/users/me',
   Ratelimit({
     storage: ratelimitStore,
@@ -235,7 +235,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:id
+  // MARK: GET /api/users/:id
   '/api/users/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
@@ -267,7 +267,7 @@ app.get(
 );
 
 app.put(
-  // PUT /api/users/me/username
+  // MARK: PUT /api/users/me/username
   '/api/users/me/username',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   ReverifyIdentity(),
@@ -314,7 +314,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/username
+  // MARK: PUT /api/users/:id/username
   '/api/users/:id/username',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -361,7 +361,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/me/email
+  // MARK: PUT /api/users/me/email
   '/api/users/me/email',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
@@ -424,7 +424,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/email
+  // MARK: PUT /api/users/:id/email
   '/api/users/:id/email',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -474,7 +474,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/verify
+  // MARK: PUT /api/users/verify
   '/api/users/verify',
   BodyValidator({
     token: 'string',
@@ -528,7 +528,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/verify
+  // MARK: PUT /api/users/:id/verify
   '/api/users/:id/verify',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -569,7 +569,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/:id/verify
+  // MARK: DELETE /api/users/:id/verify
   '/api/users/:id/verify',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -608,7 +608,7 @@ app.delete(
 );
 
 app.get(
-  // GET /api/users/me/verify
+  // MARK: GET /api/users/me/verify
   '/api/users/me/verify',
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_EMAIL_VERIFY),
@@ -658,7 +658,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/users/:id/verify
+  // MARK: GET /api/users/:id/verify
   '/api/users/:id/verify',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -706,7 +706,7 @@ app.get(
 );
 
 app.put(
-  // PUT /api/users/me/password
+  // MARK: PUT /api/users/me/password
   '/api/users/me/password',
   ReverifyIdentity(),
   BodyValidator({
@@ -747,7 +747,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/password
+  // MARK: PUT /api/users/:id/password
   '/api/users/:id/password',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -791,7 +791,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/staff
+  // MARK: PUT /api/users/:id/staff
   '/api/users/:id/staff',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -834,7 +834,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/:id/staff
+  // MARK: DELETE /api/users/:id/staff
   '/api/users/:id/staff',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -869,7 +869,7 @@ app.delete(
 );
 
 app.put(
-  // PUT /api/users/:id/ban
+  // MARK: PUT /api/users/:id/ban
   '/api/users/:id/ban',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -920,7 +920,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/:id/ban
+  // MARK: DELETE /api/users/:id/ban
   '/api/users/:id/ban',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -955,7 +955,7 @@ app.delete(
 );
 
 app.put(
-  // PUT /api/users/me/domain
+  // MARK: PUT /api/users/me/domain
   '/api/users/me/domain',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.ACCOUNT_MODIFY),
@@ -1013,7 +1013,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/users/:id/domain
+  // MARK: PUT /api/users/:id/domain
   '/api/users/:id/domain',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -1066,7 +1066,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/users/me
+  // MARK: DELETE /api/users/me
   '/api/users/me',
   ReverifyIdentity(),
   SessionPermissionChecker(), // Require a standard browser session
@@ -1089,7 +1089,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users/:id
+  // MARK: DELETE /api/users/:id
   '/api/users/:id',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),
@@ -1118,7 +1118,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/users
+  // MARK: DELETE /api/users
   '/api/users',
   ReverifyIdentity(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_ACCOUNTS),

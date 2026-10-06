@@ -19,7 +19,7 @@ import { Op } from 'sequelize';
 logger.debug('Loading: Instruction Routes...');
 
 app.get(
-  // GET /api/instructions
+  // MARK: GET /api/instructions
   '/api/instructions',
   SessionChecker(),
   LimitOffset(0, 50),
@@ -58,7 +58,7 @@ app.get(
 );
 
 app.get(
-  // GET /api/instructions/:id
+  // MARK: GET /api/instructions/:id
   '/api/instructions/:id',
   SessionChecker(),
   async (
@@ -90,7 +90,7 @@ app.get(
 );
 
 app.post(
-  // POST /api/instructions
+  // MARK: POST /api/instructions
   '/api/instructions',
   AutoTrim(),
   SessionChecker(true),
@@ -160,7 +160,7 @@ app.post(
 );
 
 app.put(
-  // PUT /api/instructions/:id/name
+  // MARK: PUT /api/instructions/:id/name
   '/api/instructions/:id/name',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
@@ -200,7 +200,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/instructions/:id/description
+  // MARK: PUT /api/instructions/:id/description
   '/api/instructions/:id/description',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
@@ -240,7 +240,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/instructions/:id/file
+  // MARK: PUT /api/instructions/:id/file
   '/api/instructions/:id/file',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
@@ -284,7 +284,7 @@ app.put(
 );
 
 app.put(
-  // PUT /api/instructions/:id/steps
+  // MARK: PUT /api/instructions/:id/steps
   '/api/instructions/:id/steps',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
@@ -324,7 +324,7 @@ app.put(
 );
 
 app.delete(
-  // DELETE /api/instructions/:id
+  // MARK: DELETE /api/instructions/:id
   '/api/instructions/:id',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
@@ -360,7 +360,7 @@ app.delete(
 );
 
 app.delete(
-  // DELETE /api/instructions
+  // MARK: DELETE /api/instructions
   '/api/instructions',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
