@@ -188,14 +188,10 @@ export async function validateToken(
       issuer: process.env.WEBAUTHN_RPID,
       algorithms: [TOKEN_ALGORITHM],
       typ: TOKEN_TYPE,
-      // requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti', 'purpose'],
-      // Don't require the 'purpose' claim yet, there's still a lot of legacy session tokens without it.
-      requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti'],
+      requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti', 'purpose'],
     });
 
-    if (!payload.purpose && purpose !== TokenPurpose.SESSION)
-      throw new Error('Token purpose is missing on token.');
-    if (payload.purpose !== purpose && purpose !== TokenPurpose.SESSION)
+    if (payload.purpose !== purpose)
       throw new Error('Token purpose does not match the expected purpose.');
     if (
       typeof payload.sub !== 'string' ||
