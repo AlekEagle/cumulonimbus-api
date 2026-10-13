@@ -191,7 +191,7 @@ export async function validateToken(
       requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti', 'purpose'],
     });
 
-    if (payload.purpose !== purpose)
+    if (payload.purpose !== TokenPurpose[purpose])
       throw new Error('Token purpose does not match the expected purpose.');
     if (
       typeof payload.sub !== 'string' ||
