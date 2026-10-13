@@ -74,6 +74,7 @@ if (process.env.ENV === 'production') {
 
     // Trust Cloudflare's IP ranges as proxies in production
     app.set('trust proxy', [
+      'loopback',
       ...cloudflareIPRanges.result.ipv4_cidrs,
       ...cloudflareIPRanges.result.ipv6_cidrs,
     ]);
