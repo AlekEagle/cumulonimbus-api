@@ -5,7 +5,6 @@ import logger from './LogMachine.js';
 import { Op } from 'sequelize';
 
 export default async function pruneAllStaleSessions(): Promise<void> {
-  const staleSessionTime = Math.floor(Date.now() / 1000);
   const users = await User.findAll();
   let pruned = 0;
   for (const user of users) {
@@ -13,7 +12,7 @@ export default async function pruneAllStaleSessions(): Promise<void> {
       where: {
         user: user.id,
         exp: {
-          [Op.lt]: staleSessionTime,
+          [Op.lt]: new Date(),
         },
       },
     });

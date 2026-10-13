@@ -99,7 +99,14 @@ app.use(
 );
 
 // Prune all stale sessions every hour
-setInterval(pruneAllStaleSessions, ms('1h'));
+const pruneSafely = async () => {
+  try {
+    await pruneAllStaleSessions();
+  } catch (error) {
+    logger.error('Failed to prune stale sessions:', error);
+  }
+};
+setInterval(pruneSafely, ms('1h'));
 
 // Cute little hello world endpoint
 app.all('/api/', (_, res) => {
