@@ -4,10 +4,10 @@ import logger from '../utils/LogMachine.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class GlobalKillSwitches extends Model {
-  id!: number;
-  state!: boolean;
-  createdAt!: Date;
-  updatedAt!: Date;
+  declare id: number;
+  declare state: boolean;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
   static is(value: any): value is GlobalKillSwitches {
     return value instanceof GlobalKillSwitches;

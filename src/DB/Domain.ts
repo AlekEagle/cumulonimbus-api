@@ -4,10 +4,10 @@ import logger from '../utils/LogMachine.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class Domain extends Model {
-  id!: string;
-  subdomains!: boolean;
-  createdAt!: Date;
-  updatedAt!: Date;
+  declare id: string;
+  declare subdomains: boolean;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
   static is(value: any): value is Domain {
     return value instanceof Domain;

@@ -10,6 +10,7 @@ await init();
 export default async function sendVerificationEmail(
   to: string,
   username: string,
+  id: string,
 ): Promise<
   | {
       success: true;
@@ -24,7 +25,7 @@ export default async function sendVerificationEmail(
       tokenData: undefined;
     }
 > {
-  const { token, data } = await generateEmailVerificationToken(to),
+  const { token, data } = await generateEmailVerificationToken(id, to),
     url = `${process.env.FRONTEND_BASE_URL}/verify?token=${token}`;
 
   try {

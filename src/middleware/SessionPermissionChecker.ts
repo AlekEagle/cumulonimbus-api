@@ -82,7 +82,7 @@ export default function SessionPermissionChecker(
         logger.warn(
           `User ${req.user.username}'s (${req.user.id}) scoped session ${req.session.name} (${req.session.id}) attempted to access a resource that required a standard browser session. PermissionFlags: ${req.session.permissionFlags}`,
         );
-        res.status(403).send(new Errors.InsufficientPermissions());
+        res.status(403).json(new Errors.InsufficientPermissions());
       }
     } else if (
       req.session.permissionFlags & PermissionFlags.ALL ||
@@ -93,7 +93,7 @@ export default function SessionPermissionChecker(
       logger.warn(
         `User ${req.user.username}'s (${req.user.id}) session ${req.session.name} (${req.session.id}) with permissionFlags ${req.session.permissionFlags} tried to access a resource that required these permissionFlags ${requiredPermissionFlags}`,
       );
-      res.status(403).send(new Errors.InsufficientPermissions());
+      res.status(403).json(new Errors.InsufficientPermissions());
     }
   };
 }

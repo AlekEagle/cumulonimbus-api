@@ -2,6 +2,7 @@
 Description=Cumulonimbus API Instance #%i
 Requires=network-online.target
 Requires=postgresql.service
+Requires=redis.service
 Requires=nginx.service
 After=network-online.target
 

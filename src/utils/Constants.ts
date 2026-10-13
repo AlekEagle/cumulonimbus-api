@@ -9,6 +9,7 @@ export const API_VERSION = JSON.parse(
 // ========= SERVER RELATED CONSTANTS =========
 export const PORT: number =
   8000 + (!process.env.INSTANCE ? 0 : Number(process.env.INSTANCE));
+export const HOST = '127.0.0.1';
 
 // ========= USER RELATED CONSTANTS =========
 export const USERNAME_REGEX = /^[a-z0-9_\-\.]{1,64}$/i;
@@ -68,3 +69,10 @@ export const SECOND_FACTOR_BACKUP_CODE_ALGORITHM = 'SHA512';
 // ========= SESSION RELATED CONSTANTS =========
 export const SHORT_LIVED_SESSION_EXPIRY = '24h';
 export const LONG_LIVED_SESSION_EXPIRY = '10y';
+
+// ========= RATELIMIT RELATED CONSTANTS =========
+export const RATELIMIT_WINDOW = 60_000; // 1 minute
+export const RATELIMIT_MAX_REQUESTS = 100;
+export const RATELIMIT_BURST_MAX = 3;
+export const RATELIMIT_BURST_WINDOW = 1_000; // 1 second
+export const RATELIMIT_ALWAYS_IGNORED_STATUS_CODES = [500, 501, 503];

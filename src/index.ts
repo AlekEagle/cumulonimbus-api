@@ -10,9 +10,12 @@ import Domain from './DB/Domain.js';
 import KillSwitch from './middleware/KillSwitch.js';
 import logger from './utils/LogMachine.js';
 import Ratelimit from './middleware/Ratelimit.js';
-import RatelimitStorage from './utils/RatelimitStorage.js';
+import BanHammer from './middleware/BanHammer.js';
+import BaseRatelimitStorage from './utils/Ratelimit/Storage/index.js';
+import MemoryRatelimitStorage from './utils/Ratelimit/Storage/Memory.js';
+import RedisRatelimitStorage from './utils/Ratelimit/Storage/Redis.js';
 import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
-import { PORT, API_VERSION } from './utils/Constants.js';
+import { PORT, HOST, API_VERSION } from './utils/Constants.js';
 import { initKillSwitches } from './utils/GlobalKillSwitches.js';
 
 // Node modules that are huge and stinky and we don't want to look at them
@@ -26,11 +29,59 @@ await initKillSwitches();
 // Create a new express instance
 export const app = Express();
 
-// Create a new RatelimitStorage Object
-export const ratelimitStore = new RatelimitStorage();
+export let ratelimitStore: BaseRatelimitStorage;
+if (process.env.REDIS_HOST) {
+  logger.debug(
+    'Redis host specified, loading Redis-backed ratelimit storage...',
+  );
+  ratelimitStore = new RedisRatelimitStorage({
+    host: process.env.REDIS_HOST,
+    port: parseInt(process.env.REDIS_PORT, 10),
+    user: process.env.REDIS_USER,
+    pass: process.env.REDIS_PASS,
+  });
+} else {
+  logger.debug(
+    'No Redis host specified, loading in-memory ratelimit storage...',
+  );
+  ratelimitStore = new MemoryRatelimitStorage();
+}
 
 // Remove the X-Powered-By header because it's stinky and we don't like it
 app.disable('x-powered-by');
+
+// Fetch Cloudflare's IP ranges so we know which proxies are trusted
+if (process.env.ENV === 'production') {
+  try {
+    logger.debug('Fetching Cloudflare IP ranges...');
+    const cloudflareIPRanges: {
+      result: {
+        ipv4_cidrs: string[];
+        ipv6_cidrs: string[];
+      };
+      success: boolean;
+      errors?: any[];
+      messages?: string[];
+    } = await (await fetch('https://api.cloudflare.com/client/v4/ips')).json();
+    logger.debug('Cloudflare IP ranges fetched successfully.');
+
+    if (!cloudflareIPRanges.success) {
+      throw new Error(
+        cloudflareIPRanges.messages?.join(', ') ??
+          'Failed to fetch Cloudflare IP ranges.',
+      );
+    }
+
+    // Trust Cloudflare's IP ranges as proxies in production
+    app.set('trust proxy', [
+      ...cloudflareIPRanges.result.ipv4_cidrs,
+      ...cloudflareIPRanges.result.ipv6_cidrs,
+    ]);
+  } catch (error) {
+    logger.error('Failed to fetch Cloudflare IP ranges:', error);
+    process.exit(1);
+  }
+}
 
 // Bloat the express instance with middleware
 app.use(
@@ -41,7 +92,9 @@ app.use(
   AuthProvider(),
   Ratelimit({
     storage: ratelimitStore,
+    bucket: 'global',
   }),
+  BanHammer(),
   KillSwitch(),
 );
 
@@ -56,7 +109,7 @@ app.all('/api/', (_, res) => {
 import('./routes/index.js');
 
 // listen to things from stuff and things
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   logger.info(`Listening on port ${PORT}.`);
 });
 

@@ -145,6 +145,7 @@ app.post(
       window: ms('10s'),
     },
     storage: ratelimitStore,
+    bucket: 'file-upload',
   }),
   async (
     req: Request,

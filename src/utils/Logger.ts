@@ -148,21 +148,4 @@ export default class Logger extends Console {
         : '',
     );
   }
-
-  trace(message: any, ...optionalParams: any[]) {
-    if (this.logLevel > Level.DEBUG) return;
-    super.trace(
-      this.timestampRender +
-        Chalk.rgb(30, 186, 198)('[TRACE]') +
-        ' ' +
-        Chalk.reset(
-          typeof message !== 'string' ? NodeUtil.inspect(message) : message,
-        ),
-      optionalParams.length > 0
-        ? optionalParams
-            .map((p) => (typeof p !== 'string' ? NodeUtil.inspect(p) : p))
-            .join(' ')
-        : '',
-    );
-  }
 }

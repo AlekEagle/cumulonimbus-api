@@ -4,27 +4,27 @@ import logger from '../utils/LogMachine.js';
 import { Model, DataTypes } from 'sequelize';
 import type {
   CredentialDeviceType,
-  AuthenticatorTransportFuture,
-} from '@simplewebauthn/types';
+  AuthenticatorTransport,
+} from '@simplewebauthn/server';
 
 export type SecondFactorType = 'totp' | 'webauthn';
 
 export default class SecondFactor extends Model {
-  id!: string;
-  user!: string;
-  type!: SecondFactorType;
-  name!: string;
+  declare id: string;
+  declare user: string;
+  declare type: SecondFactorType;
+  declare name: string;
   // Fields used by TOTP
-  secret!: string | null;
+  declare secret: string | null;
   // Fields used by WebAuthn
-  keyId!: string | null;
-  publicKey!: Buffer | null;
-  counter!: number | null;
-  deviceType!: CredentialDeviceType | null;
-  transports!: AuthenticatorTransportFuture[] | null;
-  usedAt!: Date | null;
-  createdAt!: Date;
-  updatedAt!: Date;
+  declare keyId: string | null;
+  declare publicKey: Buffer | null;
+  declare counter: number | null;
+  declare deviceType: CredentialDeviceType | null;
+  declare transports: AuthenticatorTransport[] | null;
+  declare usedAt: Date | null;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
   static is(value: any): value is SecondFactor {
     return value instanceof SecondFactor;

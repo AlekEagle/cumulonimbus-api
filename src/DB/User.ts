@@ -4,19 +4,19 @@ import logger from '../utils/LogMachine.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class User extends Model {
-  id!: string;
-  username!: string;
-  email!: string;
-  password!: string;
-  staff!: boolean;
-  domain!: string;
-  subdomain!: string | null;
-  verifiedAt!: Date | null;
-  bannedAt!: Date | null;
-  twoFactorBackupCodes!: string[] | null;
-  twoFactorBackupCodeUsedAt!: Date | null;
-  createdAt!: Date;
-  updatedAt!: Date;
+  declare id: string;
+  declare username: string;
+  declare email: string;
+  declare password: string;
+  declare staff: boolean;
+  declare domain: string;
+  declare subdomain: string | null;
+  declare verifiedAt: Date | null;
+  declare bannedAt: Date | null;
+  declare twoFactorBackupCodes: string[] | null;
+  declare twoFactorBackupCodeUsedAt: Date | null;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
   static is(value: any): value is User {
     return value instanceof User;

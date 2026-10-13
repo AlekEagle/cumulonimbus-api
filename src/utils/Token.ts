@@ -14,6 +14,15 @@ import {
   SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
 } from './Constants.js';
 import { Request } from 'express';
+import { randomUUID } from 'node:crypto';
+
+export enum TokenPurpose {
+  SESSION,
+  EMAIL_VERIFICATION,
+  TOTP_INTERMEDIATE,
+  WEBAUTHN_INTERMEDIATE,
+  REVERIFY_IDENTITY,
+}
 
 // This is the structure of the token
 export declare interface TokenStructure<T = Record<string, string>> {
@@ -26,6 +35,8 @@ export declare interface TokenStructure<T = Record<string, string>> {
     iat: number;
     exp: number;
     iss: string;
+    jti: string;
+    purpose: string;
   } & T;
 }
 
@@ -37,8 +48,11 @@ export declare interface TokenGenerationResult<T = Record<string, string>> {
 // After we import the keys, store them to reduce disk activity
 let pubKey: KeyObject, privKey: KeyObject;
 
-function generateBaseToken(data: Record<string, string> = {}): SignJWT {
-  return new SignJWT(data)
+function generateBaseToken(
+  data: Record<string, string> = {},
+  purpose: TokenPurpose,
+): SignJWT {
+  return new SignJWT({ ...data, purpose: TokenPurpose[purpose] })
     .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
     .setIssuedAt()
     .setIssuer(process.env.WEBAUTHN_RPID);
@@ -80,13 +94,15 @@ export async function importCertificates() {
 // Generate a session token for the provided user.
 export async function generateSessionToken(
   subject: string,
+  jti: string,
   longLived: boolean = false,
 ): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token = generateBaseToken()
+  let token = generateBaseToken({}, TokenPurpose.SESSION)
     .setSubject(subject)
+    .setJti(jti)
     .setExpirationTime(
       longLived ? LONG_LIVED_SESSION_EXPIRY : SHORT_LIVED_SESSION_EXPIRY,
     );
@@ -95,13 +111,15 @@ export async function generateSessionToken(
 
 // Generate an email verification token for the provided email.
 export async function generateEmailVerificationToken(
+  userID: string,
   email: string,
 ): Promise<TokenGenerationResult> {
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token = generateBaseToken()
-    .setSubject(email)
+  let token = generateBaseToken({}, TokenPurpose.EMAIL_VERIFICATION)
+    .setJti(email)
+    .setSubject(userID)
     .setExpirationTime(EMAIL_VERIFICATION_TOKEN_EXPIRY);
 
   return await completeToken(token);
@@ -115,7 +133,8 @@ export async function generateTOTPGenerationConfirmationToken(
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token = generateBaseToken({ secret })
+  let token = generateBaseToken({ secret }, TokenPurpose.TOTP_INTERMEDIATE)
+    .setJti(randomUUID())
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
   return await completeToken(token);
@@ -129,7 +148,11 @@ export async function generateWebAuthnGenerationConfirmationToken(
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token = generateBaseToken({ challenge })
+  let token = generateBaseToken(
+    { challenge },
+    TokenPurpose.WEBAUTHN_INTERMEDIATE,
+  )
+    .setJti(randomUUID())
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
   return await completeToken(token);
@@ -145,7 +168,11 @@ export async function generateSecondFactorIntermediateToken(
   // Import certificates if they aren't already imported.
   await importCertificates();
   // Generate the token.
-  let token = generateBaseToken(challenge ? { challenge } : {})
+  let token = generateBaseToken(
+    challenge ? { challenge } : {},
+    TokenPurpose.REVERIFY_IDENTITY,
+  )
+    .setJti(randomUUID())
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
   return await completeToken(token);
@@ -153,10 +180,36 @@ export async function generateSecondFactorIntermediateToken(
 
 export async function validateToken(
   token: string,
+  purpose: TokenPurpose,
 ): Promise<TokenStructure | Error> {
   await importCertificates();
   try {
-    const { protectedHeader, payload } = await jwtVerify(token, pubKey);
+    const { protectedHeader, payload }: any = await jwtVerify(token, pubKey, {
+      issuer: process.env.WEBAUTHN_RPID,
+      algorithms: [TOKEN_ALGORITHM],
+      typ: TOKEN_TYPE,
+      // requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti', 'purpose'],
+      // Don't require the 'purpose' claim yet, there's still a lot of legacy session tokens without it.
+      requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti'],
+    });
+
+    if (!payload.purpose && purpose !== TokenPurpose.SESSION)
+      throw new Error('Token purpose is missing on token.');
+    if (payload.purpose !== purpose && purpose !== TokenPurpose.SESSION)
+      throw new Error('Token purpose does not match the expected purpose.');
+    if (
+      typeof payload.sub !== 'string' ||
+      !payload.sub ||
+      typeof payload.jti !== 'string' ||
+      !payload.jti ||
+      typeof payload.iat !== 'number' ||
+      !Number.isSafeInteger(payload.iat) ||
+      typeof payload.exp !== 'number' ||
+      !Number.isSafeInteger(payload.exp) ||
+      payload.exp <= payload.iat ||
+      payload.iat > Math.floor(Date.now() / 1000)
+    )
+      throw new Error('Token payload is invalid.');
     return { payload: payload as any, header: protectedHeader as any };
   } catch (error) {
     return error as Error;

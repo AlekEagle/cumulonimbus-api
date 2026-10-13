@@ -50,8 +50,29 @@ app.get(
         order: [['createdAt', 'DESC']],
       });
 
-      let items = files.map((file) =>
-        KVExtractor(file.toJSON(), ['id', 'name']),
+      const fileJSON = files.map((file) => file.toJSON());
+
+      // Get all unique userIDs
+      let userIDs = Array.from(new Set(files.map((file) => file.userID)));
+
+      let users = await User.findAll({
+        where: {
+          id: {
+            [Op.in]: userIDs,
+          },
+        },
+      });
+
+      const filesWithUsername = fileJSON.map((file) => {
+        const user = users.find((user) => user.id === file.userID);
+        return {
+          ...file,
+          username: user ? user.username : null,
+        };
+      });
+
+      let items = filesWithUsername.map((file) =>
+        KVExtractor(file, ['id', 'name', 'username']),
       );
 
       logger.debug(
@@ -269,6 +290,7 @@ app.put(
     window: ms('6h'),
     ignoreStatusCodes: [500],
     storage: ratelimitStore,
+    bucket: 'file-name-change',
   }),
   async (
     req: Request<{ id: string }, null, { name: string }>,
@@ -357,6 +379,7 @@ app.delete(
     window: ms('6h'),
     ignoreStatusCodes: [500],
     storage: ratelimitStore,
+    bucket: 'file-name-change',
   }),
   async (
     req: Request<{ id: string }, null, null>,
@@ -445,6 +468,7 @@ app.put(
     window: ms('12h'),
     ignoreStatusCodes: [500],
     storage: ratelimitStore,
+    bucket: 'file-extension-change',
   }),
   async (
     req: Request<{ id: string }, null, { extension: string }>,
@@ -611,6 +635,7 @@ app.delete(
     window: ms('3d'),
     ignoreStatusCodes: [500],
     storage: ratelimitStore,
+    bucket: 'file-delete-all',
   }),
   async (
     req: Request,
@@ -787,6 +812,7 @@ app.delete(
     window: ms('6h'),
     ignoreStatusCodes: [400, 404, 500],
     storage: ratelimitStore,
+    bucket: 'file-delete-multi',
   }),
   async (
     req: Request<{}, null, { ids: string[] }>,

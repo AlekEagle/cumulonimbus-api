@@ -1,211 +1,232 @@
-// Custom Cumulonimbus Ratelimit Middleware
-import logger from '../utils/LogMachine.js';
 import { Errors } from '../utils/TemplateResponses.js';
-import RatelimitStorage, {
-  RatelimitStorageObject,
-} from '../utils/RatelimitStorage.js';
+import BaseRatelimitStorage, {
+  RatelimitEntry,
+} from '../utils/Ratelimit/Storage/index.js';
+import {
+  RATELIMIT_ALWAYS_IGNORED_STATUS_CODES,
+  RATELIMIT_WINDOW,
+  RATELIMIT_MAX_REQUESTS,
+  RATELIMIT_BURST_MAX,
+  RATELIMIT_BURST_WINDOW,
+} from '../utils/Constants.js';
+import MemoryRatelimitStorage from '../utils/Ratelimit/Storage/Memory.js';
+import logger from '../utils/LogMachine.js';
+import type { RequestHandler, Request, Response, Send } from 'express';
 
-import { RequestHandler, Request, Response } from 'express';
-
-const alwaysIgnoredStatusCodes = [429];
-
+/**
+ * The options for configuring the rate limiting middleware.
+ * @property window - The time window for rate limiting in milliseconds.
+ * @property max - The maximum number of requests allowed within the time window. Can be a static number or a function that determines the value dynamically.
+ * @property ignoreStatusCodes - An array of HTTP status codes to ignore when counting requests.
+ * @property burst - Configuration for burst rate limiting, including the maximum number of requests and the burst window.
+ * @property storage - The storage mechanism for tracking rate limit data.
+ * @property ipAddrIsPreferredSubject - A boolean indicating whether the IP address should be used as the preferred subject for rate limiting.
+ * @property bucket - An identifier to share a quota across multiple routes. Overrides the default route-based quota if specified.
+ */
 export interface RatelimitOptions {
-  /**
-   * The duration of the window in milliseconds.
-   */
   window: number;
-  /**
-   * The maximum number of requests a client can make in the window.
-   */
   max: number | Cumulonimbus.Utilities.ValueDeterminingMiddleware<number>;
-  /**
-   * An array of status codes that should not be counted towards the ratelimit.
-   */
   ignoreStatusCodes: number[];
-  /**
-   * An object that contains options related to burst ratelimiting.
-   */
-  burst: {
-    /**
-     * The number of requests that can be made in a burst before the punishment is applied.
-     */
-    max: number;
-    /**
-     * The duration of the burst window in milliseconds.
-     */
-    window: number;
-  };
-  /**
-   * A storage object to use for storing ratelimit data. Creates a new one if not provided.
-   */
-  storage: RatelimitStorage;
+  burst: { max: number; window: number };
+  storage: BaseRatelimitStorage;
+  ipAddrIsPreferredSubject: boolean;
+  bucket: string;
 }
 
 export const defaultRatelimitOptions: Omit<RatelimitOptions, 'storage'> = {
-  window: 60e3, // 1 minute
-  max: 100,
-  ignoreStatusCodes: [500, 501, 503],
-  burst: {
-    max: 3,
-    window: 1e3, // 1 second
-  },
+  window: RATELIMIT_WINDOW,
+  max: RATELIMIT_MAX_REQUESTS,
+  ignoreStatusCodes: RATELIMIT_ALWAYS_IGNORED_STATUS_CODES,
+  burst: { max: RATELIMIT_BURST_MAX, window: RATELIMIT_BURST_WINDOW },
+  ipAddrIsPreferredSubject: false,
+  bucket: 'global',
 };
 
-function IPResolver(req: Request): string {
-  return (req.headers['cf-connecting-ip'] as string) || req.ip!;
+function IPResolver(req: Request) {
+  return req.ip ?? req.socket.remoteAddress ?? 'unknown';
 }
 
-function appendRatelimitHeaders(res: Response): void {
+function appendHeaders(res: Response): void {
   if (!res.ratelimit)
-    // We can't append ratelimit headers if there's no ratelimit object. This shouldn't happen but better safe than sorry.
     throw new Error(
-      'Tried to add ratelimit headers when no ratelimit object was present!',
+      'Unable to find Ratelimit information on Response. This should not happen!',
     );
-  // Have we already set the headers?
+
   if (res.ratelimit.headersSet) {
-    // If we have, we don't need to do anything.
-    logger.debug(
-      `Ratelimit headers already set for request: ${res.ratelimit.requestTime}`,
-      res.ratelimit.subject,
+    // Someone called the headerAppender after the headers were already set.
+    logger.warn(
+      'Ratelimit headers have already been set on the response. This should not happen!',
     );
     return;
   }
-  // If we haven't already set the headers, set them now.
-  // Append our standard ratelimit headers.
-  res.header('RateLimit-Limit', res.ratelimit.data.max.toString());
-  res.header(
+
+  // Set the ratelimit headers in the response.
+  res.setHeader('RateLimit-Limit', String(res.ratelimit.data.max));
+  res.setHeader(
     'RateLimit-Remaining',
-    (
+    String(
       res.ratelimit.data.max -
-      Object.values(res.ratelimit.data.requests).reduce((a, b) => a + b, 0)
-    ).toString(),
+        Object.values(res.ratelimit.data.requests).reduce(
+          (acc, curr) => acc + curr,
+          0,
+        ),
+    ),
   );
-  res.header(
-    'RateLimit-Reset',
-    Math.floor(
-      (res.ratelimit.data.expiresAt.getTime() - Date.now()) / 1000,
-    ).toString(),
-  );
-  // Mark the headers as set.
+  res.setHeader('RateLimit-Bucket', String(res.ratelimit.subject.bucket));
+  // Skip setting the reset header if it has already been set by burst quota.
+  if (!res.getHeader('RateLimit-Reset'))
+    res.setHeader(
+      'RateLimit-Reset',
+      String(
+        Math.floor(
+          (res.ratelimit.data.expiresAt.getTime() - Date.now()) / 1000,
+        ),
+      ),
+    );
   res.ratelimit.headersSet = true;
 }
 
 export default function Ratelimit(
-  _opts: Partial<RatelimitOptions> = {},
+  opts: Partial<RatelimitOptions> = {},
 ): RequestHandler {
-  // Create the options object.
+  // Construct options
   const options: RatelimitOptions = {
-    window: _opts.window || defaultRatelimitOptions.window,
-    max: _opts.max || defaultRatelimitOptions.max,
-    ignoreStatusCodes:
-      _opts.ignoreStatusCodes || defaultRatelimitOptions.ignoreStatusCodes,
-    burst: {
-      max: _opts.burst?.max || defaultRatelimitOptions.burst.max,
-      window: _opts.burst?.window || defaultRatelimitOptions.burst.window,
-    },
-    storage: _opts.storage || new RatelimitStorage(),
+    ...defaultRatelimitOptions,
+    ...opts,
+    burst: { ...defaultRatelimitOptions.burst, ...opts.burst },
+    storage: opts.storage ?? new MemoryRatelimitStorage(),
   };
-  logger.debug('Initializing Ratelimit Middleware...');
+  logger.debug('Ratelimit constructed for bucket: ' + options.bucket);
   return async (req, res, next) => {
+    const resolvedIP = IPResolver(req),
+      receivedAt = Date.now();
+    // Construct subject for Ratelimits
     const subject = {
-        ip: IPResolver(req),
-        route: req.route?.path as string | null,
-        uid: req.user?.id || null,
-      },
-      requestTime = Date.now();
-    logger.debug('Processing request for: ', subject);
-    // Construct the ratelimit object for the response object.
-    let ratelimit: RatelimitStorageObject;
-    if (!options.storage.has(subject)) {
-      // Create a new ratelimit object if one doesn't exist.
-      ratelimit = options.storage.create(subject, {
-        expiresAt: new Date(requestTime + options.window),
+      bucket: options.bucket,
+      subject: options.ipAddrIsPreferredSubject
+        ? resolvedIP
+        : (req.user?.id ?? resolvedIP),
+    };
+    // If the subject resolves down to 'unknown', send them funny song
+    if (subject.subject === 'unknown') {
+      res.status(400).send('https://youtu.be/snKJPEVbQoE?t=20');
+      return;
+    }
+    // Determine max requests
+    const max =
+      typeof options.max === 'function'
+        ? await options.max(req, res)
+        : options.max;
+
+    let rlEntry: RatelimitEntry | null = null;
+    if ((rlEntry = await options.storage.get(subject)) === null) {
+      rlEntry = await options.storage.set(subject, {
+        expiresAt: new Date(receivedAt + options.window),
         requests: {},
-        max:
-          typeof options.max === 'function'
-            ? await options.max(req, res)
-            : options.max,
+        max,
       });
-    } else ratelimit = options.storage.get(subject)!;
+    }
+    // Append ratelimit object to the response
     res.ratelimit = {
       headersSet: false,
       skipped: false,
       get requestTime() {
-        return requestTime;
+        return receivedAt;
       },
       get subject() {
         return subject;
       },
       get data() {
-        return ratelimit.data;
+        return rlEntry.data;
       },
     };
-    // res.send override to track the status code of the response.
-    // If res._originalSend already exists, it's already been overridden by a Ratelimit middleware, so we don't need to override it again.
-    if (!res._originalSend) res._originalSend = res.send;
-    res.send = function (body) {
-      logger.debug(`Sending response for request: ${requestTime}`, subject);
-      if (
-        ![...options.ignoreStatusCodes, ...alwaysIgnoredStatusCodes].includes(
-          res.statusCode,
-        ) &&
-        !res.ratelimit!.skipped
-      ) {
-        ratelimit.pushRequest(requestTime);
-        appendRatelimitHeaders(res);
-      } else {
-        res.header('RateLimit-Skipped', 'true');
-      }
-      return res._originalSend!.call(this, body);
-    };
 
-    const now = Date.now(),
-      // Check if the ratelimit quota has been exceeded. (Standard Ratelimit)
-      standardQuotaExceeded =
-        Object.values(ratelimit.data.requests).reduce((a, b) => a + b, 0) >=
-        ratelimit.data.max,
-      // Check if the burst window has been exceeded.
+    // Override the default `res.end` so we can handle final ratelimit header setting.
+    if (!res._originalSend) res._originalSend = res.send.bind(res);
+    const patchedSend: Send = (body) => {
+      logger.debug(
+        `Sending response for bucket: ${subject.bucket} and subject: ${subject.subject}`,
+      );
+      if (!res.ratelimit)
+        throw new Error(
+          'Ratelimit object is missing on response for bucket: ' +
+            subject.bucket +
+            ' and subject: ' +
+            subject.subject,
+        );
+
+      // Should we ignore this one boss?
+      if (
+        [
+          ...options.ignoreStatusCodes,
+          ...RATELIMIT_ALWAYS_IGNORED_STATUS_CODES,
+        ].includes(res.statusCode) ||
+        res.ratelimit.skipped
+      ) {
+        res.header('RateLimit-Skipped', 'true');
+      } else {
+        rlEntry.pushRequest(receivedAt);
+        appendHeaders(res);
+      }
+      return res._originalSend!(body);
+    };
+    res.send = patchedSend;
+
+    // Did we exceed the standard ratelimit quota?
+    const standardQuotaExceeded =
+        Object.values(rlEntry.data.requests).reduce(
+          (acc, curr) => acc + curr,
+          0,
+        ) >= rlEntry.data.max,
+      // Did we exceed the burst ratelimit quota?
       burstQuotaExceeded =
-        Object.entries(ratelimit.data.requests)
-          .filter(([a]) => now - Number(a) <= options.burst.window)
-          .reduce((a, b) => a + b[1], 0) >= options.burst.max;
+        Object.entries(rlEntry.data.requests)
+          // Filter requests that fall within the burst window
+          .filter(
+            ([timestamp]) =>
+              receivedAt - Number(timestamp) <= options.burst.window,
+          )
+          // Count them up to see if the burst quota is exceeded.
+          .reduce((acc, [_, curr]) => acc + curr, 0) >= options.burst.max;
+
+    // Did we exceed any ratelimit quota?
     if (standardQuotaExceeded || burstQuotaExceeded) {
-      appendRatelimitHeaders(res);
       if (standardQuotaExceeded) {
         logger.debug(
-          `Standard Ratelimit exceeded for request: ${requestTime}`,
-          subject,
+          `Standard ratelimit exceeded for bucket: ${subject.bucket} and subject: ${subject.subject}`,
         );
         res.header('RateLimit-Reason', 'standard');
       } else if (burstQuotaExceeded) {
         logger.debug(
-          `Burst Ratelimit exceeded for request: ${requestTime}`,
-          subject,
+          `Burst ratelimit exceeded for bucket: ${subject.bucket} and subject: ${subject.subject}`,
         );
         res.header('RateLimit-Reason', 'burst');
-        // Identify which requests are within the burst window.
-        const burstRequests = Object.entries(ratelimit.data.requests).filter(
-          ([a]) => now - Number(a) <= options.burst.window,
-        );
-        // Find the earliest request that when out of the burst window, will allow the burst ratelimit to be lifted.
-        // We sort by the timestamp, and then select the most recent request that when moved out of the burst window, will allow the burst ratelimit to be lifted.
-        const earliestRequest = burstRequests.sort(
-          ([a], [b]) => Number(a) - Number(b),
-        )[burstRequests.length - options.burst.max];
-        // Override RateLimit-Reset with the time until the burst ratelimit is lifted in seconds if it's sooner than the standard ratelimit.
-        if (
-          Number(earliestRequest[0]) + options.burst.window - now <
-          ratelimit.data.expiresAt.getTime() - now
-        ) {
-          res.header(
-            'RateLimit-Reset',
-            Math.ceil(
-              (Number(earliestRequest[0]) + options.burst.window - now) / 1000,
-            ).toString(),
+
+        // Get requests that fall within the burst window.
+        const burstWindowRequests = Object.entries(rlEntry.data.requests)
+          .filter(
+            ([timestamp]) =>
+              receivedAt - Number(timestamp) <= options.burst.window,
+          )
+          // Sort the burst window requests by timestamp in ascending order.
+          .sort(
+            ([timestampA], [timestampB]) =>
+              Number(timestampA) - Number(timestampB),
           );
-        }
+
+        res.header(
+          'RateLimit-Reset',
+          String(
+            Math.ceil(
+              (Number(burstWindowRequests[0][0]) +
+                options.burst.window -
+                receivedAt) /
+                1000,
+            ),
+          ),
+        );
       }
-      res.status(429)._originalSend!(new Errors.RateLimited());
+      res.status(429).json(new Errors.RateLimited());
       return;
     } else next();
   };

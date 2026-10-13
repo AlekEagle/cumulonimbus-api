@@ -13,6 +13,7 @@ import logger from './LogMachine.js';
 import {
   generateSecondFactorIntermediateToken,
   validateToken,
+  TokenPurpose,
 } from './Token.js';
 
 import { HashAlgorithms } from '@otplib/core';
@@ -28,7 +29,7 @@ import {
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
 import { isoUint8Array } from '@simplewebauthn/server/helpers';
-import { AuthenticationResponseJSON } from '@simplewebauthn/types';
+import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import ms from 'ms';
 
 authenticator.options = {
@@ -203,7 +204,7 @@ export async function generateSecondFactorChallenge(
 
   return new Errors.SecondFactorChallengeRequired(
     token.token,
-    token.data.payload.exp,
+    new Date(token.data.payload.exp * 1000).toISOString(),
     [...availableFactors, 'backup'],
     challenge,
   );
@@ -214,7 +215,10 @@ export async function verifyWebAuthnRegistration(
   res: Response,
   user: User,
 ): Promise<VerifiedRegistrationResponse | null> {
-  const result = await validateToken(req.body.token);
+  const result = await validateToken(
+    req.body.token,
+    TokenPurpose.WEBAUTHN_INTERMEDIATE,
+  );
 
   if (result instanceof Error) {
     if (result instanceof JoseErrors.JWTExpired) {
@@ -269,7 +273,7 @@ export async function verifyWebAuthnAuthentication(
   res: Response,
   user: User,
 ): Promise<boolean> {
-  const result = await validateToken(token);
+  const result = await validateToken(token, TokenPurpose.REVERIFY_IDENTITY);
 
   if (result instanceof Error) {
     if (result instanceof JoseErrors.JWTExpired) {
@@ -348,7 +352,10 @@ export async function verifySecondFactor(
   res: Response,
 ): Promise<boolean> {
   // Validate the token.
-  const result = await validateToken(challenge.token);
+  const result = await validateToken(
+    challenge.token,
+    TokenPurpose.REVERIFY_IDENTITY,
+  );
 
   if (result instanceof Error) {
     if (result instanceof JoseErrors.JWTExpired) {

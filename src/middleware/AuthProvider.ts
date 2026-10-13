@@ -1,6 +1,6 @@
 import { Errors } from '../utils/TemplateResponses.js';
 import logger from '../utils/LogMachine.js';
-import { validateToken } from '../utils/Token.js';
+import { validateToken, TokenPurpose } from '../utils/Token.js';
 import User from '../DB/User.js';
 import Session from '../DB/Session.js';
 
@@ -13,7 +13,10 @@ export default function AuthProvider(): RequestHandler {
     if (req.headers.authorization) {
       try {
         // Validate and retrieve token
-        let token = await validateToken(req.headers.authorization);
+        let token = await validateToken(
+          req.headers.authorization,
+          TokenPurpose.SESSION,
+        );
         // Check if token is actually valid
         if (token instanceof Error) {
           // If token is invalid, set user and session to null
@@ -40,7 +43,7 @@ export default function AuthProvider(): RequestHandler {
             const session = await Session.findOne({
               where: {
                 user: user.id,
-                id: token.payload.iat.toString(),
+                id: token.payload.jti,
               },
             });
 

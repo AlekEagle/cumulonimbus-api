@@ -15,6 +15,7 @@ import {
   generateSessionToken,
   nameSession,
   validateToken,
+  TokenPurpose,
 } from '../utils/Token.js';
 import KVExtractor from '../utils/KVExtractor.js';
 import SessionChecker from '../middleware/SessionChecker.js';
@@ -37,11 +38,9 @@ import startAccountDeletionWorker from '../workers/AccountDeletion.js';
 import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
-import { join } from 'node:path';
-import { unlink } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import ms from 'ms';
 import SecondFactor from '../DB/SecondFactor.js';
+import { randomUUID } from 'node:crypto';
 
 logger.debug('Loading: Account Routes...');
 
@@ -64,6 +63,8 @@ app.post(
     window: ms('6h'),
     ignoreStatusCodes: [500, 409],
     storage: ratelimitStore,
+    bucket: 'account-register',
+    ipAddrIsPreferredSubject: true,
   }),
   async (
     req: Request<
@@ -104,24 +105,29 @@ app.post(
     if (existingUser) return res.status(409).json(new Errors.UserExists());
 
     try {
-      // Get the current Unix timestamp.
-      const now = Date.now().toString();
-
+      const userID = randomUUID();
       // Hash the password.
       const hashedPassword = await Bcrypt.hash(
         req.body.password,
         PASSWORD_HASH_ROUNDS,
       );
 
-      const tokenName = nameSession(req);
+      const tokenName =
+          (req.headers['x-session-name'] as string) ?? nameSession(req),
+        tokenID = randomUUID();
 
       // Generate a session token.
-      const token = await generateSessionToken(now, req.body.rememberMe);
+      const token = await generateSessionToken(
+        userID,
+        tokenID,
+        req.body.rememberMe,
+      );
 
       // Send the verification email.
       const { success, error } = await sendVerificationEmail(
         req.body.email,
         req.body.username,
+        userID,
       );
 
       // If the email failed to send, return an error 500.
@@ -132,7 +138,7 @@ app.post(
 
       // Create the user.
       const user = await User.create({
-        id: now,
+        id: userID,
         username: req.body.username,
         password: hashedPassword,
         email: req.body.email,
@@ -142,7 +148,7 @@ app.post(
 
       // Create a corresponding session.
       await Session.create({
-        id: token.data.payload.iat.toString(),
+        id: tokenID,
         user: user.id,
         name: tokenName,
         exp: new Date(token.data.payload.exp * 1000),
@@ -150,9 +156,10 @@ app.post(
 
       logger.debug(`User ${user.username} (${user.id}) account created.`);
       // Send the user object
-      return res
-        .status(201)
-        .json({ token: token.token, exp: token.data.payload.exp });
+      return res.status(201).json({
+        token: token.token,
+        exp: new Date(token.data.payload.exp * 1000).toISOString(),
+      });
     } catch (e) {
       logger.error(e);
       return res.status(500).json(new Errors.Internal());
@@ -163,9 +170,6 @@ app.post(
 app.get(
   // MARK: GET /api/users
   '/api/users',
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_ACCOUNTS),
   LimitOffset(0, 50),
@@ -214,9 +218,6 @@ app.get(
 app.get(
   // MARK: GET /api/users/me
   '/api/users/me',
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.ACCOUNT_READ),
   async (
@@ -280,6 +281,7 @@ app.put(
     window: ms('1d'),
     ignoreStatusCodes: [409, 500],
     storage: ratelimitStore,
+    bucket: 'username-change',
   }),
   async (
     req: Request<{}, null, { username: string }>,
@@ -376,6 +378,7 @@ app.put(
     window: ms('1d'),
     ignoreStatusCodes: [409, 500],
     storage: ratelimitStore,
+    bucket: 'email-change',
   }),
   async (
     req: Request<{}, null, { email: string }>,
@@ -398,6 +401,7 @@ app.put(
       const { success, error, tokenData } = await sendVerificationEmail(
         req.body.email,
         req.user.username,
+        req.user.id,
       );
 
       // If the email failed to send, return an error 500.
@@ -488,7 +492,10 @@ app.put(
   ) => {
     try {
       logger.debug('Received email verification request.');
-      const result = await validateToken(req.body.token);
+      const result = await validateToken(
+        req.body.token,
+        TokenPurpose.EMAIL_VERIFICATION,
+      );
 
       if (result instanceof Error) {
         logger.error(result);
@@ -497,12 +504,23 @@ app.put(
         // Find the user that we're verifying
         const user = await User.findOne({
           where: {
-            email: result.payload.sub,
+            id: result.payload.sub,
+            email: result.payload.jti,
           },
         });
         // If there's no user, return an InvalidVerificationToken error
         if (!user) {
-          logger.debug(`Could not find user with email ${result.payload.sub}.`);
+          logger.debug(`Could not find user with ID ${result.payload.sub}.`);
+          return res.status(400).json(new Errors.InvalidVerificationToken());
+        }
+
+        if (user.verifiedAt)
+          return res.status(400).json(new Errors.EmailAlreadyVerified());
+
+        if (user.email !== result.payload.jti) {
+          logger.debug(
+            `User email ${user.email} does not match the email in the verification token ${result.payload.jti}.`,
+          );
           return res.status(400).json(new Errors.InvalidVerificationToken());
         }
 
@@ -616,9 +634,10 @@ app.get(
   SessionChecker(),
   Ratelimit({
     max: 1,
-    window: ms('1h'),
+    window: ms('5m'),
     ignoreStatusCodes: [500],
     storage: ratelimitStore,
+    bucket: 'email-verify',
   }),
   async (
     req: Request,
@@ -636,6 +655,7 @@ app.get(
       const { success, error } = await sendVerificationEmail(
         req.user.email,
         req.user.username,
+        req.user.id,
       );
 
       // If the email failed to send, return an error 500.
@@ -684,6 +704,7 @@ app.get(
       const { success, error } = await sendVerificationEmail(
         user.email,
         user.username,
+        user.id,
       );
 
       // If the email failed to send, return an error 500.
@@ -719,6 +740,7 @@ app.put(
     window: ms('1d'),
     ignoreStatusCodes: [500],
     storage: ratelimitStore,
+    bucket: 'password-change',
   }),
   async (
     req: Request<{}, null, { newPassword: string; confirmNewPassword: string }>,
@@ -970,6 +992,7 @@ app.put(
     window: ms('1h'),
     ignoreStatusCodes: [400, 500],
     storage: ratelimitStore,
+    bucket: 'domain-change',
   }),
   async (
     req: Request<{}, null, { domain: string; subdomain?: string }>,

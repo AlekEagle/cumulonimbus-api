@@ -4,14 +4,14 @@ import logger from '../utils/LogMachine.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class Instruction extends Model {
-  id!: string;
-  name!: string;
-  steps!: string[];
-  filename!: string | null;
-  content!: string;
-  description!: string;
-  createdAt!: Date;
-  updatedAt!: Date;
+  declare id: string;
+  declare name: string;
+  declare steps: string[];
+  declare filename: string | null;
+  declare content: string;
+  declare description: string;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
   static is(value: any): value is Instruction {
     return value instanceof Instruction;

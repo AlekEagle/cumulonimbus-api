@@ -32,6 +32,7 @@ import { Request, Response } from 'express';
 import Bcrypt from 'bcrypt';
 import { fn, col, where, Op } from 'sequelize';
 import ms from 'ms';
+import { randomUUID } from 'node:crypto';
 
 logger.debug('Loading: Session Routes...');
 
@@ -57,6 +58,8 @@ app.post(
     max: 4,
     window: ms('5m'),
     storage: ratelimitStore,
+    bucket: 'session-create',
+    ipAddrIsPreferredSubject: true,
   }),
   async (
     req: Request<
@@ -81,7 +84,8 @@ app.post(
     // If the user is already logged in, return an InvalidSession error.
     if (req.user) return res.status(401).json(new Errors.InvalidSession());
     const sessionName =
-      (req.headers['x-session-name'] as string) || nameSession(req);
+        (req.headers['x-session-name'] as string) || nameSession(req),
+      sessionID = randomUUID();
     if ('password' in req.body) {
       try {
         // Find a user with the given username.
@@ -112,11 +116,15 @@ app.post(
         }
 
         // Generate a new token for the user.
-        const token = await generateSessionToken(user.id, req.body.rememberMe);
+        const token = await generateSessionToken(
+          user.id,
+          sessionID,
+          req.body.rememberMe,
+        );
 
         // Create a new session for the user.
         await Session.create({
-          id: token.data.payload.iat.toString(),
+          id: sessionID,
           user: user.id,
           exp: new Date(token.data.payload.exp * 1000),
           name: sessionName,
@@ -127,7 +135,7 @@ app.post(
         // Return a SuccessfulAuth response.
         return res.status(201).json({
           token: token.token,
-          exp: token.data.payload.exp,
+          exp: new Date(token.data.payload.exp * 1000).toISOString(),
         });
       } catch (error) {
         logger.error(error);
@@ -142,12 +150,13 @@ app.post(
           // Generate a new token for the user.
           const token = await generateSessionToken(
             user.id,
+            sessionID,
             req.body.rememberMe,
           );
 
           // Create a new session for the user.
           await Session.create({
-            id: token.data.payload.iat.toString(),
+            id: sessionID,
             user: user.id,
             exp: new Date(token.data.payload.exp * 1000),
             name: sessionName,
@@ -160,7 +169,7 @@ app.post(
           // Return a SuccessfulAuth response.
           return res.status(201).json({
             token: token.token,
-            exp: token.data.payload.exp,
+            exp: new Date(token.data.payload.exp * 1000).toISOString(),
           });
         }
         // verifySecondFactor will handle sending the error response, we're done here.
@@ -190,6 +199,7 @@ app.post(
     max: 4,
     window: ms('5m'),
     storage: ratelimitStore,
+    bucket: 'session-create-scoped',
   }),
   async (
     req: Request<
@@ -203,15 +213,17 @@ app.post(
     >,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    const sessionID = randomUUID();
     // Generate a new token for the user.
     const token = await generateSessionToken(
       req.user.id,
+      sessionID,
       req.body.longLived || false,
     );
 
     // Create a new session for the user.
     const session = await Session.create({
-      id: token.data.payload.iat.toString(),
+      id: sessionID,
       user: req.user.id,
       exp: new Date(token.data.payload.exp * 1000),
       name: req.body.name,
@@ -226,7 +238,7 @@ app.post(
     return res.status(201).json({
       token: token.token,
       id: session.id,
-      exp: session.exp.getTime() / 1000,
+      exp: session.exp.toISOString(),
       name: session.name,
       permissionFlags: session.permissionFlags,
       usedAt: null,
@@ -241,9 +253,6 @@ app.get(
   '/api/users/me/sessions/me',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request,
     res: Response<
@@ -258,7 +267,7 @@ app.get(
 
     return res.status(200).json({
       id: req.session.id,
-      exp: req.session.exp.getTime() / 1000,
+      exp: req.session.exp.toISOString(),
       name: req.session.name,
       permissionFlags: req.session.permissionFlags,
       usedAt: req.session.usedAt?.toISOString() || null,
@@ -273,9 +282,6 @@ app.get(
   '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request<{ sid: string }>,
     res: Response<
@@ -301,7 +307,7 @@ app.get(
     // Return the session.
     return res.status(200).json({
       id: session.id,
-      exp: session.exp.getTime() / 1000,
+      exp: session.exp.toISOString(),
       name: session.name,
       permissionFlags: session.permissionFlags,
       usedAt: session.usedAt?.toISOString() || null,
@@ -316,9 +322,6 @@ app.patch(
   '/api/users/me/sessions/:sid',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   BodyValidator({
     name: 'string',
   }),
@@ -350,7 +353,7 @@ app.patch(
 
       return res.status(200).json({
         id: session.id,
-        exp: session.exp.getTime() / 1000,
+        exp: session.exp.toISOString(),
         name: session.name,
         permissionFlags: session.permissionFlags,
         usedAt: session.usedAt?.toISOString() || null,
@@ -369,9 +372,6 @@ app.get(
   '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_READ_SESSIONS),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request<{ uid: string; sid: string }>,
     res: Response<
@@ -404,7 +404,7 @@ app.get(
       // Return the session.
       return res.status(200).json({
         id: session.id,
-        exp: session.exp.getTime() / 1000,
+        exp: session.exp.toISOString(),
         name: session.name,
         permissionFlags: session.permissionFlags,
         usedAt: session.usedAt?.toISOString() || null,
@@ -423,9 +423,6 @@ app.patch(
   '/api/users/:uid/sessions/:sid',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   BodyValidator({
     name: 'string',
   }),
@@ -465,7 +462,7 @@ app.patch(
       // Return the updated session.
       return res.status(200).json({
         id: session.id,
-        exp: session.exp.getTime() / 1000,
+        exp: session.exp.toISOString(),
         name: session.name,
         permissionFlags: session.permissionFlags,
         usedAt: session.usedAt?.toISOString() || null,
@@ -485,9 +482,6 @@ app.get(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_READ),
   LimitOffset(0, 50),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request,
     res: Response<
@@ -575,9 +569,6 @@ app.delete(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request,
     res: Response<
@@ -609,9 +600,6 @@ app.delete(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request<{ sid: string }>,
     res: Response<
@@ -701,9 +689,6 @@ app.delete(
   BodyValidator({
     ids: new ExtendedValidBodyTypes().array('string'),
   }),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request<{}, null, { ids: string[] }>,
     res: Response<
@@ -791,9 +776,6 @@ app.delete(
   KillSwitch(KillSwitches.ACCOUNT_MODIFY),
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request,
     res: Response<

@@ -4,12 +4,12 @@ import logger from '../utils/LogMachine.js';
 import { Model, DataTypes } from 'sequelize';
 
 export default class File extends Model {
-  id!: string;
-  userID!: string;
-  size!: number;
-  name!: string;
-  createdAt!: Date;
-  updatedAt!: Date;
+  declare id: string;
+  declare userID: string;
+  declare size: number;
+  declare name: string;
+  declare createdAt: Date;
+  declare updatedAt: Date;
 
   static is(value: any): value is File {
     return value instanceof File;

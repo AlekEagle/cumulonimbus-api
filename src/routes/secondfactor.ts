@@ -19,6 +19,7 @@ import {
   generateTOTPGenerationConfirmationToken,
   generateWebAuthnGenerationConfirmationToken,
   validateToken,
+  TokenPurpose,
 } from '../utils/Token.js';
 import {
   SECOND_FACTOR_TOTP_ALGORITHM,
@@ -38,6 +39,7 @@ import SessionPermissionChecker, {
 import { Request, Response, NextFunction } from 'express';
 import { errors as JoseErrors } from 'jose';
 import ms from 'ms';
+import { randomUUID } from 'node:crypto';
 
 logger.debug('Loading: Second Factor routes...');
 
@@ -51,6 +53,7 @@ app.post(
     max: 3,
     window: ms('1d'),
     storage: ratelimitStore,
+    bucket: '2fa-gen',
   }),
   async (
     req: Request,
@@ -70,7 +73,7 @@ app.post(
 
     return res.status(200).json({
       token,
-      exp: data.payload.exp,
+      exp: new Date(data.payload.exp * 1000).toISOString(),
       type: 'totp',
       secret,
       digits: SECOND_FACTOR_TOTP_DIGITS,
@@ -100,7 +103,10 @@ app.post(
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     // Validate the token
-    const result = await validateToken(req.body.token);
+    const result = await validateToken(
+      req.body.token,
+      TokenPurpose.TOTP_INTERMEDIATE,
+    );
     if (result instanceof Error) {
       if (result instanceof JoseErrors.JWTExpired)
         return res.status(401).json(new Errors.InvalidSecondFactorResponse());
@@ -109,9 +115,11 @@ app.post(
       if (!(await verifyTOTP(req.body.code, result.payload.secret)))
         return res.status(401).json(new Errors.InvalidSecondFactorResponse());
 
+      const TOTPID = randomUUID();
+
       // Store the TOTP secret in the database
       await SecondFactor.create({
-        id: result.payload.iat.toString(),
+        id: TOTPID,
         name: req.body.name,
         user: result.payload.sub,
         type: 'totp',
@@ -130,7 +138,7 @@ app.post(
       }
 
       return res.status(201).json({
-        id: result.payload.iat.toString(),
+        id: TOTPID,
         type: 'totp',
         name: req.body.name,
         codes,
@@ -149,6 +157,7 @@ app.post(
     max: 3,
     window: ms('1d'),
     storage: ratelimitStore,
+    bucket: '2fa-gen',
   }),
   async (
     req: Request,
@@ -168,7 +177,7 @@ app.post(
 
     return res.status(200).json({
       token,
-      exp: data.payload.exp,
+      exp: new Date(data.payload.exp * 1000).toISOString(),
       type: 'webauthn',
       ...challenge,
     });
@@ -202,8 +211,9 @@ app.post(
       return;
     } else {
       const { payload } = extractToken(req.body.token);
+      const factorID = randomUUID();
       await SecondFactor.create({
-        id: payload.iat.toString(),
+        id: factorID,
         name: req.body.name,
         user: payload.sub,
         type: 'webauthn',
@@ -226,7 +236,7 @@ app.post(
       }
 
       return res.status(201).json({
-        id: payload.iat.toString(),
+        id: factorID,
         type: 'webauthn',
         name: req.body.name,
         codes,
@@ -245,6 +255,7 @@ app.post(
     max: 1,
     window: ms('1d'),
     storage: ratelimitStore,
+    bucket: '2fa-backup',
   }),
   async (
     req: Request,
@@ -286,9 +297,6 @@ app.get(
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
   LimitOffset(0, 50),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request,
     res: Response<
@@ -377,9 +385,6 @@ app.get(
   '/api/users/me/2fa/:id',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.SECOND_FACTOR_READ),
-  Ratelimit({
-    storage: ratelimitStore,
-  }),
   async (
     req: Request<{ id: string }>,
     res: Response<
@@ -469,6 +474,7 @@ app.delete(
     max: 5,
     window: ms('1d'),
     storage: ratelimitStore,
+    bucket: '2fa-delete-all',
   }),
   async (
     req: Request,
@@ -555,6 +561,7 @@ app.delete(
     max: 10,
     window: ms('1d'),
     storage: ratelimitStore,
+    bucket: '2fa-delete',
   }),
   async (
     req: Request<{ id: string }>,
@@ -662,6 +669,7 @@ app.delete(
     max: 5,
     window: ms('1d'),
     storage: ratelimitStore,
+    bucket: '2fa-delete-multi',
   }),
   async (
     req: Request<{}, null, { ids: string[] }>,
