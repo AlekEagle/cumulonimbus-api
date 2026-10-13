@@ -1,4 +1,5 @@
 import { app } from '../index.js';
+import redisMessaging from '../utils/RedisMessagingMachine.js';
 import logger from '../utils/LogMachine.js';
 import { Level } from '../utils/Logger.js';
 import { Errors } from '../utils/TemplateResponses.js';
@@ -57,6 +58,17 @@ app.patch(
 
     // Set the log level.
     logger.logLevel = level;
+
+    // Notify other instances of the log level change.
+    if (redisMessaging) {
+      try {
+        await redisMessaging.publish('loglevel', {
+          level: logger.logLevel,
+        });
+      } catch (error) {
+        logger.error('Failed to publish loglevel change:', error);
+      }
+    }
 
     // Return the log level.
     return res.status(200).json({

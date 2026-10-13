@@ -189,6 +189,13 @@ export async function generateSecondFactorChallenge(
   }
 
   const availableFactors = secondFactors
+    // Sort by most recently used, falling back to creation date if never used,
+    // This allows clients to recommend the most recently used second factor first.
+    .sort(
+      (a, b) =>
+        new Date(b.usedAt ?? b.createdAt).getTime() -
+        new Date(a.usedAt ?? a.createdAt).getTime(),
+    )
     .map((factor) => factor.type)
     .filter((t, i, a) => a.indexOf(t) === i);
 

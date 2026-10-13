@@ -8,6 +8,7 @@ import DevelopmentCORS from './middleware/DevelopmentCORS.js';
 import DeviceDetector from './middleware/DeviceDetector.js';
 import Domain from './DB/Domain.js';
 import KillSwitch from './middleware/KillSwitch.js';
+import { Level } from './utils/Logger.js';
 import logger from './utils/LogMachine.js';
 import Ratelimit from './middleware/Ratelimit.js';
 import BanHammer from './middleware/BanHammer.js';
@@ -16,6 +17,7 @@ import MemoryRatelimitStorage from './utils/Ratelimit/Storage/Memory.js';
 import RedisRatelimitStorage from './utils/Ratelimit/Storage/Redis.js';
 import pruneAllStaleSessions from './utils/StaleSessionPruner.js';
 import { PORT, HOST, API_VERSION } from './utils/Constants.js';
+import redisMessaging from './utils/RedisMessagingMachine.js';
 import { initKillSwitches } from './utils/GlobalKillSwitches.js';
 
 // Node modules that are huge and stinky and we don't want to look at them
@@ -31,9 +33,7 @@ export const app = Express();
 
 export let ratelimitStore: BaseRatelimitStorage;
 if (process.env.REDIS_HOST) {
-  logger.debug(
-    'Redis host specified, loading Redis-backed ratelimit storage...',
-  );
+  logger.debug('Loading Redis-backed ratelimit storage and Redis messaging...');
   ratelimitStore = new RedisRatelimitStorage({
     host: process.env.REDIS_HOST,
     port: parseInt(process.env.REDIS_PORT, 10),
@@ -41,10 +41,31 @@ if (process.env.REDIS_HOST) {
     pass: process.env.REDIS_PASS,
   });
 } else {
-  logger.debug(
-    'No Redis host specified, loading in-memory ratelimit storage...',
-  );
+  logger.debug('Loading in-memory ratelimit storage...');
   ratelimitStore = new MemoryRatelimitStorage();
+}
+
+if (redisMessaging) {
+  // Handle Redis messaging errors
+  redisMessaging.onError((channel, error, message) => {
+    logger.error(
+      `Redis messaging error on channel ${channel}:`,
+      error,
+      message,
+    );
+  });
+  // Sync log level with Redis messaging
+  redisMessaging.on<{ level: Level }>('loglevel', (payload, channel) => {
+    console.log(
+      'Received loglevel change from instance:',
+      payload.from,
+      'with level:',
+      Level[payload.data.level],
+      'on channel:',
+      channel,
+    );
+    logger.logLevel = payload.data.level;
+  });
 }
 
 // Remove the X-Powered-By header because it's stinky and we don't like it
