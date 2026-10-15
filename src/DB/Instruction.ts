@@ -3,12 +3,25 @@ import logger from '../utils/LogMachine.js';
 
 import { Model, DataTypes } from 'sequelize';
 
+export enum InstructionStepActions {
+  OPEN_URL = 'OPEN_URL',
+  COPY_TOKEN_TO_CLIPBOARD = 'COPY_TOKEN_TO_CLIPBOARD',
+  DOWNLOAD_CONFIG_FILE = 'DOWNLOAD_CONFIG_FILE',
+  NOOP = 'NOOP',
+}
+
 export default class Instruction extends Model {
   declare id: string;
   declare name: string;
-  declare steps: string[];
-  declare filename: string | null;
-  declare content: string;
+  declare steps: {
+    action: InstructionStepActions;
+    content: string;
+    file?: {
+      name: string;
+      content: string;
+    };
+    url?: string;
+  }[];
   declare description: string;
   declare createdAt: Date;
   declare updatedAt: Date;
@@ -33,15 +46,7 @@ export default class Instruction extends Model {
         allowNull: false,
       },
       steps: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        allowNull: false,
-      },
-      filename: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      content: {
-        type: DataTypes.STRING(65536),
+        type: DataTypes.ARRAY(DataTypes.JSONB),
         allowNull: false,
       },
       description: {

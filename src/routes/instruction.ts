@@ -2,7 +2,7 @@ import { app } from '../index.js';
 import logger from '../utils/LogMachine.js';
 import { Errors, Success } from '../utils/TemplateResponses.js';
 import AutoTrim from '../middleware/AutoTrim.js';
-import Instruction from '../DB/Instruction.js';
+import Instruction, { InstructionStepActions } from '../DB/Instruction.js';
 import KVExtractor from '../utils/KVExtractor.js';
 import SessionChecker from '../middleware/SessionChecker.js';
 import BodyValidator, {
@@ -98,9 +98,15 @@ app.post(
   BodyValidator({
     name: 'string',
     description: 'string',
-    filename: new ExtendedValidBodyTypes().string().notRequired(),
-    content: 'string',
-    steps: new ExtendedValidBodyTypes().array('string'),
+    steps: new ExtendedValidBodyTypes().array('record', {
+      action: 'string',
+      content: 'string',
+      file: new ExtendedValidBodyTypes().notRequired().object({
+        name: 'string',
+        content: 'string',
+      }),
+      url: new ExtendedValidBodyTypes().notRequired().string(),
+    }),
   }),
   async (
     req: Request<
@@ -109,9 +115,15 @@ app.post(
       {
         name: string;
         description: string;
-        filename: string;
-        content: string;
-        steps: string[];
+        steps: {
+          action: InstructionStepActions;
+          content: string;
+          file?: {
+            name: string;
+            content: string;
+          };
+          url?: string;
+        }[];
       }
     >,
     res: Response<
@@ -136,13 +148,35 @@ app.post(
       if (instruction)
         return res.status(409).json(new Errors.InstructionExists());
 
+      // Do some validation or preprocessing on the steps if necessary.
+
+      for (const [index, step] of req.body.steps.entries()) {
+        // Is the step's action a valid action?
+        if (!Object.values(InstructionStepActions).includes(step.action)) {
+          return res.status(400).json(new Errors.InvalidInstruction());
+        }
+        // If the step's action requires a file, ensure the file is provided.
+        if (
+          step.action === InstructionStepActions.DOWNLOAD_CONFIG_FILE &&
+          !step.file
+        ) {
+          return res
+            .status(400)
+            .json(new Errors.MissingFields([`steps[${index}].file`]));
+        }
+        // If the step's action requires a URL, ensure the URL is provided.
+        if (step.action === InstructionStepActions.OPEN_URL && !step.url) {
+          return res
+            .status(400)
+            .json(new Errors.MissingFields([`steps[${index}].url`]));
+        }
+      }
+
       // Create the instruction.
       const newInstruction = await Instruction.create({
         id,
         name: req.body.name,
         description: req.body.description,
-        filename: req.body.filename,
-        content: req.body.content,
         steps: req.body.steps,
       });
 
@@ -240,60 +274,35 @@ app.put(
 );
 
 app.put(
-  // MARK: PUT /api/instructions/:id/file
-  '/api/instructions/:id/file',
-  SessionChecker(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
-  AutoTrim(),
-  BodyValidator({
-    filename: new ExtendedValidBodyTypes().string().notRequired(),
-    content: 'string',
-  }),
-  async (
-    req: Request<{ id: string }, null, { filename?: string; content: string }>,
-    res: Response<
-      Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-    try {
-      // Get the instruction.
-      const instruction = await Instruction.findByPk(req.params.id);
-
-      // If the instruction doesn't exist, return an InvalidInstruction error.
-      if (!instruction)
-        return res.status(404).json(new Errors.InvalidInstruction());
-
-      // Update the instruction.
-      await instruction.update({
-        filename: req.body.filename ? req.body.filename : null,
-        content: req.body.content,
-      });
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) updated instruction ${instruction.name} (${instruction.id}) file.`,
-      );
-
-      // Return the instruction.
-      return res.status(200).json(instruction.toJSON());
-    } catch (e) {
-      logger.error(e);
-      return res.status(500).json(new Errors.Internal());
-    }
-  },
-);
-
-app.put(
   // MARK: PUT /api/instructions/:id/steps
   '/api/instructions/:id/steps',
   SessionChecker(true),
   SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_INSTRUCTIONS),
   AutoTrim(),
   BodyValidator({
-    steps: new ExtendedValidBodyTypes().array('string'),
+    steps: new ExtendedValidBodyTypes().array('record', {
+      action: 'string',
+      content: 'string',
+      file: new ExtendedValidBodyTypes().notRequired().object({
+        name: 'string',
+        content: 'string',
+      }),
+      url: new ExtendedValidBodyTypes().notRequired().string(),
+    }),
   }),
   async (
-    req: Request<{ id: string }, null, { steps: string[] }>,
+    req: Request<
+      { id: string },
+      null,
+      {
+        steps: {
+          action: string;
+          content: string;
+          file?: { name: string; content: string };
+          url?: string;
+        }[];
+      }
+    >,
     res: Response<
       Cumulonimbus.Structures.Instruction | Cumulonimbus.Structures.Error
     >,
@@ -306,6 +315,23 @@ app.put(
       // If the instruction doesn't exist, return an InvalidInstruction error.
       if (!instruction)
         return res.status(404).json(new Errors.InvalidInstruction());
+
+      // Validate the steps.
+      for (const [index, step] of req.body.steps.entries()) {
+        if (step.action === InstructionStepActions.OPEN_URL && !step.url) {
+          return res
+            .status(400)
+            .json(new Errors.MissingFields([`steps[${index}].url`]));
+        }
+        if (
+          step.action === InstructionStepActions.DOWNLOAD_CONFIG_FILE &&
+          !step.file
+        ) {
+          return res
+            .status(400)
+            .json(new Errors.MissingFields([`steps[${index}].file`]));
+        }
+      }
 
       // Update the instruction.
       await instruction.update({ steps: req.body.steps });

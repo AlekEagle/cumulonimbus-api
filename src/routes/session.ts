@@ -595,6 +595,90 @@ app.delete(
 );
 
 app.delete(
+  // MARK: DELETE /api/users/me/sessions/all
+  '/api/users/me/sessions/all',
+  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
+  SessionChecker(),
+  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
+  async (
+    req: Request,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    if (!req.user || !req.session)
+      return res.status(401).json(new Errors.InvalidSession());
+    // Find the sessions that belong to the user.
+    const { rows, count } = await Session.findAndCountAll({
+      where: {
+        user: req.user.id,
+        ...{
+          id: req.query['include-self']
+            ? { [Op.ne]: null }
+            : { [Op.ne]: req.session.id },
+        },
+      },
+    });
+
+    // Remove the sessions.
+    await Promise.all(rows.map((session) => session.destroy()));
+
+    logger.debug(
+      `User ${req.user.username} (${
+        req.user.id
+      }) requested to remove all of their sessions. (they did${
+        req.query['include-self'] ? '' : ' not'
+      } include the current session)`,
+    );
+
+    // Return a success.
+    return res.status(200).json(new Success.DeleteSessions(count));
+  },
+);
+
+app.delete(
+  // MARK: DELETE /api/users/:uid/sessions/all
+  '/api/users/:uid/sessions/all',
+  ReverifyIdentity(true),
+  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
+  async (
+    req: Request<{ uid: string }>,
+    res: Response<
+      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
+    >,
+  ) => {
+    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    try {
+      // Find the user with the given ID.
+      const user = await User.findByPk(req.params.uid);
+
+      // If no user was found, return an InvalidUser error.
+      if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+      // Find the user's sessions.
+      const { count, rows } = await Session.findAndCountAll({
+        where: {
+          user: user.id,
+        },
+      });
+
+      // Remove the sessions.
+      await Promise.all(rows.map((session) => session.destroy()));
+
+      logger.debug(
+        `User ${req.user.username} (${req.user.id}) requested to remove all of user ${user.username} (${user.id})'s sessions.`,
+      );
+
+      // Return a success.
+      return res.status(200).json(new Success.DeleteSessions(count));
+    } catch (error) {
+      logger.error(error);
+      return res.status(500).json(new Errors.Internal());
+    }
+  },
+);
+
+app.delete(
   // MARK: DELETE /api/users/me/sessions/:sid
   '/api/users/me/sessions/:sid',
   SessionChecker(),
@@ -759,90 +843,6 @@ app.delete(
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested to remove ${count} of user ${user.username} (${user.id})'s sessions.`,
-      );
-
-      // Return a success.
-      return res.status(200).json(new Success.DeleteSessions(count));
-    } catch (error) {
-      logger.error(error);
-      return res.status(500).json(new Errors.Internal());
-    }
-  },
-);
-
-app.delete(
-  // MARK: DELETE /api/users/me/sessions/all
-  '/api/users/me/sessions/all',
-  KillSwitch(KillSwitches.ACCOUNT_MODIFY),
-  SessionChecker(),
-  SessionPermissionChecker(PermissionFlags.SESSION_MODIFY),
-  async (
-    req: Request,
-    res: Response<
-      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user || !req.session)
-      return res.status(401).json(new Errors.InvalidSession());
-    // Find the sessions that belong to the user.
-    const { rows, count } = await Session.findAndCountAll({
-      where: {
-        user: req.user.id,
-        ...{
-          id: req.query['include-self']
-            ? { [Op.ne]: null }
-            : { [Op.ne]: req.session.id },
-        },
-      },
-    });
-
-    // Remove the sessions.
-    await Promise.all(rows.map((session) => session.destroy()));
-
-    logger.debug(
-      `User ${req.user.username} (${
-        req.user.id
-      }) requested to remove all of their sessions. (they did${
-        req.query['include-self'] ? '' : ' not'
-      } include the current session)`,
-    );
-
-    // Return a success.
-    return res.status(200).json(new Success.DeleteSessions(count));
-  },
-);
-
-app.delete(
-  // MARK: DELETE /api/users/:uid/sessions/all
-  '/api/users/:uid/sessions/all',
-  ReverifyIdentity(true),
-  SessionPermissionChecker(PermissionFlags.STAFF_MODIFY_SESSIONS),
-  async (
-    req: Request<{ uid: string }>,
-    res: Response<
-      Cumulonimbus.Structures.Success | Cumulonimbus.Structures.Error
-    >,
-  ) => {
-    if (!req.user) return res.status(401).json(new Errors.InvalidSession());
-    try {
-      // Find the user with the given ID.
-      const user = await User.findByPk(req.params.uid);
-
-      // If no user was found, return an InvalidUser error.
-      if (!user) return res.status(404).json(new Errors.InvalidUser());
-
-      // Find the user's sessions.
-      const { count, rows } = await Session.findAndCountAll({
-        where: {
-          user: user.id,
-        },
-      });
-
-      // Remove the sessions.
-      await Promise.all(rows.map((session) => session.destroy()));
-
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) requested to remove all of user ${user.username} (${user.id})'s sessions.`,
       );
 
       // Return a success.
