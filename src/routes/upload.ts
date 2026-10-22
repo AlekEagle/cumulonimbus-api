@@ -59,14 +59,38 @@ function filenameGen(): string {
   return result;
 }
 
-/**
- * Content-based extension detection. The stored extension is always chosen by
- * the server from file content; user-supplied filenames and MIME types are
- * display-only and never influence the stored path.
- */
+function looksLikeHtml(buffer: Buffer): boolean {
+  const head = buffer
+    .subarray(0, 512)
+    .toString('utf8')
+    .replace(/^\uFEFF/, '');
+  const first = head.search(/\S/);
+  const trimmed = (first === -1 ? head : head.slice(first)).toLowerCase();
+  return trimmed.startsWith('<!doctype html') || trimmed.startsWith('<html');
+}
+
+function isTextBuffer(buffer: Buffer): boolean {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch {
+    return false;
+  }
+  for (let i = 0; i < buffer.length; i++) {
+    const b = buffer[i];
+    if (b < 0x20 && b !== 0x09 && b !== 0x0a && b !== 0x0d) return false;
+    if (b === 0x7f) return false;
+  }
+  return true;
+}
+
 async function detectExtension(buffer: Buffer): Promise<string> {
   const detected = await fileTypeFromBuffer(buffer);
-  if (!detected) return 'bin';
+  if (!detected) {
+    // No known binary signature — classify text content.
+    if (looksLikeHtml(buffer)) return 'html';
+    if (isTextBuffer(buffer)) return 'txt';
+    return 'bin';
+  }
 
   // file-type resolves everything except containers it cannot see through.
   if (!NESTED_CONTAINERS.has(detected.ext)) return detected.ext;

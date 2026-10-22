@@ -9,7 +9,7 @@ export const API_VERSION = JSON.parse(
 // ========= SERVER RELATED CONSTANTS =========
 export const PORT: number =
   8000 + (!process.env.INSTANCE ? 0 : Number(process.env.INSTANCE));
-export const HOST = '127.0.0.1';
+export const HOST = process.env.HOST ?? '127.0.0.1';
 
 // ========= USER RELATED CONSTANTS =========
 export const USERNAME_REGEX = /^[a-z0-9_\-\.]{1,64}$/i;

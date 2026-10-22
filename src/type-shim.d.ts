@@ -39,6 +39,7 @@ declare global {
       REDIS_PORT: string;
       REDIS_USER: string;
       REDIS_PASS: string;
+      HOST?: string;
     }
   }
 
