@@ -73,6 +73,6 @@ export const LONG_LIVED_SESSION_EXPIRY = '10y';
 // ========= RATELIMIT RELATED CONSTANTS =========
 export const RATELIMIT_WINDOW = 60_000; // 1 minute
 export const RATELIMIT_MAX_REQUESTS = 100;
-export const RATELIMIT_BURST_MAX = 3;
+export const RATELIMIT_BURST_MAX = 5;
 export const RATELIMIT_BURST_WINDOW = 1_000; // 1 second
 export const RATELIMIT_ALWAYS_IGNORED_STATUS_CODES = [500, 501, 503];
