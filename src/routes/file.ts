@@ -52,28 +52,7 @@ app.get(
 
       const fileJSON = files.map((file) => file.toJSON());
 
-      // Get all unique userIDs
-      let userIDs = Array.from(new Set(files.map((file) => file.userID)));
-
-      let users = await User.findAll({
-        where: {
-          id: {
-            [Op.in]: userIDs,
-          },
-        },
-      });
-
-      const filesWithUsername = fileJSON.map((file) => {
-        const user = users.find((user) => user.id === file.userID);
-        return {
-          ...file,
-          username: user ? user.username : null,
-        };
-      });
-
-      let items = filesWithUsername.map((file) =>
-        KVExtractor(file, ['id', 'name', 'username']),
-      );
+      let items = fileJSON.map((file) => KVExtractor(file, ['id', 'name']));
 
       logger.debug(
         `User ${req.user.username} (${req.user.id}) requested all user files. (limit: ${req.limit}, offset: ${req.offset})`,

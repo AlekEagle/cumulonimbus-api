@@ -34,6 +34,7 @@ declare global {
       SMTP_PORT: string;
       SMTP_USER: string;
       SMTP_PASS: string;
+      SMTP_FROM: string;
       SMTP_SECURE: string;
       REDIS_HOST: string;
       REDIS_PORT: string;

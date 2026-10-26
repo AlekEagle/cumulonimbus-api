@@ -21,7 +21,7 @@ export async function init(): Promise<boolean> {
         },
       },
       {
-        from: 'Cumulonimbus <no-reply@alekeagle.me>',
+        from: `Cumulonimbus <${process.env.SMTP_FROM}>`,
       },
     );
 
