@@ -5,6 +5,7 @@ import {
   SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY,
   SECOND_FACTOR_TOTP_DIGITS,
   SECOND_FACTOR_TOTP_STEP,
+  SECOND_FACTOR_TOTP_MIN_SECRET_BYTES,
 } from './Constants.js';
 import User from '../DB/User.js';
 import SecondFactor from '../DB/SecondFactor.js';
@@ -16,7 +17,7 @@ import {
   TokenPurpose,
 } from './Token.js';
 
-import { generateSecret, generate, verify } from 'otplib';
+import { generateSecret, generate, verify, createGuardrails } from 'otplib';
 import type { VerifyResult } from '@otplib/totp';
 import { randomBytes, createHash } from 'crypto';
 import { errors as JoseErrors } from 'jose';
@@ -59,8 +60,12 @@ export type SecondFactorChallengeResponse =
   | BackupCodeSecondFactorChallengeResponse
   | WebAuthnSecondFactorChallengeResponse;
 
+const guardrails = createGuardrails({
+  MIN_SECRET_BYTES: SECOND_FACTOR_TOTP_MIN_SECRET_BYTES,
+});
+
 export async function generateTOTPSecret(): Promise<string> {
-  return await generateSecret();
+  return generateSecret({ length: 20 });
 }
 
 export async function generateTOTP(secret: string): Promise<string> {
@@ -69,6 +74,7 @@ export async function generateTOTP(secret: string): Promise<string> {
     digits: SECOND_FACTOR_TOTP_DIGITS,
     period: SECOND_FACTOR_TOTP_STEP,
     algorithm: SECOND_FACTOR_TOTP_ALGORITHM,
+    guardrails,
   });
 }
 
@@ -86,6 +92,7 @@ export async function verifyTOTP(
       period: SECOND_FACTOR_TOTP_STEP,
       algorithm: SECOND_FACTOR_TOTP_ALGORITHM,
       epochTolerance: [30, 30],
+      guardrails,
     })) as VerifyResult;
   } catch (error) {
     return null;
