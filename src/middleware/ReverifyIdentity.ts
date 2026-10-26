@@ -56,28 +56,18 @@ export default function ReverifyIdentity(
     if (!req.body)
       return res.status(400).json(new Errors.MissingFields(['password']));
 
-    // If they aren't responding to a challenge, check if they provided the correct password.
-    if (!req.body['2fa'] || !req.body['2fa'].token) {
-      if (!req.body.password)
-        // If they didn't provide a password, we will send an error response.
-        return res.status(400).json(new Errors.MissingFields(['password']));
-      // If they did provide a password, we will check if it is correct.
-      else if (!(await Bcrypt.compare(req.body.password, req.user.password)))
-        return res.status(401).json(new Errors.InvalidPassword());
-    }
-
-    // If they have second factors, we will also use them to reverify their identity.
-    if (availableFactors.length !== 0) {
-      // They are not responding to a challenge, so we will send them one.
-      try {
-        if (!req.body['2fa'] || !req.body['2fa'].token) {
-          logger.debug(
-            `User ${req.user.username} (${req.user.id}) is being issued a second factor challenge.`,
-          );
-          return res
-            .status(401)
-            .json(await generateSecondFactorChallenge(req.user));
-        } else {
+    // Are we responding to a second factor challenge?
+    if (req.body['2fa'] && req.body['2fa'].token) {
+      // Yes we are, let's make sure the user actually has a second factor to verify against.
+      if (availableFactors.length === 0) {
+        // They don't have any second factors to verify against.
+        logger.warn(
+          `User ${req.user.username} (${req.user.id}) attempted to respond to a second factor challenge without having any second factors. Route: ${req.path}`,
+        );
+        return res.status(400).json(new Errors.UserRequiresSecondFactor());
+      } else {
+        // They have second factors, so we will attempt to verify them.
+        try {
           if (await verifySecondFactor(req.body['2fa'], req.user, res)) {
             logger.debug(
               `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their second factor.`,
@@ -87,18 +77,29 @@ export default function ReverifyIdentity(
             // verifySecondFactor deals with sending the error response. We're done here.
             return;
           }
+        } catch (e) {
+          logger.error(e);
+          return res.status(500).json(new Errors.Internal());
         }
-      } catch (e) {
-        logger.error(e);
-        return res.status(500).json(new Errors.Internal());
       }
-    }
-    // The user does not have any second factors, but their password is correct. There is no point in issuing a challenge that they would not be able to complete.
-    else {
-      logger.debug(
-        `User ${req.user.username} (${req.user.id}) successfully reverified their identity using their password.`,
-      );
-      return next();
+    } else {
+      // They are not responding to a second factor challenge. Do they have their password to reverify their identity?
+      if (!req.body.password)
+        return res.status(400).json(new Errors.MissingFields(['password']));
+      else if (!(await Bcrypt.compare(req.body.password, req.user.password)))
+        return res.status(401).json(new Errors.InvalidPassword());
+      else {
+        // Does the user have any second factors to verify against?
+        if (availableFactors.length === 0) {
+          // They don't have any second factors to verify against.
+          return next();
+        } else {
+          // They have second factors, so we will issue a challenge.
+          return res
+            .status(401)
+            .json(await generateSecondFactorChallenge(req.user));
+        }
+      }
     }
   };
 }

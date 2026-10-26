@@ -55,10 +55,14 @@ function generateBaseToken(
   return new SignJWT({ ...data, purpose: TokenPurpose[purpose] })
     .setProtectedHeader({ alg: TOKEN_ALGORITHM, typ: TOKEN_TYPE })
     .setIssuedAt()
-    .setIssuer(process.env.WEBAUTHN_RPID);
+    .setIssuer(
+      process.env.TOKEN_ISSUERS.split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)[0],
+    );
 }
 
-async function completeToken<T = Record<string, string>>(
+async function blessToken<T = Record<string, string>>(
   token: SignJWT,
 ): Promise<TokenGenerationResult<T>> {
   const signedToken = await token.sign(privKey);
@@ -106,7 +110,7 @@ export async function generateSessionToken(
     .setExpirationTime(
       longLived ? LONG_LIVED_SESSION_EXPIRY : SHORT_LIVED_SESSION_EXPIRY,
     );
-  return await completeToken(token);
+  return await blessToken(token);
 }
 
 // Generate an email verification token for the provided email.
@@ -122,7 +126,7 @@ export async function generateEmailVerificationToken(
     .setSubject(userID)
     .setExpirationTime(EMAIL_VERIFICATION_TOKEN_EXPIRY);
 
-  return await completeToken(token);
+  return await blessToken(token);
 }
 
 // Generate a TOTP generation confirmation token for the provided user and TOTP secret.
@@ -137,7 +141,7 @@ export async function generateTOTPGenerationConfirmationToken(
     .setJti(randomUUID())
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
-  return await completeToken(token);
+  return await blessToken(token);
 }
 
 // Generate a WebAuthn generation confirmation token for the provided user and WebAuthn registration challenge.
@@ -155,7 +159,7 @@ export async function generateWebAuthnGenerationConfirmationToken(
     .setJti(randomUUID())
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
-  return await completeToken(token);
+  return await blessToken(token);
 }
 
 // Generate a 2FA intermediate token for the provided user.
@@ -175,7 +179,7 @@ export async function generateSecondFactorIntermediateToken(
     .setJti(randomUUID())
     .setSubject(subject)
     .setExpirationTime(SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY);
-  return await completeToken(token);
+  return await blessToken(token);
 }
 
 export async function validateToken(
@@ -185,7 +189,6 @@ export async function validateToken(
   await importCertificates();
   try {
     const { protectedHeader, payload }: any = await jwtVerify(token, pubKey, {
-      issuer: process.env.WEBAUTHN_RPID,
       algorithms: [TOKEN_ALGORITHM],
       typ: TOKEN_TYPE,
       requiredClaims: ['iss', 'sub', 'exp', 'iss', 'jti', 'purpose'],
@@ -203,7 +206,11 @@ export async function validateToken(
       typeof payload.exp !== 'number' ||
       !Number.isSafeInteger(payload.exp) ||
       payload.exp <= payload.iat ||
-      payload.iat > Math.floor(Date.now() / 1000)
+      payload.iat > Math.floor(Date.now() / 1000) ||
+      process.env.TOKEN_ISSUERS.split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .indexOf(payload.iss) === -1
     )
       throw new Error('Token payload is invalid.');
     return { payload: payload as any, header: protectedHeader as any };
@@ -226,12 +233,13 @@ export function extractToken<T = Record<string, string>>(
 // The name is based on the device that the user is using.
 // Example: "Chrome on Windows 10 Desktop"
 export function nameSession(req: Request): string {
+  if (!req.useragent) return req.headers['user-agent'] ?? 'Unknown User Agent';
   // If req.useragent.os and req.useragent.device are empty objects, fallback to the user agent string
   if (
     Object.keys(req.useragent.os).length === 0 &&
     req.useragent.device === undefined
   )
-    return req.headers['user-agent']!;
+    return req.headers['user-agent'] ?? 'Unknown User Agent';
   let name = '';
   // If only req.useragent.client is empty, call it an "Unknown Browser"
   if (Object.keys(req.useragent.client).length === 0) name += 'Unknown Browser';
@@ -265,7 +273,11 @@ export function nameSession(req: Request): string {
         case 'ios':
         case 'mac':
           // iOS and macOS always reports the major version as 18 and 10 respectively, but the browser version happens to correspond with the OS version, so we will use that
-          name += ' v' + req.useragent.client.version.split('.')[0];
+          name +=
+            ' v' +
+            (req.useragent.client.version ?? req.useragent.os.version).split(
+              '.',
+            )[0];
           break;
         default:
           name += ' v' + req.useragent.os.version.split('.')[0];

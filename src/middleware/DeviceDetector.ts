@@ -12,8 +12,12 @@ export default function (): RequestHandler {
   // @ts-ignore
   const clientHints = new ClientHints();
   return (req: Request, res: Response, next: NextFunction) => {
-    const hints = clientHints.parse(req.headers);
-    req.useragent = detector.detect(req.headers['user-agent'], hints);
+    try {
+      const hints = clientHints.parse(req.headers);
+      req.useragent = detector.detect(req.headers['user-agent'], hints);
+    } catch (e) {
+      req.useragent = null;
+    }
     next();
   };
 }

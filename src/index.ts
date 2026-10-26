@@ -36,7 +36,7 @@ if (process.env.REDIS_HOST) {
   logger.debug('Loading Redis-backed ratelimit storage and Redis messaging...');
   ratelimitStore = new RedisRatelimitStorage({
     host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT, 10),
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
     user: process.env.REDIS_USER,
     pass: process.env.REDIS_PASS,
   });

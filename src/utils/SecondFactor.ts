@@ -16,8 +16,8 @@ import {
   TokenPurpose,
 } from './Token.js';
 
-import { HashAlgorithms } from '@otplib/core';
-import { authenticator } from '@otplib/preset-default-async';
+import { generateSecret, generate, verify } from 'otplib';
+import type { VerifyResult } from '@otplib/totp';
 import { randomBytes, createHash } from 'crypto';
 import { errors as JoseErrors } from 'jose';
 import { Request, Response } from 'express';
@@ -32,12 +32,7 @@ import { isoUint8Array } from '@simplewebauthn/server/helpers';
 import { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import ms from 'ms';
 
-authenticator.options = {
-  window: [2, 1],
-  step: SECOND_FACTOR_TOTP_STEP,
-  digits: SECOND_FACTOR_TOTP_DIGITS,
-  algorithm: HashAlgorithms[SECOND_FACTOR_TOTP_ALGORITHM],
-};
+const burnedIntermediateTokens: Set<string> = new Set();
 
 export interface BaseSecondFactorChallengeResponse {
   token: string;
@@ -65,26 +60,36 @@ export type SecondFactorChallengeResponse =
   | WebAuthnSecondFactorChallengeResponse;
 
 export async function generateTOTPSecret(): Promise<string> {
-  return await authenticator.generateSecret();
+  return await generateSecret();
 }
 
 export async function generateTOTP(secret: string): Promise<string> {
-  return await authenticator.generate(secret);
-}
-
-export async function checkTOTPDelta(
-  token: string,
-  secret: string,
-): Promise<number | null> {
-  const delta = await authenticator.checkDelta(token, secret);
-  return delta;
+  return await generate({
+    secret,
+    digits: SECOND_FACTOR_TOTP_DIGITS,
+    period: SECOND_FACTOR_TOTP_STEP,
+    algorithm: SECOND_FACTOR_TOTP_ALGORITHM,
+  });
 }
 
 export async function verifyTOTP(
   token: string,
   secret: string,
-): Promise<boolean> {
-  return (await checkTOTPDelta(token, secret)) !== null;
+  afterTimeStep: number,
+): Promise<VerifyResult | null> {
+  try {
+    return (await verify({
+      token,
+      secret,
+      afterTimeStep,
+      digits: SECOND_FACTOR_TOTP_DIGITS,
+      period: SECOND_FACTOR_TOTP_STEP,
+      algorithm: SECOND_FACTOR_TOTP_ALGORITHM,
+      epochTolerance: [30, 30],
+    })) as VerifyResult;
+  } catch (error) {
+    return null;
+  }
 }
 
 function generateBackupCode(): Promise<{
@@ -359,13 +364,13 @@ export async function verifySecondFactor(
   res: Response,
 ): Promise<boolean> {
   // Validate the token.
-  const result = await validateToken(
+  const tokenValidationResult = await validateToken(
     challenge.token,
     TokenPurpose.REVERIFY_IDENTITY,
   );
 
-  if (result instanceof Error) {
-    if (result instanceof JoseErrors.JWTExpired) {
+  if (tokenValidationResult instanceof Error) {
+    if (tokenValidationResult instanceof JoseErrors.JWTExpired) {
       logger.debug(
         `User ${user.username} (${user.id}) attempted to use an expired 2FA intermediate token.`,
       );
@@ -373,14 +378,20 @@ export async function verifySecondFactor(
       return false;
     } else {
       logger.error(
-        `User ${user.username} (${user.id}) attempted to use an invalid 2FA intermediate token: ${result.message}`,
+        `User ${user.username} (${user.id}) attempted to use an invalid 2FA intermediate token: ${tokenValidationResult.message}`,
       );
-      res.status(400).json(new Errors.InvalidSecondFactorResponse());
+      res.status(401).json(new Errors.InvalidSecondFactorResponse());
       return false;
     }
-  } else if (result.payload.sub !== user.id) {
+  } else if (tokenValidationResult.payload.sub !== user.id) {
     logger.warn(
       `User ${user.username} (${user.id}) attempted to use a 2FA intermediate token that does not belong to them.`,
+    );
+    res.status(401).json(new Errors.InvalidSecondFactorResponse());
+    return false;
+  } else if (burnedIntermediateTokens.has(tokenValidationResult.payload.jti)) {
+    logger.warn(
+      `User ${user.username} (${user.id}) attempted to use a burned 2FA intermediate token.`,
     );
     res.status(401).json(new Errors.InvalidSecondFactorResponse());
     return false;
@@ -422,6 +433,7 @@ export async function verifySecondFactor(
             ),
             twoFactorBackupCodeUsedAt: new Date(),
           });
+          burnedIntermediateTokens.add(tokenValidationResult.payload.jti);
           return true;
         }
       case 'totp':
@@ -449,12 +461,27 @@ export async function verifySecondFactor(
           return false;
         }
         for (const factor of secondFactors) {
-          if (await verifyTOTP(challenge.code, factor.secret!)) {
-            // Update the usedAt field of the TOTP factor
-            await factor.update({ usedAt: new Date() });
+          // Calculate the time step when this particular TOTP factor was last used, if applicable.
+          const afterTimeStep = factor.usedAt
+            ? Math.floor(
+                factor.usedAt.getTime() / 1000 / SECOND_FACTOR_TOTP_STEP,
+              )
+            : 0;
+          // Verify the TOTP code against the factor's secret
+          const totpVerificationResult = await verifyTOTP(
+            challenge.code,
+            factor.secret!,
+            afterTimeStep,
+          );
+          if (totpVerificationResult?.valid) {
+            // Update the usedAt field of the TOTP factor and factor in the TOTP delta
+            await factor.update({
+              usedAt: new Date(totpVerificationResult.epoch * 1000),
+            });
             logger.debug(
               `User ${user.username} (${user.id}) successfully used a TOTP code.`,
             );
+            burnedIntermediateTokens.add(tokenValidationResult.payload.jti);
             return true;
           }
         }
@@ -474,11 +501,11 @@ export async function verifySecondFactor(
         }
 
         // Check if the challenge is in the token
-        if (!result.payload.challenge) {
+        if (!tokenValidationResult.payload.challenge) {
           logger.error(
             `User ${user.username} (${user.id}) attempted to use a WebAuthn response without a challenge in the token.`,
           );
-          res.status(400).json(new Errors.InvalidSecondFactorResponse());
+          res.status(401).json(new Errors.InvalidSecondFactorResponse());
           return false;
         }
 
@@ -494,11 +521,13 @@ export async function verifySecondFactor(
           logger.debug(
             `User ${user.username} (${user.id}) successfully used a WebAuthn credential.`,
           );
+          burnedIntermediateTokens.add(tokenValidationResult.payload.jti);
           return true;
         } else {
           logger.debug(
             `User ${user.username} (${user.id}) attempted to use an invalid WebAuthn response.`,
           );
+          res.status(401).json(new Errors.InvalidSecondFactorResponse());
           return false;
         }
       default:

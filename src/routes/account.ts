@@ -95,8 +95,18 @@ app.post(
     const existingUser = await User.findOne({
       where: {
         [Op.or]: [
-          { username: req.body.username.toLowerCase() },
-          { email: req.body.email.toLowerCase() },
+          {
+            username: {
+              [Op.iLike]: req.body.username
+                .toLowerCase()
+                .replace(/[_%]/g, '\\$&'),
+            },
+          },
+          {
+            email: {
+              [Op.iLike]: req.body.email.toLowerCase().replace(/[_%]/g, '\\$&'),
+            },
+          },
         ],
       },
     });
@@ -141,7 +151,7 @@ app.post(
         id: userID,
         username: req.body.username,
         password: hashedPassword,
-        email: req.body.email,
+        email: req.body.email.toLowerCase(),
         domain: process.env.DEFAULT_DOMAIN,
         subdomain: null,
       });
@@ -294,7 +304,17 @@ app.put(
         return res.status(400).json(new Errors.InvalidUsername());
 
       // Check if the username is already taken.
-      if (await User.findOne({ where: { username: req.body.username } }))
+      if (
+        await User.findOne({
+          where: {
+            username: {
+              [Op.iLike]: req.body.username
+                .toLowerCase()
+                .replace(/[_%\\]/g, '\\$&'),
+            },
+          },
+        })
+      )
         return res.status(409).json(new Errors.UserExists());
 
       logger.debug(
@@ -341,7 +361,17 @@ app.put(
         return res.status(400).json(new Errors.InvalidUsername());
 
       // Check if the username is already taken.
-      if (await User.findOne({ where: { username: req.body.username } }))
+      if (
+        await User.findOne({
+          where: {
+            username: {
+              [Op.iLike]: req.body.username
+                .toLowerCase()
+                .replace(/[_%\\]/g, '\\$&'),
+            },
+          },
+        })
+      )
         return res.status(409).json(new Errors.UserExists());
 
       logger.debug(
@@ -391,7 +421,17 @@ app.put(
         return res.status(400).json(new Errors.InvalidEmail());
 
       // Check if the email is already taken.
-      if (await User.findOne({ where: { email: req.body.email } }))
+      if (
+        await User.findOne({
+          where: {
+            email: {
+              [Op.iLike]: req.body.email
+                .toLowerCase()
+                .replace(/[_%\\]/g, '\\$&'),
+            },
+          },
+        })
+      )
         return res.status(409).json(new Errors.UserExists());
 
       logger.debug(
@@ -399,7 +439,7 @@ app.put(
       );
 
       const { success, error, tokenData } = await sendVerificationEmail(
-        req.body.email,
+        req.body.email.toLowerCase(),
         req.user.username,
         req.user.id,
       );
@@ -412,7 +452,7 @@ app.put(
 
       // Update the email.
       await req.user.update({
-        email: req.body.email,
+        email: req.body.email.toLowerCase(),
         verifiedAt: null,
       });
 
@@ -453,7 +493,17 @@ app.put(
         return res.status(400).json(new Errors.InvalidEmail());
 
       // Check if the email is already taken.
-      if (await User.findOne({ where: { email: req.body.email } }))
+      if (
+        await User.findOne({
+          where: {
+            email: {
+              [Op.iLike]: req.body.email
+                .toLowerCase()
+                .replace(/[_%\\]/g, '\\$&'),
+            },
+          },
+        })
+      )
         return res.status(409).json(new Errors.UserExists());
 
       logger.debug(
@@ -464,7 +514,10 @@ app.put(
       // And if the staff wants to send an email, they can use the /api/users/:id/verify endpoint.
 
       // Update the email.
-      await user.update({ email: req.body.email });
+      await user.update({
+        email: req.body.email.toLowerCase(),
+        verifiedAt: null,
+      });
 
       // Send the user object.
       return res
@@ -1102,6 +1155,8 @@ app.delete(
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
     try {
+      // Mark the user's account as deleting.
+      await req.user.update({ deletingAt: new Date() });
       await startAccountDeletionWorker(req.user);
       return res.status(200).json(new Success.DeleteUser());
     } catch (error) {
@@ -1130,6 +1185,8 @@ app.delete(
       // If the user does not exist, return a InvalidUser error.
       if (!user) return res.status(404).json(new Errors.InvalidUser());
 
+      // Mark the user's account as deleting.
+      await user.update({ deletingAt: new Date() });
       await startAccountDeletionWorker(user, req.user);
 
       return res.status(200).json(new Success.DeleteUser());
@@ -1172,6 +1229,8 @@ app.delete(
       // Delete the users.
       await Promise.all(
         users.map(async (user) => {
+          // Mark the user's account as deleting.
+          await user.update({ deletingAt: new Date() });
           await startAccountDeletionWorker(user, req.user!);
         }),
       );

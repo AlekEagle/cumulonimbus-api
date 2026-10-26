@@ -17,6 +17,7 @@ export default class User extends Model {
   declare twoFactorBackupCodeUsedAt: Date | null;
   declare createdAt: Date;
   declare updatedAt: Date;
+  declare deletingAt: Date | null;
 
   static is(value: any): value is User {
     return value instanceof User;
@@ -73,6 +74,10 @@ export default class User extends Model {
         allowNull: true,
       },
       twoFactorBackupCodeUsedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      deletingAt: {
         type: DataTypes.DATE,
         allowNull: true,
       },

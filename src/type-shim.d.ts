@@ -6,7 +6,10 @@ import type {
   RatelimitSubject,
   RatelimitData,
 } from './utils/Ratelimit/Storage/index.ts';
-import _Structures from 'cumulonimbus-types';
+import _Structures, {
+  Errors as _Errors,
+  Successes as _Successes,
+} from 'cumulonimbus-types';
 
 import { DetectResult } from 'node-device-detector';
 import { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/server';
@@ -28,6 +31,7 @@ declare global {
       BASE_THUMBNAIL_PATH: string;
       DEFAULT_DOMAIN: string;
       WEBAUTHN_RPID: string;
+      TOKEN_ISSUERS: string;
       FRONTEND_BASE_URL: string;
       THUMBNAIL_BASE_URL: string;
       SMTP_HOST: string;
@@ -35,11 +39,10 @@ declare global {
       SMTP_USER: string;
       SMTP_PASS: string;
       SMTP_FROM: string;
-      SMTP_SECURE: string;
-      REDIS_HOST: string;
-      REDIS_PORT: string;
-      REDIS_USER: string;
-      REDIS_PASS: string;
+      REDIS_HOST?: string;
+      REDIS_PORT?: string;
+      REDIS_USER?: string;
+      REDIS_PASS?: string;
       HOST?: string;
     }
   }
@@ -47,7 +50,7 @@ declare global {
   // Express
   namespace Express {
     interface Request {
-      useragent: DetectResult;
+      useragent: DetectResult | null;
       user: User | null;
       session: Session | null;
       limit?: number;
@@ -69,6 +72,8 @@ declare global {
   // Cumulonimbus
   namespace Cumulonimbus {
     export import Structures = _Structures;
+    export import Errors = _Errors;
+    export import Successes = _Successes;
 
     namespace Utilities {
       export type ValueDeterminingMiddleware<T> = (

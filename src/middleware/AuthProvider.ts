@@ -39,30 +39,39 @@ export default function AuthProvider(): RequestHandler {
             req.user = null;
             req.session = null;
           } else {
-            // Cool, the user exists, let's see if that session has been revoked.
-            const session = await Session.findOne({
-              where: {
-                user: user.id,
-                id: token.payload.jti,
-              },
-            });
-
-            // If the session doesn't exist in the database, it's been revoked.
-            if (!session) {
+            // Cool, the user exists, is the user in the process of being deleted?
+            if (user.deletingAt) {
               logger.debug(
-                `Request contained valid token for user ${user.username} (${user.id}), but has since been revoked.`,
+                `Request contained valid token for user ${user.username} (${user.id}), but the user is being deleted.`,
               );
               req.user = null;
               req.session = null;
             } else {
-              // If the session exists, then the user is authenticated.
-              logger.debug(
-                `Request contained valid token for user ${user.username} (${user.id}).`,
-              );
-              // Since the user is authenticated and the session is valid, we'll update the session's last used time.
-              await session.update({ usedAt: new Date() });
-              req.user = user;
-              req.session = session;
+              // Cool, the user isn't being deleted, let's see if that session has been revoked.
+              const session = await Session.findOne({
+                where: {
+                  user: user.id,
+                  id: token.payload.jti,
+                },
+              });
+
+              // If the session doesn't exist in the database, it's been revoked.
+              if (!session) {
+                logger.debug(
+                  `Request contained valid token for user ${user.username} (${user.id}), but has since been revoked.`,
+                );
+                req.user = null;
+                req.session = null;
+              } else {
+                // If the session exists, then the user is authenticated.
+                logger.debug(
+                  `Request contained valid token for user ${user.username} (${user.id}).`,
+                );
+                // Since the user is authenticated and the session is valid, we'll update the session's last used time.
+                await session.update({ usedAt: new Date() });
+                req.user = user;
+                req.session = session;
+              }
             }
           }
         }

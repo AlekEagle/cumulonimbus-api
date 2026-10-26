@@ -108,11 +108,19 @@ app.post(
       TokenPurpose.TOTP_INTERMEDIATE,
     );
     if (result instanceof Error) {
-      if (result instanceof JoseErrors.JWTExpired)
-        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
+      logger.debug(`Invalid TOTP token: ${result.message}`);
+      return res.status(401).json(new Errors.InvalidSecondFactorResponse());
     } else {
+      // Does the token belong to the current user? If not, reject it.
+      if (result.payload.sub !== req.user.id)
+        return res.status(401).json(new Errors.InvalidSecondFactorResponse());
       // Verify the TOTP code
-      if (!(await verifyTOTP(req.body.code, result.payload.secret)))
+      const totpVerifyResult = await verifyTOTP(
+        req.body.code,
+        result.payload.secret,
+        0,
+      );
+      if (!totpVerifyResult?.valid)
         return res.status(401).json(new Errors.InvalidSecondFactorResponse());
 
       const TOTPID = randomUUID();
@@ -124,6 +132,7 @@ app.post(
         user: result.payload.sub,
         type: 'totp',
         secret: result.payload.secret,
+        usedAt: new Date(), // Set usedAt now since we burned the TOTP that was just used to register this factor
       });
 
       let codes;

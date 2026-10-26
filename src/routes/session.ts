@@ -42,7 +42,7 @@ app.post(
   KillSwitch(KillSwitches.ACCOUNT_LOGIN),
   AutoTrim(),
   BodyValidator({
-    'username': new ExtendedValidBodyTypes().string().notRequired(),
+    'username': new ExtendedValidBodyTypes().string(),
     'password': new ExtendedValidBodyTypes().string().notRequired(),
     'rememberMe': new ExtendedValidBodyTypes().boolean().notRequired(),
     '2fa': new ExtendedValidBodyTypes()
@@ -86,18 +86,30 @@ app.post(
     const sessionName =
         (req.headers['x-session-name'] as string) || nameSession(req),
       sessionID = randomUUID();
+
+    // If request doesn't have a 2fa challenge OR password, return an error.
+    if (!('password' in req.body) && !('2fa' in req.body)) {
+      return res.status(400).json(new Errors.MissingFields(['password']));
+    }
     if ('password' in req.body) {
       try {
         // Find a user with the given username.
         const user = await User.findOne({
-          where: where(
-            fn('lower', col('username')),
-            req.body.username.toLowerCase(),
-          ),
+          where: {
+            username: {
+              [Op.iLike]: req.body.username
+                .toLowerCase()
+                .replace(/[_%\\]/g, '\\$&'),
+            },
+          },
         });
 
         // If no user was found, return an InvalidUser error.
         if (!user) return res.status(404).json(new Errors.InvalidUser());
+
+        // If the user's account is marked as deleting, return an InvalidUser error.
+        if (user.deletingAt)
+          return res.status(404).json(new Errors.InvalidUser());
 
         // If the user is banned, return a Banned error.
         if (user.bannedAt) return res.status(403).json(new Errors.Banned());
@@ -146,6 +158,9 @@ app.post(
         const uid = extractToken(req.body['2fa'].token).payload.sub,
           user = await User.findByPk(uid);
         if (!user) return res.status(404).json(new Errors.InvalidUser());
+        if (user.deletingAt)
+          return res.status(404).json(new Errors.InvalidUser());
+        if (user.bannedAt) return res.status(403).json(new Errors.Banned());
         if (await verifySecondFactor(req.body['2fa'], user, res)) {
           // Generate a new token for the user.
           const token = await generateSessionToken(
@@ -213,6 +228,8 @@ app.post(
     >,
   ) => {
     if (!req.user) return res.status(401).json(new Errors.InvalidSession());
+    if (req.user.deletingAt)
+      return res.status(404).json(new Errors.InvalidUser());
     const sessionID = randomUUID();
     // Generate a new token for the user.
     const token = await generateSessionToken(

@@ -1,13 +1,15 @@
 {
   "name": "cumulonimbus-api",
-  "version": "6.2.7",
+  "version": "6.2.8",
   "description": "The API for Cumulonimbus.",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ENV=development node --no-warnings=ExperimentalWarning --watch --loader ts-node/esm ./src/index.ts",
-    "generate-certificates": "./gencerts.sh"
+    "dev": "env ENV=development INSTANCE=0 node --no-warnings=ExperimentalWarning --watch --loader ts-node/esm ./src/index.ts",
+    "generate-certificates": "./gencerts.sh",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "repository": {
     "type": "git",
@@ -30,7 +32,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@otplib/preset-default-async": "^12.0.1",
     "@simplewebauthn/server": "^14.0.0",
     "bcrypt": "^6.0.0",
     "chalk": "^5.6.2",
@@ -38,7 +39,6 @@
     "cumulonimbus-types": "^1.1.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "express-rate-limit": "^6.7.0",
     "file-type": "^22.1.1",
     "jose": "^6.1.0",
     "libmagic-ffi": "^0.1.4",
@@ -46,6 +46,7 @@
     "multer": "^2.0.2",
     "node-device-detector": "^2.2.4",
     "nodemailer": "^10.1.0",
+    "otplib": "^13.5.0",
     "pg": "^8.16.3",
     "pg-hstore": "^2.3.4",
     "redis": "^6.3.0",

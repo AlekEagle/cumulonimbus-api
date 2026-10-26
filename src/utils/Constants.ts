@@ -20,6 +20,7 @@ export const OMITTED_USER_FIELDS = [
   'password',
   'sessions',
   'twoFactorBackupCodes',
+  'deletingAt',
 ];
 
 // ========= FILE RELATED CONSTANTS =========
@@ -59,10 +60,10 @@ export const TOKEN_TYPE = 'JWT';
 export const EMAIL_VERIFICATION_TOKEN_EXPIRY = '1h';
 
 // ========= 2FA RELATED CONSTANTS =========
-export const SECOND_FACTOR_TOTP_ALGORITHM = 'SHA1';
+export const SECOND_FACTOR_TOTP_ALGORITHM = 'sha1';
 export const SECOND_FACTOR_TOTP_DIGITS = 6;
 export const SECOND_FACTOR_TOTP_STEP = 30;
-export const SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY = '5m';
+export const SECOND_FACTOR_INTERMEDIATE_TOKEN_EXPIRY = '2m';
 export const SECOND_FACTOR_BACKUP_CODE_LENGTH = 10;
 export const SECOND_FACTOR_BACKUP_CODE_ALGORITHM = 'SHA512';
 

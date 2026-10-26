@@ -1,5 +1,6 @@
 import logger from '../utils/LogMachine.js';
 import { transport, init } from './index.js';
+import { URL } from 'node:url';
 
 await init();
 
@@ -45,7 +46,7 @@ export async function sendBannedNotice(
     <h1>Why was my account banned?</h1>
     <p>
       Your account was banned due to a violation of our
-      <a href="https://alekeagle.me/tos" target="_blank" rel="noreferrer"
+      <a href="${process.env.FRONTEND_BASE_URL}/tos" target="_blank" rel="noreferrer"
         >terms of service</a
       >. The reason provided is as follows:
     </p>
@@ -65,7 +66,7 @@ export async function sendBannedNotice(
     <h1>What can I do?</h1>
     <p>
       If you believe this was a mistake, please contact us at
-      <a href="mailto:appeals@alekeagle.me">appeals@alekeagle.me</a>
+      <a href="mailto:appeals@${process.env.SMTP_FROM.split('@')[1]}">appeals@${process.env.SMTP_FROM.split('@')[1]}</a>
       to submit an appeal. Please provide as much information as possible to
       help us understand your situation.
     </p>

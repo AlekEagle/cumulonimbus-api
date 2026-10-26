@@ -158,7 +158,6 @@ app.post(
   '/api/upload',
   SessionChecker(),
   SessionPermissionChecker(PermissionFlags.UPLOAD_FILE),
-  multerUpload(),
   KillSwitch(KillSwitches.FILE_CREATE),
   Ratelimit({
     max: 100,
@@ -171,6 +170,7 @@ app.post(
     storage: ratelimitStore,
     bucket: 'file-upload',
   }),
+  multerUpload(),
   async (
     req: Request,
     res: Response<
