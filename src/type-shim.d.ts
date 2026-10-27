@@ -34,6 +34,7 @@ declare global {
       TOKEN_ISSUERS: string;
       FRONTEND_BASE_URL: string;
       THUMBNAIL_BASE_URL: string;
+      OVERRIDE_CLOUDFLARE_TRUST_PROXY: string;
       SMTP_HOST: string;
       SMTP_PORT: string;
       SMTP_USER: string;

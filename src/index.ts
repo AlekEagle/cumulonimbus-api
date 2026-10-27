@@ -77,35 +77,47 @@ app.disable('x-powered-by');
 
 // Fetch Cloudflare's IP ranges so we know which proxies are trusted
 if (process.env.ENV === 'production') {
-  try {
-    logger.debug('Fetching Cloudflare IP ranges...');
-    const cloudflareIPRanges: {
-      result: {
-        ipv4_cidrs: string[];
-        ipv6_cidrs: string[];
-      };
-      success: boolean;
-      errors?: any[];
-      messages?: string[];
-    } = await (await fetch('https://api.cloudflare.com/client/v4/ips')).json();
-    logger.debug('Cloudflare IP ranges fetched successfully.');
+  if (process.env.OVERRIDE_CLOUDFLARE_TRUST_PROXY) {
+    const overrideIPs = process.env.OVERRIDE_CLOUDFLARE_TRUST_PROXY.split(',')
+      .map((ip) => ip.trim())
+      .filter(Boolean);
+    logger.info(
+      `Overriding Cloudflare trust proxy with IPs: ${overrideIPs.join(', ')}`,
+    );
+    app.set('trust proxy', overrideIPs);
+  } else {
+    try {
+      logger.info('Fetching Cloudflare IP ranges...');
+      const cloudflareIPRanges: {
+        result: {
+          ipv4_cidrs: string[];
+          ipv6_cidrs: string[];
+        };
+        success: boolean;
+        errors?: any[];
+        messages?: string[];
+      } = await (
+        await fetch('https://api.cloudflare.com/client/v4/ips')
+      ).json();
+      logger.debug('Cloudflare IP ranges fetched successfully.');
 
-    if (!cloudflareIPRanges.success) {
-      throw new Error(
-        cloudflareIPRanges.messages?.join(', ') ??
-          'Failed to fetch Cloudflare IP ranges.',
-      );
+      if (!cloudflareIPRanges.success) {
+        throw new Error(
+          cloudflareIPRanges.messages?.join(', ') ??
+            'Failed to fetch Cloudflare IP ranges.',
+        );
+      }
+
+      // Trust Cloudflare's IP ranges as proxies in production
+      app.set('trust proxy', [
+        'loopback',
+        ...cloudflareIPRanges.result.ipv4_cidrs,
+        ...cloudflareIPRanges.result.ipv6_cidrs,
+      ]);
+    } catch (error) {
+      logger.error('Failed to fetch Cloudflare IP ranges:', error);
+      process.exit(1);
     }
-
-    // Trust Cloudflare's IP ranges as proxies in production
-    app.set('trust proxy', [
-      'loopback',
-      ...cloudflareIPRanges.result.ipv4_cidrs,
-      ...cloudflareIPRanges.result.ipv6_cidrs,
-    ]);
-  } catch (error) {
-    logger.error('Failed to fetch Cloudflare IP ranges:', error);
-    process.exit(1);
   }
 }
 
