@@ -16,7 +16,7 @@ export default class File extends Model {
   }
 }
 
-(async function () {
+export async function initFile() {
   await initDB();
   File.init(
     {
@@ -45,13 +45,13 @@ export default class File extends Model {
     },
     {
       sequelize: sequelize!,
-      tableName: 'Uploads',
+      tableName: 'Files',
     },
   );
   try {
     await File.sync();
-    logger.info('Upload model synced with DB.');
+    logger.info('File model synced with DB.');
   } catch (error) {
-    logger.error('Unable to sync Upload model. Error: ', error);
+    logger.error('Unable to sync File model. Error: ', error);
   }
-})();
+}

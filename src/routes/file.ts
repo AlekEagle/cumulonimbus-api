@@ -637,7 +637,7 @@ app.delete(
         `User ${req.user.username} (${req.user.id}) deleted all of their own files. Count: ${count}`,
       );
 
-      return res.status(200).json(new Success.DeleteFiles(count));
+      return res.status(202).json(new Success.DeleteFiles(count));
     } catch (error) {
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
@@ -675,7 +675,7 @@ app.delete(
         `User ${req.user.username} (${req.user.id}) deleted all files belonging to user ${user.username} (${user.id}). Count: ${count}`,
       );
 
-      return res.status(200).json(new Success.DeleteFiles(count));
+      return res.status(202).json(new Success.DeleteFiles(count));
     } catch (error) {
       logger.error(error);
       return res.status(500).json(new Errors.Internal());

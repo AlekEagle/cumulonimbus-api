@@ -19,7 +19,7 @@ export default class Session extends Model {
   }
 }
 
-(async function () {
+export async function initSession() {
   await initDB();
   Session.init(
     {
@@ -64,6 +64,6 @@ export default class Session extends Model {
     await Session.sync();
     logger.info('Session model synced with DB.');
   } catch (error) {
-    logger.error('Unable to sync User model. Error: ', error);
+    logger.error('Unable to sync Session model. Error: ', error);
   }
-})();
+}

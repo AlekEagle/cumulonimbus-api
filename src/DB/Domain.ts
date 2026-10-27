@@ -14,7 +14,7 @@ export default class Domain extends Model {
   }
 }
 
-(async function () {
+export async function initDomain() {
   await initDB();
   Domain.init(
     {
@@ -40,4 +40,4 @@ export default class Domain extends Model {
   } catch (error) {
     logger.error('Unable to sync Domain model. Error: ', error);
   }
-})();
+}

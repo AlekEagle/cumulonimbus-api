@@ -14,7 +14,7 @@ export default class GlobalKillSwitches extends Model {
   }
 }
 
-(async function () {
+export async function initGlobalKillSwitches() {
   await initDB();
   GlobalKillSwitches.init(
     {
@@ -43,4 +43,4 @@ export default class GlobalKillSwitches extends Model {
   } catch (error) {
     logger.error('Unable to sync GlobalKillSwitches model. Error:', error);
   }
-})();
+}

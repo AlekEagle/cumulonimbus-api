@@ -31,7 +31,7 @@ export default class Instruction extends Model {
   }
 }
 
-(async function () {
+export async function initInstruction() {
   await initDB();
   Instruction.init(
     {
@@ -65,4 +65,4 @@ export default class Instruction extends Model {
   } catch (error) {
     logger.error('Unable to sync Instruction model. Error: ', error);
   }
-})();
+}

@@ -31,7 +31,7 @@ export default class SecondFactor extends Model {
   }
 }
 
-(async function () {
+export async function initSecondFactor() {
   await initDB();
   SecondFactor.init(
     {
@@ -97,4 +97,4 @@ export default class SecondFactor extends Model {
   } catch (error) {
     logger.error('Unable to sync SecondFactor model. Error: ', error);
   }
-})();
+}

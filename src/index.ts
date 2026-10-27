@@ -8,6 +8,7 @@ import DevelopmentCORS from './middleware/DevelopmentCORS.js';
 import DeviceDetector from './middleware/DeviceDetector.js';
 import Domain from './DB/Domain.js';
 import KillSwitch from './middleware/KillSwitch.js';
+import initDBs from './DB/InitDBs.js';
 import { Level } from './utils/Logger.js';
 import logger from './utils/LogMachine.js';
 import Ratelimit from './middleware/Ratelimit.js';
@@ -24,6 +25,9 @@ import { initKillSwitches } from './utils/GlobalKillSwitches.js';
 // (JK we love the developers that made these awesome modules)
 import Express, { json } from 'express';
 import ms from 'ms';
+
+// Initialize the databases
+await initDBs();
 
 // Initialize the kill switches
 await initKillSwitches();

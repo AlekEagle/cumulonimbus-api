@@ -24,7 +24,7 @@ export default class User extends Model {
   }
 }
 
-(async function () {
+export async function initUser() {
   await initDB();
   User.init(
     {
@@ -93,4 +93,4 @@ export default class User extends Model {
   } catch (error) {
     logger.error('Unable to sync User model. Error: ', error);
   }
-})();
+}

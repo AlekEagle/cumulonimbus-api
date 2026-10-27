@@ -1158,7 +1158,7 @@ app.delete(
       // Mark the user's account as deleting.
       await req.user.update({ deletingAt: new Date() });
       await startAccountDeletionWorker(req.user);
-      return res.status(200).json(new Success.DeleteUser());
+      return res.status(202).json(new Success.DeleteUser());
     } catch (error) {
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
@@ -1189,7 +1189,7 @@ app.delete(
       await user.update({ deletingAt: new Date() });
       await startAccountDeletionWorker(user, req.user);
 
-      return res.status(200).json(new Success.DeleteUser());
+      return res.status(202).json(new Success.DeleteUser());
     } catch (error) {
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
@@ -1239,7 +1239,7 @@ app.delete(
         `User ${req.user.username} (${req.user.id}) deleted ${count} users.`,
       );
 
-      return res.status(200).json(new Success.DeleteUsers(count));
+      return res.status(202).json(new Success.DeleteUsers(count));
     } catch (error) {
       logger.error(error);
       return res.status(500).json(new Errors.Internal());
