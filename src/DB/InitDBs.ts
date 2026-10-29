@@ -5,8 +5,10 @@ import { initInstruction } from './Instruction.js';
 import { initGlobalKillSwitches } from './GlobalKillSwitches.js';
 import { initDomain } from './Domain.js';
 import { initFile } from './File.js';
+import { init as initDB } from './index.js';
 
 export default async function initDBs() {
+  await initDB();
   await initUser();
   await initSession();
   await initSecondFactor();

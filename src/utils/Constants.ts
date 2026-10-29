@@ -7,8 +7,9 @@ export const API_VERSION = JSON.parse(
 ).version;
 
 // ========= SERVER RELATED CONSTANTS =========
-export const PORT: number =
-  8000 + (!process.env.INSTANCE ? 0 : Number(process.env.INSTANCE));
+export const PORT: number = process.env.PORT
+  ? Number(process.env.PORT)
+  : 8000 + (!process.env.INSTANCE ? 0 : Number(process.env.INSTANCE));
 export const HOST = process.env.HOST ?? '127.0.0.1';
 
 // ========= USER RELATED CONSTANTS =========

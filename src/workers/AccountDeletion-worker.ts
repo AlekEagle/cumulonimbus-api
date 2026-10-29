@@ -3,7 +3,7 @@ import logger from '../utils/LogMachine.js';
 import SecondFactor from '../DB/SecondFactor.js';
 import Session from '../DB/Session.js';
 import User from '../DB/User.js';
-import { init as initDB } from '../DB/index.js';
+import initDBs from '../DB/InitDBs.js';
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,7 +14,7 @@ logger.log(
   `Initializing AccountDeletion worker for user: ${workerData.user.username} (${workerData.user.id})`,
 );
 
-await initDB();
+await initDBs();
 
 // Fetch the user from the worker data
 try {

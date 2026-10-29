@@ -1,6 +1,6 @@
 import File from '../DB/File.js';
 import logger from '../utils/LogMachine.js';
-import { init as initDB } from '../DB/index.js';
+import initDBs from '../DB/InitDBs.js';
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,7 +11,7 @@ logger.log(
   `Initializing files deletion worker for user: ${workerData.user.username} (${workerData.user.id})`,
 );
 
-await initDB();
+await initDBs();
 
 // Wait a moment to ensure database tables are synced
 await new Promise((resolve) => setTimeout(resolve, 1000));

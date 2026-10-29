@@ -27,6 +27,7 @@ declare global {
       DATABASE_PASS: string;
       DATABASE: string;
       INSTANCE: string;
+      PORT: string;
       BASE_UPLOAD_PATH: string;
       BASE_THUMBNAIL_PATH: string;
       DEFAULT_DOMAIN: string;
